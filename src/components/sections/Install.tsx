@@ -1,6 +1,7 @@
 import { Download, Apple, Monitor } from "lucide-react";
 import { siteConfig } from "../../site.config";
 import { Button } from "../ui/Button";
+import { useMemo } from "react";
 
 const platformIcons: Record<string, typeof Download> = {
   macos: Apple,
@@ -8,10 +9,24 @@ const platformIcons: Record<string, typeof Download> = {
   linux: Download,
 };
 
+function detectPlatform(): string {
+  const ua = navigator.userAgent.toLowerCase();
+  if (ua.includes("win")) return "windows";
+  if (ua.includes("linux")) return "linux";
+  return "macos";
+}
+
 export function Install() {
   const { download } = siteConfig;
-  const primary = download.options[0];
-  const others = download.options.slice(1);
+
+  const { primary, others } = useMemo(() => {
+    const detected = detectPlatform();
+    const idx = download.options.findIndex((o) => o.platform === detected);
+    const primaryIdx = idx >= 0 ? idx : 0;
+    const p = download.options[primaryIdx];
+    const rest = download.options.filter((_, i) => i !== primaryIdx);
+    return { primary: p, others: rest };
+  }, [download.options]);
 
   return (
     <section id="download" className="py-24 px-6">
@@ -27,7 +42,10 @@ export function Install() {
           <div className="mb-8">
             <a href={primary.href}>
               <Button className="text-lg px-8 py-4 h-auto">
-                <Download className="w-5 h-5 mr-2" />
+                {(() => {
+                  const Icon = platformIcons[primary.platform] ?? Download;
+                  return <Icon className="w-5 h-5 mr-2" />;
+                })()}
                 {primary.label}
               </Button>
             </a>
