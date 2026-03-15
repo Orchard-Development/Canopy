@@ -8,10 +8,10 @@ export function HowItWorks() {
     <section className="py-24 px-6">
       <div className="max-w-5xl mx-auto">
         <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4">
-          How it works
+          Zero to exponential in three steps
         </h2>
         <p className="text-[var(--muted-foreground)] text-center mb-16 max-w-2xl mx-auto">
-          Get started in three simple steps.
+          No setup. No prompt engineering. Just start working and let it compound.
         </p>
 
         <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-12 md:gap-0">

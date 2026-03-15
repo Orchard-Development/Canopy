@@ -19,10 +19,10 @@ export function Features() {
     <section className="py-24 px-6">
       <div className="max-w-6xl mx-auto">
         <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4">
-          Everything you need
+          Linear AI vs. Squared AI
         </h2>
         <p className="text-[var(--muted-foreground)] text-center mb-16 max-w-2xl mx-auto">
-          A complete toolkit designed to work together seamlessly.
+          Most AI resets every session. Squared compounds every session.
         </p>
 
         <motion.div

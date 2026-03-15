@@ -6,6 +6,9 @@ import {
   Layout,
   MonitorSmartphone,
   Radio,
+  UserPlus,
+  Layers,
+  TrendingUp,
 } from "lucide-react";
 
 // -- Types ------------------------------------------------------------------
@@ -41,6 +44,8 @@ export interface SiteConfig {
     cta: { label: string; href: string };
   };
 
+  problemPoints: string[];
+
   features: Feature[];
   steps: Step[];
 
@@ -60,54 +65,79 @@ export interface SiteConfig {
 // -- Config -----------------------------------------------------------------
 
 export const siteConfig: SiteConfig = {
-  name: "Context",
-  tagline: "AI workspaces that learn and improve",
+  name: "Squared",
+  tagline: "You + AI, squared",
   description:
-    "A poly-repo coordination layer with persistent memory, reusable skills, and real-time orchestration for AI agents.",
-  url: "https://context.dev",
+    "Squared makes AI exponentially more useful over time. Persistent memory, compounding skills, and your personal context -- every session multiplies the last.",
+  url: "https://squared.dev",
 
   hero: {
-    heading: "Your AI workspace, compounding",
+    heading: "AI that grows exponentially with you",
     subheading:
-      "Context gives your AI agents persistent memory, reusable skills, and behavioral guardrails -- so every session builds on the last.",
+      "Most AI is linear -- same blank slate, every time. Squared makes it exponential. Every conversation teaches it more about you, every workflow becomes a reusable skill, every decision compounds. Session 100 is unrecognizably better than session 1.",
     cta: { label: "Download", href: "#download" },
   },
 
+  problemPoints: [
+    "Session 1 and session 1,000 are identical -- AI never learns",
+    "You repeat the same context, preferences, and instructions every time",
+    "What you build in one tool vanishes when you switch to another",
+    "AI gets more powerful every month, but your experience of it stays flat",
+  ],
+
   features: [
     {
-      title: "Skills",
+      title: "Onboard AI to you",
       description:
-        "Reusable agent workflows that encode best practices and evolve from real usage across your team.",
-      icon: Zap,
+        "Squared learns how you think, what you're working on, and how you like things done. Every new session starts where the last one left off.",
+      icon: UserPlus,
     },
     {
-      title: "Memory",
+      title: "Memory that compounds",
       description:
-        "Persistent project knowledge that survives across sessions -- decisions, progress, and lessons learned.",
+        "Decisions, preferences, and lessons accumulate across sessions and tools. Your AI doesn't just remember -- it builds on what it knows.",
       icon: Brain,
     },
     {
-      title: "Rules",
+      title: "Skills that multiply",
       description:
-        "Behavioral guardrails shared across every AI tool. Define standards once, enforce everywhere.",
+        "Turn any workflow into a reusable skill -- research, writing, analysis, planning, coding, anything. Each use refines the skill. What took an hour becomes minutes.",
+      icon: Zap,
+    },
+    {
+      title: "Your rules, everywhere",
+      description:
+        "Define how you want AI to behave once. Tone, format, process, guardrails -- enforced across every tool, every session. Set it and forget it.",
       icon: ShieldCheck,
+    },
+    {
+      title: "Every AI tool, one brain",
+      description:
+        "Cursor, Claude Code, Windsurf, Codex -- they all share the same memory, skills, and rules. Switch freely. Nothing is lost.",
+      icon: MonitorSmartphone,
     },
     {
       title: "Command Center",
       description:
-        "A web UI for managing skills, rules, memory, and deployments in one place.",
+        "A desktop app to see your AI's accumulated knowledge -- memory, skills, active work, agent coordination -- all in one place.",
       icon: Layout,
     },
     {
-      title: "Multi-IDE Sync",
+      title: "Not just code",
       description:
-        "Works with Cursor, Claude Code, Windsurf, and Codex. Same rules and skills everywhere.",
-      icon: MonitorSmartphone,
+        "Research, writing, planning, ops, design, analysis -- Squared makes AI exponentially better at anything you do repeatedly.",
+      icon: Layers,
     },
     {
-      title: "MQTT Event Bus",
+      title: "Exponential returns",
       description:
-        "Real-time coordination between agents, repos, and services via a lightweight message bus.",
+        "Linear tools give you the same value on day 1 and day 100. Squared compounds. The more you use it, the more it multiplies your output.",
+      icon: TrendingUp,
+    },
+    {
+      title: "Real-time coordination",
+      description:
+        "Agents and services communicate in real time via a built-in event bus. Orchestrate complex workflows that span tools and projects.",
       icon: Radio,
     },
   ],
@@ -115,44 +145,45 @@ export const siteConfig: SiteConfig = {
   steps: [
     {
       number: 1,
-      title: "Download",
-      description: "Grab the desktop app for your platform.",
+      title: "Install Squared",
+      description:
+        "Download the desktop app. It connects to your AI tools and starts learning immediately.",
     },
     {
       number: 2,
-      title: "Configure",
+      title: "Work like normal",
       description:
-        "Define your rules, skills, and memory structure to match your workflow.",
+        "Use any AI tool. Squared captures context, decisions, and workflows in the background -- no extra effort.",
     },
     {
       number: 3,
-      title: "Compound",
+      title: "Watch it go exponential",
       description:
-        "Every AI session contributes knowledge back. Your workspace gets smarter over time.",
+        "Session by session, your AI gets dramatically better. Skills compound, memory deepens, and what used to take hours takes seconds.",
     },
   ],
 
   download: {
-    heading: "Download Context",
+    heading: "Download Squared",
     subheading: "Available for macOS, Windows, and Linux.",
     options: [
       {
         platform: "macos",
         label: "Download for macOS",
-        href: "#",
+        href: "https://pub-8ded0a2cb4124fdf871305165509c89f.r2.dev/latest/Context-0.1.1-arm64.dmg",
         note: "Apple Silicon & Intel",
       },
       {
         platform: "windows",
         label: "Download for Windows",
-        href: "#",
+        href: "https://pub-8ded0a2cb4124fdf871305165509c89f.r2.dev/latest/Context Setup 0.1.1.exe",
         note: "Windows 10+",
       },
       {
         platform: "linux",
         label: "Download for Linux",
-        href: "#",
-        note: ".deb and .AppImage",
+        href: "https://pub-8ded0a2cb4124fdf871305165509c89f.r2.dev/latest/Context-0.1.1.AppImage",
+        note: ".AppImage",
       },
     ],
   },

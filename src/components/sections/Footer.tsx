@@ -8,7 +8,7 @@ export function Footer() {
     <footer className="border-t border-[var(--border)] py-12 px-6">
       <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <img src="/logo.svg" alt={name} className="w-6 h-6" />
+          <img src="/logo.png" alt={name} className="w-6 h-6" />
           <p className="text-sm text-[var(--muted-foreground)]">
             {name} {links.license ? `-- ${links.license} License` : ""}
           </p>
