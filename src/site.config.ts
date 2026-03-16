@@ -65,16 +65,16 @@ export interface SiteConfig {
 // -- Config -----------------------------------------------------------------
 
 export const siteConfig: SiteConfig = {
-  name: "Squared",
-  tagline: "You + AI, squared",
+  name: "Orchard",
+  tagline: "Grow your AI",
   description:
-    "Squared makes AI exponentially more useful over time. Persistent memory, compounding skills, and your personal context -- every session multiplies the last.",
-  url: "https://squared.dev",
+    "Orchard makes AI exponentially more useful over time. Persistent memory, compounding skills, and your personal context -- every session multiplies the last.",
+  url: "https://orchard.dev",
 
   hero: {
     heading: "AI that grows exponentially with you",
     subheading:
-      "Most AI is linear -- same blank slate, every time. Squared makes it exponential. Every conversation teaches it more about you, every workflow becomes a reusable skill, every decision compounds. Session 100 is unrecognizably better than session 1.",
+      "Most AI is linear -- same blank slate, every time. Orchard makes it exponential. Every conversation teaches it more about you, every workflow becomes a reusable skill, every decision compounds. Session 100 is unrecognizably better than session 1.",
     cta: { label: "Download", href: "#download" },
   },
 
@@ -89,7 +89,7 @@ export const siteConfig: SiteConfig = {
     {
       title: "Onboard AI to you",
       description:
-        "Squared learns how you think, what you're working on, and how you like things done. Every new session starts where the last one left off.",
+        "Orchard learns how you think, what you're working on, and how you like things done. Every new session starts where the last one left off.",
       icon: UserPlus,
     },
     {
@@ -125,13 +125,13 @@ export const siteConfig: SiteConfig = {
     {
       title: "Not just code",
       description:
-        "Research, writing, planning, ops, design, analysis -- Squared makes AI exponentially better at anything you do repeatedly.",
+        "Research, writing, planning, ops, design, analysis -- Orchard makes AI exponentially better at anything you do repeatedly.",
       icon: Layers,
     },
     {
       title: "Exponential returns",
       description:
-        "Linear tools give you the same value on day 1 and day 100. Squared compounds. The more you use it, the more it multiplies your output.",
+        "Linear tools give you the same value on day 1 and day 100. Orchard compounds. The more you use it, the more it multiplies your output.",
       icon: TrendingUp,
     },
     {
@@ -145,7 +145,7 @@ export const siteConfig: SiteConfig = {
   steps: [
     {
       number: 1,
-      title: "Install Squared",
+      title: "Install Orchard",
       description:
         "Download the desktop app. It connects to your AI tools and starts learning immediately.",
     },
@@ -153,7 +153,7 @@ export const siteConfig: SiteConfig = {
       number: 2,
       title: "Work like normal",
       description:
-        "Use any AI tool. Squared captures context, decisions, and workflows in the background -- no extra effort.",
+        "Use any AI tool. Orchard captures context, decisions, and workflows in the background -- no extra effort.",
     },
     {
       number: 3,
@@ -164,25 +164,25 @@ export const siteConfig: SiteConfig = {
   ],
 
   download: {
-    heading: "Download Squared",
+    heading: "Download Orchard",
     subheading: "Available for macOS, Windows, and Linux.",
     options: [
       {
         platform: "macos",
         label: "Download for macOS",
-        href: "https://pub-8ded0a2cb4124fdf871305165509c89f.r2.dev/latest/Context-0.1.8-arm64.dmg",
+        href: "https://pub-8ded0a2cb4124fdf871305165509c89f.r2.dev/latest/Context-0.1.9-arm64.dmg",
         note: "Apple Silicon & Intel",
       },
       {
         platform: "windows",
         label: "Download for Windows",
-        href: "https://pub-8ded0a2cb4124fdf871305165509c89f.r2.dev/latest/Context Setup 0.1.8.exe",
+        href: "https://pub-8ded0a2cb4124fdf871305165509c89f.r2.dev/latest/Context Setup 0.1.9.exe",
         note: "Windows 10+",
       },
       {
         platform: "linux",
         label: "Download for Linux",
-        href: "https://pub-8ded0a2cb4124fdf871305165509c89f.r2.dev/latest/Context-0.1.8.AppImage",
+        href: "https://pub-8ded0a2cb4124fdf871305165509c89f.r2.dev/latest/Context-0.1.9.AppImage",
         note: ".AppImage",
       },
     ],
