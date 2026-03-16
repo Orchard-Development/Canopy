@@ -1,49 +1,31 @@
-import { motion } from "framer-motion";
 import { siteConfig } from "../../site.config";
-import { Card } from "../ui/Card";
-
-const container = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.08 } },
-};
-
-const item = {
-  hidden: { opacity: 0, y: 24 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.4 } },
-};
 
 export function Features() {
   const { features } = siteConfig;
 
   return (
-    <section className="py-24 px-6">
-      <div className="max-w-6xl mx-auto">
+    <section className="py-24 px-6 border-t border-[var(--border)]">
+      <div className="max-w-5xl mx-auto">
         <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4">
-          Linear AI vs. Squared AI
+          Why Orchard
         </h2>
         <p className="text-[var(--muted-foreground)] text-center mb-16 max-w-2xl mx-auto">
-          Most AI resets every session. Squared compounds every session.
+          Most AI resets every session. Orchard compounds every session.
         </p>
 
-        <motion.div
-          variants={container}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: "-100px" }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-        >
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {features.map((feature) => (
-            <motion.div key={feature.title} variants={item}>
-              <Card className="h-full hover:border-[var(--primary)]/40 transition-colors">
-                <feature.icon className="w-8 h-8 text-[var(--primary)] mb-4" />
-                <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
-                <p className="text-[var(--muted-foreground)] text-sm leading-relaxed">
-                  {feature.description}
-                </p>
-              </Card>
-            </motion.div>
+            <div key={feature.title} className="space-y-3">
+              <div className="flex items-center gap-3">
+                <feature.icon className="w-5 h-5 text-[var(--primary)] shrink-0" />
+                <h3 className="text-base font-semibold">{feature.title}</h3>
+              </div>
+              <p className="text-[var(--muted-foreground)] text-sm leading-relaxed">
+                {feature.description}
+              </p>
+            </div>
           ))}
-        </motion.div>
+        </div>
       </div>
     </section>
   );

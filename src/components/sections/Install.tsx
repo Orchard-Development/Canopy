@@ -1,6 +1,5 @@
 import { Download, Apple, Monitor } from "lucide-react";
 import { siteConfig } from "../../site.config";
-import { Button } from "../ui/Button";
 import { useMemo } from "react";
 
 const platformIcons: Record<string, typeof Download> = {
@@ -29,7 +28,7 @@ export function Install() {
   }, [download.options]);
 
   return (
-    <section id="download" className="py-24 px-6">
+    <section id="download" className="py-24 px-6 border-t border-[var(--border)]">
       <div className="max-w-2xl mx-auto text-center">
         <h2 className="text-3xl sm:text-4xl font-bold mb-4">
           {download.heading}
@@ -41,13 +40,13 @@ export function Install() {
         {primary && (
           <div className="mb-8">
             <a href={primary.href}>
-              <Button className="text-lg px-8 py-4 h-auto">
+              <button className="inline-flex items-center justify-center rounded-lg font-semibold text-base h-12 px-8 bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90 transition-opacity cursor-pointer">
                 {(() => {
                   const Icon = platformIcons[primary.platform] ?? Download;
                   return <Icon className="w-5 h-5 mr-2" />;
                 })()}
                 {primary.label}
-              </Button>
+              </button>
             </a>
             {primary.note && (
               <p className="text-sm text-[var(--muted-foreground)] mt-3">

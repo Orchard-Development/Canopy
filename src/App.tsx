@@ -6,7 +6,7 @@ import { Footer } from "./components/sections/Footer";
 
 export function App() {
   return (
-    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+    <div className="min-h-screen text-[var(--foreground)]">
       <Hero />
       <Features />
       <HowItWorks />
