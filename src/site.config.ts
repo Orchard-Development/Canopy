@@ -170,19 +170,19 @@ export const siteConfig: SiteConfig = {
       {
         platform: "macos",
         label: "Download for macOS",
-        href: "https://pub-8ded0a2cb4124fdf871305165509c89f.r2.dev/latest/Context-0.1.12-arm64.dmg",
+        href: "https://pub-8ded0a2cb4124fdf871305165509c89f.r2.dev/latest/Context-0.1.13-arm64.dmg",
         note: "Apple Silicon & Intel",
       },
       {
         platform: "windows",
         label: "Download for Windows",
-        href: "https://pub-8ded0a2cb4124fdf871305165509c89f.r2.dev/latest/Context Setup 0.1.12.exe",
+        href: "https://pub-8ded0a2cb4124fdf871305165509c89f.r2.dev/latest/Context Setup 0.1.13.exe",
         note: "Windows 10+",
       },
       {
         platform: "linux",
         label: "Download for Linux",
-        href: "https://pub-8ded0a2cb4124fdf871305165509c89f.r2.dev/latest/Context-0.1.12.AppImage",
+        href: "https://pub-8ded0a2cb4124fdf871305165509c89f.r2.dev/latest/Context-0.1.13.AppImage",
         note: ".AppImage",
       },
     ],
