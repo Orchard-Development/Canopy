@@ -56,6 +56,9 @@ export interface SiteConfig {
     options: DownloadOption[];
     betaVersion?: string;
     beta?: DownloadOption[];
+    devVersion?: string;
+    devArchive?: string;
+    devQuickstart?: string;
   };
 
   links: {
@@ -185,6 +188,9 @@ export const siteConfig: SiteConfig = {
       },
     ],
     betaVersion: "0.1.89",
+    devVersion: "",
+    devArchive: "",
+    devQuickstart: "",
     beta: [
       {
         platform: "macos",

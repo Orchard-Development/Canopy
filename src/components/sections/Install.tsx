@@ -1,4 +1,4 @@
-import { Download, Apple, Monitor } from "lucide-react";
+import { Download, Apple, Monitor, Code } from "lucide-react";
 import { siteConfig } from "../../site.config";
 import { useMemo } from "react";
 
@@ -103,6 +103,26 @@ export function Install() {
                 );
               })}
             </div>
+
+            {download.devVersion && download.devArchive && (
+              <div className="mt-6 flex items-center justify-center gap-4">
+                <a
+                  href={download.devArchive}
+                  className="inline-flex items-center gap-1.5 text-[10px] text-[var(--muted-foreground)] opacity-40 hover:opacity-70 transition-opacity"
+                >
+                  <Code className="w-3 h-3" />
+                  Dev source v{download.devVersion}
+                </a>
+                {download.devQuickstart && (
+                  <a
+                    href={download.devQuickstart}
+                    className="text-[10px] text-[var(--muted-foreground)] opacity-40 hover:opacity-70 transition-opacity"
+                  >
+                    quickstart.ps1
+                  </a>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
