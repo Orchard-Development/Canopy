@@ -27,6 +27,9 @@ export function Install() {
     return { primary: p, others: rest };
   }, [download.options]);
 
+  const betaLinks = download.beta ?? [];
+  const showBeta = betaLinks.length > 0 && download.betaVersion !== download.stableVersion;
+
   return (
     <section id="download" className="py-24 px-6 border-t border-[var(--border)]">
       <div className="max-w-2xl mx-auto text-center">
@@ -53,6 +56,11 @@ export function Install() {
                 {primary.note}
               </p>
             )}
+            {download.stableVersion && (
+              <p className="text-xs text-[var(--muted-foreground)] mt-1 opacity-60">
+                v{download.stableVersion} — Stable
+              </p>
+            )}
           </div>
         )}
 
@@ -74,6 +82,29 @@ export function Install() {
             );
           })}
         </div>
+
+        {showBeta && (
+          <div className="mt-12 pt-8 border-t border-[var(--border)]">
+            <p className="text-xs text-[var(--muted-foreground)] opacity-60 mb-4">
+              Beta — v{download.betaVersion}
+            </p>
+            <div className="flex items-center justify-center gap-6 flex-wrap">
+              {betaLinks.map((opt) => {
+                const Icon = platformIcons[opt.platform] ?? Download;
+                return (
+                  <a
+                    key={opt.platform}
+                    href={opt.href}
+                    className="flex items-center gap-2 text-xs text-[var(--muted-foreground)] opacity-50 hover:opacity-80 transition-opacity"
+                  >
+                    <Icon className="w-3 h-3" />
+                    {opt.label}
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );

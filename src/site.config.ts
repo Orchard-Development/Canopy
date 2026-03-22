@@ -52,7 +52,10 @@ export interface SiteConfig {
   download: {
     heading: string;
     subheading: string;
+    stableVersion?: string;
     options: DownloadOption[];
+    betaVersion?: string;
+    beta?: DownloadOption[];
   };
 
   links: {
@@ -165,25 +168,29 @@ export const siteConfig: SiteConfig = {
 
   download: {
     heading: "Download Orchard",
-    subheading: "Available for macOS, Windows, and Linux.",
+    subheading: "Available for macOS and Windows.",
+    stableVersion: "0.1.69",
     options: [
       {
         platform: "macos",
         label: "Download for macOS",
-        href: "https://pub-8ded0a2cb4124fdf871305165509c89f.r2.dev/latest/Context-0.1.20-arm64.dmg",
-        note: "Apple Silicon & Intel",
+        href: "https://pub-8ded0a2cb4124fdf871305165509c89f.r2.dev/0.1.66/Orchard-0.1.66-arm64-mac.zip",
+        note: "Apple Silicon (0.1.66)",
       },
       {
         platform: "windows",
         label: "Download for Windows",
-        href: "https://pub-8ded0a2cb4124fdf871305165509c89f.r2.dev/latest/Context Setup 0.1.20.exe",
-        note: "Windows 10+",
+        href: "https://pub-8ded0a2cb4124fdf871305165509c89f.r2.dev/0.1.69/Orchard%20Setup%200.1.69.exe",
+        note: "Windows 10+ (x64)",
       },
+    ],
+    betaVersion: "0.1.81",
+    beta: [
       {
-        platform: "linux",
-        label: "Download for Linux",
-        href: "https://pub-8ded0a2cb4124fdf871305165509c89f.r2.dev/latest/Context-0.1.20.AppImage",
-        note: ".AppImage",
+        platform: "windows",
+        label: "Windows",
+        href: "https://pub-8ded0a2cb4124fdf871305165509c89f.r2.dev/beta/0.1.81/Orchard-Setup-0.1.81.exe",
+        note: "Windows 10+ (x64)",
       },
     ],
   },
@@ -191,6 +198,6 @@ export const siteConfig: SiteConfig = {
   links: {
     github: "https://github.com/context-dev/context",
     docs: "/docs",
-    license: "MIT",
+    license: "",
   },
 };
