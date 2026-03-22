@@ -184,24 +184,24 @@ export const siteConfig: SiteConfig = {
         note: "Windows 10+ (x64)",
       },
     ],
-    betaVersion: "0.1.88",
+    betaVersion: "0.1.89",
     beta: [
       {
         platform: "macos",
         label: "macOS",
-        href: "https://pub-8ded0a2cb4124fdf871305165509c89f.r2.dev/beta/0.1.88/Orchard-0.1.88-arm64.dmg",
+        href: "https://pub-8ded0a2cb4124fdf871305165509c89f.r2.dev/beta/0.1.89/Orchard-0.1.89-arm64.dmg",
         note: "Apple Silicon",
       },
       {
         platform: "windows",
         label: "Windows",
-        href: "https://pub-8ded0a2cb4124fdf871305165509c89f.r2.dev/beta/0.1.88/Orchard-Setup-0.1.88.exe",
+        href: "https://pub-8ded0a2cb4124fdf871305165509c89f.r2.dev/beta/0.1.89/Orchard%20Setup%200.1.89.exe",
         note: "Windows 10+ (x64)",
       },
       {
         platform: "linux",
         label: "Linux",
-        href: "https://pub-8ded0a2cb4124fdf871305165509c89f.r2.dev/beta/0.1.88/Orchard-0.1.88.AppImage",
+        href: "https://pub-8ded0a2cb4124fdf871305165509c89f.r2.dev/beta/0.1.89/Orchard-0.1.89.AppImage",
         note: "AppImage",
       },
     ],
