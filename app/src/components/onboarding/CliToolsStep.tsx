@@ -1,0 +1,190 @@
+import { useState, useEffect, useCallback } from "react";
+import {
+  Box,
+  Typography,
+  Button,
+  CircularProgress,
+  Stack,
+  Chip,
+} from "@mui/material";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import { api } from "../../lib/api";
+import type { StepProps } from "./registry";
+
+interface ToolState {
+  installed: boolean;
+  version: string | null;
+}
+
+interface Status {
+  claude: ToolState;
+  codex: ToolState;
+  opencode: ToolState;
+}
+
+export function CliToolsStep({ onComplete, onBack, onSkip, state, setState }: StepProps) {
+  const [status, setStatus] = useState<Status | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [installing, setInstalling] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      const s = await api.cliToolsStatus();
+      setStatus(s);
+      setState({ cliTools: { claude: s.claude.installed, codex: s.codex.installed, opencode: s.opencode.installed } });
+    } catch {
+      setStatus({
+        claude: { installed: false, version: null },
+        codex: { installed: false, version: null },
+        opencode: { installed: false, version: null },
+      });
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  useEffect(() => {
+    if (!status || loading) return;
+    if (status.claude.installed && status.codex.installed && status.opencode.installed) {
+      const timer = setTimeout(onComplete, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [status, loading, onComplete]);
+
+  async function handleInstall(tool: "claude" | "codex" | "opencode") {
+    setInstalling(tool);
+    setError(null);
+    try {
+      const result = await api.cliToolsInstall(tool);
+      if (!result.success) {
+        setError(result.error ?? `Failed to install ${tool}`);
+      } else if (result.installed) {
+        // Use install response directly -- check_tool may miss newly installed
+        // tools due to stale PATH in the BEAM process
+        setStatus((prev) => prev ? {
+          ...prev,
+          [tool]: { installed: true, version: result.version ?? null },
+        } : prev);
+        const cliTools = { ...state.cliTools, [tool]: true };
+        setState({ cliTools });
+      } else {
+        await refresh();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+    setInstalling(null);
+  }
+
+  const allReady = status?.claude.installed && status?.codex.installed && status?.opencode.installed;
+
+  return (
+    <Box sx={{ maxWidth: 480, mx: "auto", px: 3, textAlign: "center" }}>
+      <Typography variant="h4" fontWeight={700} gutterBottom>
+        AI Coding CLIs
+      </Typography>
+      <Typography color="text.secondary" sx={{ mb: 4 }}>
+        Install the Claude Code, Codex, and OpenCode command-line tools for
+        AI-powered coding directly from your terminal.
+      </Typography>
+
+      {loading ? (
+        <CircularProgress />
+      ) : allReady ? (
+        <Stack alignItems="center" spacing={2}>
+          <CheckCircleIcon
+            sx={{
+              fontSize: 64,
+              color: "success.main",
+              animation: "story-enter 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+            }}
+          />
+          <Typography
+            variant="h6"
+            color="success.main"
+            sx={{ animation: "story-enter 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards", opacity: 0 }}
+          >
+            Already installed
+          </Typography>
+          <Stack direction="row" spacing={1} flexWrap="wrap" justifyContent="center">
+            <Chip label={`claude ${status!.claude.version}`} color="success" />
+            <Chip label={`codex ${status!.codex.version}`} color="success" />
+            <Chip label={`opencode ${status!.opencode.version}`} color="success" />
+          </Stack>
+        </Stack>
+      ) : (
+        <Stack spacing={3} alignItems="center">
+          <ToolRow
+            name="Claude Code"
+            bin="claude"
+            state={status!.claude}
+            installing={installing === "claude"}
+            onInstall={() => handleInstall("claude")}
+          />
+          <ToolRow
+            name="Codex"
+            bin="codex"
+            state={status!.codex}
+            installing={installing === "codex"}
+            onInstall={() => handleInstall("codex")}
+          />
+          <ToolRow
+            name="OpenCode"
+            bin="opencode"
+            state={status!.opencode}
+            installing={installing === "opencode"}
+            onInstall={() => handleInstall("opencode")}
+          />
+          {error && (
+            <Typography color="error" variant="body2">{error}</Typography>
+          )}
+        </Stack>
+      )}
+
+      <Stack direction="row" spacing={2} justifyContent="center" sx={{ mt: 4 }}>
+        <Button variant="text" onClick={onBack}>Back</Button>
+        <Button variant="text" onClick={onSkip}>Skip</Button>
+      </Stack>
+    </Box>
+  );
+}
+
+function ToolRow({ name, bin, state, installing, onInstall }: {
+  name: string;
+  bin: string;
+  state: ToolState;
+  installing: boolean;
+  onInstall: () => void;
+}) {
+  if (state.installed) {
+    return (
+      <Stack direction="row" alignItems="center" spacing={1.5}>
+        <CheckCircleIcon color="success" />
+        <Typography>{name}</Typography>
+        <Chip label={`${bin} ${state.version}`} size="small" color="success" />
+      </Stack>
+    );
+  }
+
+  return (
+    <Stack direction="row" alignItems="center" spacing={2}>
+      <Typography>{name}</Typography>
+      <Button
+        variant="contained"
+        onClick={onInstall}
+        disabled={installing}
+        startIcon={
+          installing ? <CircularProgress size={16} color="inherit" /> : undefined
+        }
+        disableElevation
+        size="small"
+        sx={{ minWidth: 120 }}
+      >
+        {installing ? "Installing..." : "Install"}
+      </Button>
+    </Stack>
+  );
+}

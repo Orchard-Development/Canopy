@@ -1,0 +1,5 @@
+{
+  "description": "Views listed here are excluded from production builds. They exist locally for development but are not shipped in the Electron app.",
+  "exclude": [],
+  "registryKeys": []
+}
