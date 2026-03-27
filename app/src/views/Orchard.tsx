@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { Box, CircularProgress } from "@mui/material";
 import { useActiveProject } from "../hooks/useActiveProject";
 import { ProjectProvider } from "../hooks/useProject";
-import { OrchardHeader } from "../components/OrchardHeader";
 
 const ProjectDetail = lazy(() => import("./ProjectDetail"));
 
@@ -30,7 +29,6 @@ export default function Orchard() {
   return (
     <ProjectProvider projectId={project.id}>
       <Box sx={{ pt: 2 }}>
-        <OrchardHeader />
         <Suspense fallback={<Loading />}>
           <ProjectDetail embedded />
         </Suspense>

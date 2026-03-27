@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Box,
   Popover,
@@ -13,9 +13,10 @@ import {
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import CheckIcon from "@mui/icons-material/Check";
 import AddIcon from "@mui/icons-material/Add";
+import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import LanIcon from "@mui/icons-material/Lan";
 import { useNavigate } from "react-router-dom";
-import { api, setRemoteOrchard, type ProjectRecord, type MeshStatus } from "../lib/api";
+import { setRemoteOrchard, type ProjectRecord, type MeshStatus } from "../lib/api";
 import { useActiveProject } from "../hooks/useActiveProject";
 import { ProjectLogo } from "./project/ProjectLogo";
 
@@ -25,42 +26,98 @@ interface RemoteProject extends ProjectRecord {
   _token: string;
 }
 
+const ORDER_KEY = "orchard:project-order";
+
+function loadOrder(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(ORDER_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveOrder(ids: string[]) {
+  localStorage.setItem(ORDER_KEY, JSON.stringify(ids));
+}
+
+function sortByOrder(projects: ProjectRecord[], order: string[]): ProjectRecord[] {
+  if (order.length === 0) return projects;
+  const indexed = new Map(projects.map((p) => [p.id, p]));
+  const sorted: ProjectRecord[] = [];
+  for (const id of order) {
+    const p = indexed.get(id);
+    if (p) {
+      sorted.push(p);
+      indexed.delete(id);
+    }
+  }
+  for (const p of indexed.values()) sorted.push(p);
+  return sorted;
+}
+
+function getBranding(p: ProjectRecord) {
+  const b = p.config?.branding as Record<string, string> | undefined;
+  return { logoUrl: b?.logoUrl, faviconUrl: b?.faviconUrl };
+}
+
 export function ProjectSwitcher() {
   const anchorRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [remoteProjects, setRemoteProjects] = useState<RemoteProject[]>([]);
   const [activeNode, setActiveNode] = useState<string | null>(null);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [overIdx, setOverIdx] = useState<number | null>(null);
   const navigate = useNavigate();
   const { project: active, activate } = useActiveProject();
 
   useEffect(() => {
     if (!open) return;
-    // Always fetch local projects from localhost, regardless of remote orchard state
-    fetch("/api/projects").then((r) => r.json()).then(setProjects).catch(() => {});
-    // Mesh status is always local
-    fetch("/api/mesh/status").then((r) => r.json()).then(async (status: MeshStatus) => {
-      const remote: RemoteProject[] = [];
-      for (const node of status.connected_nodes) {
-        if (!node.token || !node.http_url) continue;
-        try {
-          const res = await fetch(`${node.http_url}/api/projects`, {
-            headers: { Authorization: `Bearer ${node.token}` },
-          });
-          if (!res.ok) continue;
-          const nodeProjects: ProjectRecord[] = await res.json();
-          for (const p of nodeProjects) {
-            remote.push({ ...p, _node: node.name, _httpUrl: node.http_url, _token: node.token });
-          }
-        } catch { /* node unreachable */ }
-      }
-      setRemoteProjects(remote);
-    }).catch(() => {});
+    fetch("/api/projects")
+      .then((r) => r.json())
+      .then((list: ProjectRecord[]) => setProjects(sortByOrder(list, loadOrder())))
+      .catch(() => {});
+    fetch("/api/mesh/status")
+      .then((r) => r.json())
+      .then(async (status: MeshStatus) => {
+        const remote: RemoteProject[] = [];
+        for (const node of status.connected_nodes) {
+          if (!node.token || !node.http_url) continue;
+          try {
+            const res = await fetch(`${node.http_url}/api/projects`, {
+              headers: { Authorization: `Bearer ${node.token}` },
+            });
+            if (!res.ok) continue;
+            const nodeProjects: ProjectRecord[] = await res.json();
+            for (const p of nodeProjects) {
+              remote.push({ ...p, _node: node.name, _httpUrl: node.http_url, _token: node.token });
+            }
+          } catch { /* node unreachable */ }
+        }
+        setRemoteProjects(remote);
+      })
+      .catch(() => {});
   }, [open]);
+
+  const handleDragEnd = useCallback(() => {
+    if (dragIdx !== null && overIdx !== null && dragIdx !== overIdx) {
+      setProjects((prev) => {
+        const next = [...prev];
+        const [moved] = next.splice(dragIdx, 1);
+        next.splice(overIdx, 0, moved);
+        saveOrder(next.map((p) => p.id));
+        return next;
+      });
+    }
+    setDragIdx(null);
+    setOverIdx(null);
+  }, [dragIdx, overIdx]);
 
   const label = active
     ? `${active.name}${activeNode ? " (remote)" : ""}`
     : "No project";
+
+  const activeBranding = active ? getBranding(active) : {};
 
   function handleSelect(p: ProjectRecord) {
     setRemoteOrchard(null, null);
@@ -86,7 +143,7 @@ export function ProjectSwitcher() {
         sx={{
           display: "flex",
           alignItems: "center",
-          gap: 0.5,
+          gap: 0.75,
           cursor: "pointer",
           borderRadius: 1,
           px: 0.75,
@@ -97,8 +154,8 @@ export function ProjectSwitcher() {
         {active && (
           <ProjectLogo
             name={active.name}
-            logoUrl={(active.config?.branding as Record<string, string> | undefined)?.logoUrl}
-            faviconUrl={(active.config?.branding as Record<string, string> | undefined)?.faviconUrl}
+            logoUrl={activeBranding.logoUrl}
+            faviconUrl={activeBranding.faviconUrl}
             size={24}
           />
         )}
@@ -132,7 +189,7 @@ export function ProjectSwitcher() {
         anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
         transformOrigin={{ vertical: "top", horizontal: "left" }}
         slotProps={{
-          paper: { sx: { width: 300, maxHeight: 400, mt: 0.5 } },
+          paper: { sx: { width: 320, maxHeight: 400, mt: 0.5 } },
         }}
       >
         <Box sx={{ px: 2, py: 1.5 }}>
@@ -148,45 +205,58 @@ export function ProjectSwitcher() {
           </Box>
         )}
         <List dense disablePadding sx={{ pb: 1 }}>
-          {projects.map((p) => (
-            <ListItemButton
-              key={p.id}
-              selected={active?.id === p.id}
-              onClick={() => handleSelect(p)}
-              sx={{ px: 2, py: 0.5 }}
-            >
-              <ListItemIcon sx={{ minWidth: 32 }}>
-                <ProjectLogo
-                  name={p.name}
-                  logoUrl={(p.config?.branding as Record<string, string> | undefined)?.logoUrl}
-                  faviconUrl={(p.config?.branding as Record<string, string> | undefined)?.faviconUrl}
-                  size={22}
-                />
-              </ListItemIcon>
-              <ListItemText
-                primary={p.name}
-                secondary={p.description || p.root_path}
-                primaryTypographyProps={{
-                  variant: "body2",
-                  fontWeight: active?.id === p.id ? 600 : 400,
+          {projects.map((p, idx) => {
+            const b = getBranding(p);
+            return (
+              <ListItemButton
+                key={p.id}
+                selected={active?.id === p.id && !activeNode}
+                onClick={() => handleSelect(p)}
+                draggable
+                onDragStart={() => setDragIdx(idx)}
+                onDragOver={(e) => { e.preventDefault(); setOverIdx(idx); }}
+                onDragEnd={handleDragEnd}
+                sx={{
+                  px: 2,
+                  py: 0.75,
+                  opacity: dragIdx === idx ? 0.4 : 1,
+                  bgcolor: overIdx === idx && dragIdx !== null && dragIdx !== idx
+                    ? "action.hover"
+                    : undefined,
+                  transition: "background-color 0.15s",
                 }}
-                secondaryTypographyProps={{
-                  variant: "caption",
-                  noWrap: true,
-                }}
-              />
-              {active?.id === p.id && (
-                <Chip
-                  icon={<CheckIcon sx={{ fontSize: 14 }} />}
-                  label="Active"
-                  size="small"
-                  color="primary"
-                  variant="outlined"
-                  sx={{ ml: 1, height: 22, fontSize: 11 }}
+              >
+                <ListItemIcon sx={{ minWidth: 36 }}>
+                  <ProjectLogo name={p.name} logoUrl={b.logoUrl} faviconUrl={b.faviconUrl} size={28} />
+                </ListItemIcon>
+                <ListItemText
+                  primary={p.name}
+                  secondary={p.description || p.root_path}
+                  primaryTypographyProps={{
+                    variant: "body2",
+                    fontWeight: active?.id === p.id ? 600 : 400,
+                  }}
+                  secondaryTypographyProps={{
+                    variant: "caption",
+                    noWrap: true,
+                  }}
                 />
-              )}
-            </ListItemButton>
-          ))}
+                {active?.id === p.id && !activeNode && (
+                  <Chip
+                    icon={<CheckIcon sx={{ fontSize: 14 }} />}
+                    label="Active"
+                    size="small"
+                    color="primary"
+                    variant="outlined"
+                    sx={{ ml: 1, height: 22, fontSize: 11 }}
+                  />
+                )}
+                <DragIndicatorIcon
+                  sx={{ fontSize: 16, color: "text.disabled", ml: 0.5, cursor: "grab", flexShrink: 0 }}
+                />
+              </ListItemButton>
+            );
+          })}
           {remoteProjects.length > 0 && (
             <>
               <Divider sx={{ my: 0.5 }} />
@@ -195,45 +265,48 @@ export function ProjectSwitcher() {
                   Remote orchards
                 </Typography>
               </Box>
-              {remoteProjects.map((p) => (
-                <ListItemButton
-                  key={`${p._node}:${p.id}`}
-                  selected={active?.id === p.id && activeNode === p._node}
-                  onClick={() => handleSelectRemote(p)}
-                  sx={{ px: 2, py: 0.5 }}
-                >
-                  <ListItemIcon sx={{ minWidth: 28 }}>
-                    <LanIcon sx={{ fontSize: 16, color: "info.main" }} />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={p.name}
-                    secondary={p._node.split("@")[0]}
-                    primaryTypographyProps={{
-                      variant: "body2",
-                      fontWeight: active?.id === p.id && activeNode === p._node ? 600 : 400,
-                    }}
-                    secondaryTypographyProps={{ variant: "caption", noWrap: true }}
-                  />
-                  {active?.id === p.id && activeNode === p._node && (
-                    <Chip
-                      icon={<CheckIcon sx={{ fontSize: 14 }} />}
-                      label="Active"
-                      size="small"
-                      color="info"
-                      variant="outlined"
-                      sx={{ ml: 1, height: 22, fontSize: 11 }}
+              {remoteProjects.map((p) => {
+                const b = getBranding(p);
+                return (
+                  <ListItemButton
+                    key={`${p._node}:${p.id}`}
+                    selected={active?.id === p.id && activeNode === p._node}
+                    onClick={() => handleSelectRemote(p)}
+                    sx={{ px: 2, py: 0.75 }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 36 }}>
+                      <ProjectLogo name={p.name} logoUrl={b.logoUrl} faviconUrl={b.faviconUrl} size={28} />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={p.name}
+                      secondary={p._node.split("@")[0]}
+                      primaryTypographyProps={{
+                        variant: "body2",
+                        fontWeight: active?.id === p.id && activeNode === p._node ? 600 : 400,
+                      }}
+                      secondaryTypographyProps={{ variant: "caption", noWrap: true }}
                     />
-                  )}
-                </ListItemButton>
-              ))}
+                    {active?.id === p.id && activeNode === p._node && (
+                      <Chip
+                        icon={<CheckIcon sx={{ fontSize: 14 }} />}
+                        label="Active"
+                        size="small"
+                        color="info"
+                        variant="outlined"
+                        sx={{ ml: 1, height: 22, fontSize: 11 }}
+                      />
+                    )}
+                  </ListItemButton>
+                );
+              })}
             </>
           )}
           <Divider sx={{ my: 0.5 }} />
           <ListItemButton
             onClick={() => { setOpen(false); navigate("/projects/new"); }}
-            sx={{ px: 2, py: 0.5 }}
+            sx={{ px: 2, py: 0.75 }}
           >
-            <ListItemIcon sx={{ minWidth: 32 }}>
+            <ListItemIcon sx={{ minWidth: 36 }}>
               <AddIcon fontSize="small" color="primary" />
             </ListItemIcon>
             <ListItemText
