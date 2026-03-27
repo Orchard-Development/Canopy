@@ -22,7 +22,6 @@ import { PageLayout } from "../components/PageLayout";
 import { ProjectDashboard } from "../components/project/ProjectDashboard";
 import { IntelligenceTab } from "../components/project/IntelligenceTab";
 import { SettingsTab } from "../components/project/SettingsTab";
-import { ProjectLogo } from "../components/project/ProjectLogo";
 
 const IDE_ICONS: Record<string, React.ReactElement> = {
   "claude-code": <SmartToyIcon fontSize="small" />,
@@ -99,13 +98,16 @@ export default function ProjectDetail({ embedded }: { embedded?: boolean }) {
   );
 
   const tabBar = (
-    <Tabs
-      value={tabIndex}
-      onChange={(_, idx) => setParams({ tab: TAB_KEYS[idx] })}
-      sx={{ mb: 2, borderBottom: 1, borderColor: "divider" }}
-    >
-      {TAB_KEYS.map((key) => <Tab key={key} label={TAB_LABELS[key]} />)}
-    </Tabs>
+    <Stack direction="row" alignItems="center" sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+      <Tabs
+        value={tabIndex}
+        onChange={(_, idx) => setParams({ tab: TAB_KEYS[idx] })}
+        sx={{ flex: 1 }}
+      >
+        {TAB_KEYS.map((key) => <Tab key={key} label={TAB_LABELS[key]} />)}
+      </Tabs>
+      {actions}
+    </Stack>
   );
 
   const tabContent = (
@@ -131,16 +133,8 @@ export default function ProjectDetail({ embedded }: { embedded?: boolean }) {
     );
   }
 
-  const branding = project.config?.branding as
-    | { logoUrl?: string; faviconUrl?: string; ogImage?: string; websiteUrl?: string }
-    | undefined;
-
   return (
-    <PageLayout
-      title={project.name}
-      icon={<ProjectLogo name={project.name} logoUrl={branding?.logoUrl} faviconUrl={branding?.faviconUrl} size={32} />}
-      actions={actions}
-    >
+    <PageLayout title="">
       {tabBar}
       {tabContent}
     </PageLayout>
