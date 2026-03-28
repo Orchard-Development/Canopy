@@ -33,8 +33,13 @@ import { useCloudSync } from "../hooks/useCloudSync";
 import { ViewsCard } from "../components/project/ViewsCard";
 import { SeedPacksCard } from "../components/settings/SeedPacksCard";
 import { AutomationCard } from "../components/settings/AutomationCard";
+import { ModelDefaultsCard } from "../components/settings/ModelDefaultsCard";
+import { NotificationsCard } from "../components/settings/NotificationsCard";
+import { DesktopPermissionsCard } from "../components/settings/DesktopPermissionsCard";
+import { UsageStatsCard } from "../components/settings/UsageStatsCard";
+import { useSettingsContext } from "../contexts/SettingsContext";
 
-const TAB_KEYS = ["providers", "secrets", "audio", "appearance", "views", "seedpacks", "automation", "general", "engine", "account"] as const;
+const TAB_KEYS = ["providers", "secrets", "audio", "appearance", "views", "seedpacks", "automation", "stats", "notifications", "general", "engine", "account"] as const;
 type TabKey = (typeof TAB_KEYS)[number];
 
 interface ModelOption {
@@ -44,6 +49,7 @@ interface ModelOption {
 }
 
 function useSettings() {
+  const { setAllSettings } = useSettingsContext();
   const [settings, setSettings] = useState<SettingsData>({});
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,6 +74,7 @@ function useSettings() {
         body: JSON.stringify(settings),
       });
       if (!res.ok) throw new Error(await res.text());
+      setAllSettings(settings as Record<string, string>);
       setSaved(true);
       setError(null);
       setTimeout(() => setSaved(false), 3000);
@@ -284,6 +291,7 @@ function ResetCard() {
 function GeneralTab({ s, devMode }: { s: ReturnType<typeof useSettings>; devMode: boolean }) {
   return (
     <Box sx={{ maxWidth: 720, mx: "auto" }}>
+      <DesktopPermissionsCard />
       <RemoteAccessCard
         remoteEnabled={s.settings.remote_access_enabled ?? "true"}
         onUpdate={s.update}
@@ -445,6 +453,8 @@ function SettingsContent() {
     views: "Views",
     seedpacks: "Seed Packs",
     automation: "Automation",
+    stats: "Stats",
+    notifications: "Notifications",
     general: "General",
     engine: "Engine",
     account: "Account",
@@ -474,7 +484,16 @@ function SettingsContent() {
       {tab === "appearance" && <Box data-tour="tour-settings-appearance"><AppearanceTab /></Box>}
       {tab === "views" && <Box data-tour="tour-settings-views"><ViewsTab /></Box>}
       {tab === "seedpacks" && <Box sx={{ maxWidth: 720, mx: "auto" }}><SeedPacksCard /></Box>}
-      {tab === "automation" && <Box sx={{ maxWidth: 720, mx: "auto" }}><AutomationCard /></Box>}
+      {tab === "automation" && (
+        <Box sx={{ maxWidth: 720, mx: "auto" }}>
+          <Stack spacing={3}>
+            <AutomationCard />
+            <ModelDefaultsCard settings={s.settings} models={s.models} onUpdate={s.update} />
+          </Stack>
+        </Box>
+      )}
+      {tab === "stats" && <Box sx={{ maxWidth: 720, mx: "auto" }}><UsageStatsCard /></Box>}
+      {tab === "notifications" && <Box sx={{ maxWidth: 720, mx: "auto" }}><NotificationsCard /></Box>}
       {tab === "general" && <GeneralTab s={s} devMode={devMode} />}
       {tab === "engine" && <EngineView />}
       {tab === "account" && <AccountTab s={s} />}
