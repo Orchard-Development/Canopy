@@ -158,5 +158,6 @@ function actionMetaToButton(meta: EventActionMeta): ReactNode {
 function toastDuration(event: EngineEvent): number {
   if (event.severity === "error") return 6000;
   if (event.category === "proposal") return 0; // sticky
+  if (event.event === "session:needs_attention") return 0; // sticky -- user must dismiss
   return 3000;
 }

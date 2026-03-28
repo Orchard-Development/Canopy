@@ -37,6 +37,7 @@ export const EVENTS = {
     pokerFired: "session:poker_fired",
     prettier: "session:prettier",
     open: "terminal:open",
+    needsAttention: "session:needs_attention",
   },
   sessions: "sessions:updated",
   mcp: {

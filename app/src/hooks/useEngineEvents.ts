@@ -121,6 +121,21 @@ export function useEngineEvents(channel: Channel | null): void {
     });
   });
 
+  useChannelSub(channel, EVENTS.session.needsAttention, (payload: Record<string, unknown>) => {
+    const id = payload.id as string;
+    const label = (payload.label as string) || "Terminal";
+    const reason = (payload.reason as string) || "Needs attention";
+    const idleSec = (payload.idle_seconds as number) || 0;
+    emit({
+      category: "session",
+      event: "session:needs_attention",
+      message: `'${label}' needs attention -- ${reason} (idle ${idleSec}s)`,
+      severity: "warning",
+      data: payload,
+      actionMeta: { type: "focus-session", sessionId: id, label },
+    });
+  });
+
   useChannelSub(channel, EVENTS.analysis.complete, (payload: Record<string, unknown>) => {
     emit({
       category: "analysis",
