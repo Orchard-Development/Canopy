@@ -9,6 +9,7 @@
 import { useRef, useEffect, useState } from "react";
 import {
   Box,
+  Button,
   Paper,
   Typography,
   IconButton,
@@ -17,6 +18,7 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import DesktopWindowsIcon from "@mui/icons-material/DesktopWindows";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import MouseIcon from "@mui/icons-material/Mouse";
 import { useDesktopSession } from "../../hooks/useDesktopSession";
 import type { Channel } from "phoenix";
@@ -36,7 +38,7 @@ interface Props {
 }
 
 export function DesktopEmbed({ sessionId, channel, windowTitle, windowTarget }: Props) {
-  const { title, isLive, canvasRef, handleClick, handleKeyDown, handleScroll } =
+  const { title, isLive, error, canvasRef, handleClick, handleKeyDown, handleScroll, retry } =
     useDesktopSession(sessionId, channel, windowTitle, windowTarget);
   const [hasFrame, setHasFrame] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -184,7 +186,7 @@ export function DesktopEmbed({ sessionId, channel, windowTitle, windowTarget }: 
         />
 
         {/* Loading state */}
-        {!hasFrame && isLive && (
+        {!hasFrame && isLive && !error && (
           <Box
             sx={{
               display: "flex",
@@ -197,6 +199,43 @@ export function DesktopEmbed({ sessionId, channel, windowTitle, windowTarget }: 
             <Typography variant="caption" color="text.secondary">
               Connecting to desktop...
             </Typography>
+          </Box>
+        )}
+
+        {/* Error state */}
+        {error && (
+          <Box
+            sx={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 1.5,
+              bgcolor: "rgba(0,0,0,0.5)",
+              zIndex: 1,
+            }}
+          >
+            <ErrorOutlineIcon sx={{ color: "error.light", fontSize: 32 }} />
+            <Typography
+              variant="body2"
+              sx={{ color: "white", fontWeight: 500, textAlign: "center", px: 2 }}
+            >
+              {error}
+            </Typography>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={retry}
+              sx={{
+                color: "white",
+                borderColor: "rgba(255,255,255,0.5)",
+                "&:hover": { borderColor: "white", bgcolor: "rgba(255,255,255,0.1)" },
+              }}
+            >
+              Retry
+            </Button>
           </Box>
         )}
 
@@ -223,7 +262,7 @@ export function DesktopEmbed({ sessionId, channel, windowTitle, windowTarget }: 
         )}
 
         {/* Session ended overlay */}
-        {!isLive && (
+        {!isLive && !error && (
           <Box
             sx={{
               position: "absolute",

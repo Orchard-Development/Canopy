@@ -31,10 +31,11 @@ interface Props {
   onViewLog?: () => void;
   onOpenLogFile?: () => void;
   onAiSync?: (id: string, updates: { label?: string; summary?: string; lastAiUpdate?: number }) => void;
+  externalRefreshKey?: number;
 }
 
 export const TerminalCard = forwardRef(function TerminalCard(
-  { tab, profile, colSpan, rowSpan, isDragging, onResizeStart, onReorderStart, onExpand, onCardClick, onKill, onExit, onViewLog, onOpenLogFile, onAiSync }: Props,
+  { tab, profile, colSpan, rowSpan, isDragging, onResizeStart, onReorderStart, onExpand, onCardClick, onKill, onExit, onViewLog, onOpenLogFile, onAiSync, externalRefreshKey }: Props,
   forwardedRef: React.ForwardedRef<HTMLElement>,
 ) {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -332,7 +333,7 @@ export const TerminalCard = forwardRef(function TerminalCard(
         </Box>
       )}
       <CardContent sx={{ flex: 1, p: 0, "&:last-child": { pb: 0 }, overflow: "hidden" }}>
-        <TerminalPanel key={`${tab.id}-${refreshKey}`} sessionId={tab.id} active onExit={onExit} />
+        <TerminalPanel key={`${tab.id}-${refreshKey}-${externalRefreshKey || 0}`} sessionId={tab.id} active onExit={onExit} />
       </CardContent>
       {/* Left edge drag-to-reorder handle */}
       <Box

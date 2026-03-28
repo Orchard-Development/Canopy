@@ -160,6 +160,23 @@ export function useEngineEvents(channel: Channel | null): void {
     return { message: `Session ${snakeToWords(action)}`, severity: "info" };
   });
 
+  // Toast when an agent session ends -- no auto-focus
+  useChannelSub(channel, EVENTS.agent.lifecycle, (payload: Record<string, unknown>) => {
+    const action = stripPrefix(payload.event as string | undefined);
+    if (action !== "session_end" && action !== "stop") return;
+    const sessionId = payload.session_id as string | undefined;
+    if (!sessionId) return;
+    const label = (payload.agent_type as string) || "Agent";
+    emit({
+      category: "agent",
+      event: "session_end",
+      message: `${label} session ended`,
+      severity: "info",
+      data: payload,
+      actionMeta: { type: "focus-session", sessionId, label },
+    });
+  });
+
   useAgentEvent(channel, emit, EVENTS.agent.tool, "tool", (p) => {
     const tool = p.tool_name || (p.data?.tool_name as string) || "unknown";
     const action = stripPrefix(p.event);

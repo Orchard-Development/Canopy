@@ -125,6 +125,12 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
   const tabsRef = useRef(tabs);
   tabsRef.current = tabs;
 
+  const activeTabRef = useRef(activeTab);
+  activeTabRef.current = activeTab;
+
+  // When an agent terminal auto-closes, navigate back to whichever terminal was active before it was opened
+  const returnToIdRef = useRef<string | null>(null);
+
   const pendingFocusSync = useRef(false);
   const prevOpen = useRef(open);
   const mountedRef = useRef(false);
@@ -306,6 +312,12 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
       setScrollToSessionId(sessionId);
       setTimeout(() => setScrollToSessionId(null), 100);
 
+      // Save current tab as return-to target before switching to the new session
+      const currentTab = tabsRef.current[activeTabRef.current];
+      if (currentTab && currentTab.id !== sessionId && currentTab.exitCode === undefined) {
+        returnToIdRef.current = currentTab.id;
+      }
+
       if (attachedSessions.current.has(sessionId)) {
         // Session already exists -- just focus it
         const filtered = tabsRef.current.filter((t) =>
@@ -368,8 +380,30 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
         }).catch((err) => {
           // Session no longer exists on the server -- remove the dead tab
           if (err?.message?.includes("404")) {
+            const removedFilteredIdx = tabsRef.current.findIndex((t) => t.id === tab.id);
+            const wasActive = removedFilteredIdx >= 0 && removedFilteredIdx === activeTabRef.current;
             setTabs((prev) => prev.filter((t) => t.id !== tab.id));
             attachedSessions.current.delete(tab.id);
+            if (wasActive) {
+              // Navigate back to the terminal that was active before the agent session was opened
+              setTimeout(() => {
+                const returnId = returnToIdRef.current;
+                if (returnId) {
+                  const idx = tabsRef.current.findIndex((t) => t.id === returnId && t.exitCode === undefined);
+                  if (idx >= 0) {
+                    setActiveTab(idx);
+                    returnToIdRef.current = null;
+                    return;
+                  }
+                }
+                // Fallback: last live tab
+                const liveIdx = tabsRef.current.reduce(
+                  (best, t, i) => (t.exitCode === undefined && t.id !== tab.id ? i : best),
+                  -1,
+                );
+                if (liveIdx >= 0) setActiveTab(liveIdx);
+              }, 0);
+            }
           }
         });
       }

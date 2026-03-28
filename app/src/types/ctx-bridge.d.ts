@@ -39,7 +39,13 @@ interface ViewerRegion {
   height: number;
 }
 
+interface DesktopPermissions {
+  screenRecording: boolean;
+  accessibility: boolean;
+}
+
 interface ViewerBridge {
+  checkPermissions?: () => Promise<DesktopPermissions>;
   listWindows: () => Promise<
     Array<{ title: string; pid?: number; app?: string; region: ViewerRegion }>
   >;

@@ -266,9 +266,18 @@ export function TerminalDrawerContent({
 }: Props) {
   const [summaryMode, setSummaryMode] = useState(false);
   const [refreshKeys, setRefreshKeys] = useState<Record<string, number>>({});
+  const [globalRefreshKey, setGlobalRefreshKey] = useState(0);
   const handleRefresh = () => {
     const tab = tabs[activeTab];
     if (tab) setRefreshKeys((prev) => ({ ...prev, [tab.id]: (prev[tab.id] || 0) + 1 }));
+  };
+  const handleRefreshAll = () => {
+    setRefreshKeys((prev) => {
+      const next: Record<string, number> = {};
+      for (const tab of tabs) next[tab.id] = (prev[tab.id] || 0) + 1;
+      return next;
+    });
+    setGlobalRefreshKey((k) => k + 1);
   };
   const [historyOpen, setHistoryOpen] = useState(false);
   const gridScrollRef = useRef<HTMLDivElement>(null);
@@ -494,6 +503,11 @@ export function TerminalDrawerContent({
               </IconButton>
             </Tooltip>
           )}
+          <Tooltip title="Refresh all terminals">
+            <IconButton size="small" onClick={handleRefreshAll} sx={{ mr: 0.5 }}>
+              <RefreshIcon fontSize="small" color="primary" />
+            </IconButton>
+          </Tooltip>
           <Tooltip title={summaryMode ? "Exit summary view" : "Summary view"}>
             <IconButton
               size="small"
@@ -681,6 +695,7 @@ export function TerminalDrawerContent({
             onViewLog={onViewLog}
             onOpenLogFile={onOpenLogFile}
             onAiSync={onAiSync}
+            externalRefreshKey={globalRefreshKey}
           />
         </Box>
       ) : (

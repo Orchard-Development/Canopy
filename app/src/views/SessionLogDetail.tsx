@@ -14,6 +14,12 @@ import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import CallSplitIcon from "@mui/icons-material/CallSplit";
 import TerminalIcon from "@mui/icons-material/Terminal";
 import ChatIcon from "@mui/icons-material/Chat";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+import RemoveCircleOutlineIcon from "@mui/icons-material/RemoveCircleOutline";
+import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutlined";
+import BuildIcon from "@mui/icons-material/Build";
+import LightbulbOutlinedIcon from "@mui/icons-material/LightbulbOutlined";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
@@ -26,23 +32,126 @@ import { useSessionMessages } from "../hooks/useSessionMessages";
 import { ChatMessages } from "../components/chat/ChatMessages";
 import { sessionMessagesToChat } from "../lib/sessionConvert";
 
-function AnalysisPanel({ analysis }: { analysis: SessionLogAnalysis }) {
+interface RichAnalysis {
+  status: string;
+  detail: string;
+  label?: string;
+  summary?: string;
+  actionNeeded?: boolean;
+  ts: string;
+  // Rich fields from the AI analysis
+  outcome?: string;
+  filesChanged?: string[];
+  toolsUsed?: string[];
+  keyDecisions?: string[];
+}
+
+function OutcomeChip({ outcome }: { outcome?: string }) {
+  if (!outcome) return null;
+  const color = outcome === "success" ? "success" as const
+    : outcome === "failure" ? "error" as const
+    : "warning" as const;
+  const icon = outcome === "success" ? <CheckCircleOutlineIcon sx={{ fontSize: 14 }} />
+    : outcome === "failure" ? <ErrorOutlineIcon sx={{ fontSize: 14 }} />
+    : <RemoveCircleOutlineIcon sx={{ fontSize: 14 }} />;
+  return <Chip icon={icon} label={outcome} size="small" color={color} variant="outlined" sx={{ height: 24, fontSize: 12 }} />;
+}
+
+function AnalysisPanel({ analysis, rich }: { analysis: SessionLogAnalysis; rich?: RichAnalysis }) {
+  const files = rich?.filesChanged ?? [];
+  const tools = rich?.toolsUsed ?? [];
+  const decisions = rich?.keyDecisions ?? [];
+
   return (
-    <Paper variant="outlined" sx={{ px: 2, py: 1.5, mb: 1 }}>
-      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+    <Paper variant="outlined" sx={{ px: 2, py: 1.5, mb: 1.5 }}>
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+        <AutoFixHighIcon sx={{ fontSize: 16, color: "primary.main" }} />
         <Typography variant="subtitle2">Analysis</Typography>
         <Chip label={analysis.status} size="small" color={statusColor(analysis.status)} />
         {analysis.actionNeeded && <Chip label="action needed" size="small" color="warning" />}
+        <OutcomeChip outcome={rich?.outcome} />
+        <Box sx={{ flex: 1 }} />
+        <Typography variant="caption" color="text.disabled">
+          {formatTime(analysis.ts)}
+        </Typography>
       </Stack>
-      <Typography variant="body2" color="text.secondary">{analysis.detail}</Typography>
-      {analysis.summary && (
-        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
-          {analysis.summary}
+
+      {/* Summary */}
+      {(rich?.summary || analysis.summary) && (
+        <Typography variant="body2" sx={{ mb: 1 }}>
+          {rich?.summary || analysis.summary}
         </Typography>
       )}
-      <Typography variant="caption" color="text.disabled" sx={{ mt: 0.5, display: "block" }}>
-        Analyzed {formatTime(analysis.ts)}
-      </Typography>
+
+      {/* Detail */}
+      {analysis.detail && analysis.detail !== analysis.summary && (
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          {analysis.detail}
+        </Typography>
+      )}
+
+      {/* Key decisions */}
+      {decisions.length > 0 && (
+        <Box sx={{ mb: 1 }}>
+          <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mb: 0.5 }}>
+            <LightbulbOutlinedIcon sx={{ fontSize: 14, color: "text.secondary" }} />
+            <Typography variant="caption" fontWeight={600} color="text.secondary">Decisions</Typography>
+          </Stack>
+          {decisions.map((d, i) => (
+            <Typography key={i} variant="caption" color="text.secondary" sx={{ display: "block", ml: 2.5, lineHeight: 1.5 }}>
+              {d}
+            </Typography>
+          ))}
+        </Box>
+      )}
+
+      {/* Files + Tools row */}
+      {(files.length > 0 || tools.length > 0) && (
+        <Stack direction="row" spacing={3} sx={{ mt: 0.5 }}>
+          {files.length > 0 && (
+            <Box>
+              <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mb: 0.5 }}>
+                <InsertDriveFileOutlinedIcon sx={{ fontSize: 14, color: "text.secondary" }} />
+                <Typography variant="caption" fontWeight={600} color="text.secondary">
+                  Files ({files.length})
+                </Typography>
+              </Stack>
+              <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+                {files.slice(0, 8).map((f, i) => (
+                  <Chip
+                    key={i}
+                    label={f.split("/").pop()}
+                    size="small"
+                    variant="outlined"
+                    sx={{ height: 20, fontSize: 11, fontFamily: "monospace" }}
+                  />
+                ))}
+                {files.length > 8 && (
+                  <Chip label={`+${files.length - 8}`} size="small" sx={{ height: 20, fontSize: 11 }} />
+                )}
+              </Stack>
+            </Box>
+          )}
+          {tools.length > 0 && (
+            <Box>
+              <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mb: 0.5 }}>
+                <BuildIcon sx={{ fontSize: 14, color: "text.secondary" }} />
+                <Typography variant="caption" fontWeight={600} color="text.secondary">
+                  Tools ({tools.length})
+                </Typography>
+              </Stack>
+              <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+                {tools.slice(0, 6).map((t, i) => (
+                  <Chip key={i} label={t} size="small" variant="outlined" sx={{ height: 20, fontSize: 11 }} />
+                ))}
+                {tools.length > 6 && (
+                  <Chip label={`+${tools.length - 6}`} size="small" sx={{ height: 20, fontSize: 11 }} />
+                )}
+              </Stack>
+            </Box>
+          )}
+        </Stack>
+      )}
     </Paper>
   );
 }
@@ -58,7 +167,7 @@ function ResumeChain({ sessionId }: { sessionId: string }) {
   if (chain.length < 2) return null;
 
   return (
-    <Paper variant="outlined" sx={{ px: 2, py: 1.5, mb: 1 }}>
+    <Paper variant="outlined" sx={{ px: 2, py: 1.5, mb: 1.5 }}>
       <Typography variant="subtitle2" sx={{ mb: 0.5 }}>Conversation Thread</Typography>
       <Stack spacing={0.5}>
         {chain.map((s, i) => (
@@ -139,11 +248,13 @@ function ResumeActions({
 function DetailContent({
   session,
   analysis,
+  richAnalysis,
   analyzing,
   onAnalyze,
 }: {
   session: SessionLogMeta;
   analysis: SessionLogAnalysis | null;
+  richAnalysis: RichAnalysis | null;
   analyzing: boolean;
   onAnalyze: () => void;
 }) {
@@ -257,16 +368,25 @@ function DetailContent({
         </Stack>
       }
     >
-      {session.summary && (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5, ml: 6, fontStyle: "italic" }}>
-          {session.summary}
-        </Typography>
+      {/* Summary + CWD */}
+      {(session.summary || session.cwd) && (
+        <Paper variant="outlined" sx={{ px: 2, py: 1.5, mb: 1.5 }}>
+          {session.summary && (
+            <Typography variant="body2" sx={{ fontStyle: "italic", mb: session.cwd ? 0.5 : 0 }}>
+              {session.summary}
+            </Typography>
+          )}
+          {session.cwd && (
+            <Typography variant="caption" color="text.disabled" sx={{ fontFamily: "monospace" }}>
+              {session.cwd}
+            </Typography>
+          )}
+        </Paper>
       )}
-      {session.cwd && (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1, ml: 6 }}>{session.cwd}</Typography>
-      )}
-      {analysis && <AnalysisPanel analysis={analysis} />}
+
+      {analysis && <AnalysisPanel analysis={analysis} rich={richAnalysis ?? undefined} />}
       <ResumeChain sessionId={session.id} />
+
       {viewMode === "raw" ? (
         <>
           {streaming && <LinearProgress sx={{ mb: 0.5, borderRadius: 1, flexShrink: 0 }} />}
@@ -274,7 +394,7 @@ function DetailContent({
             ref={containerRef}
             sx={{
               flex: 1, minHeight: 0, borderRadius: 1, overflow: "hidden",
-              border: 1, borderColor: "warning.main", opacity: 0.85,
+              border: 1, borderColor: "divider",
               "& .xterm": { height: "100%", p: 0.5 },
             }}
           />
@@ -304,6 +424,7 @@ export default function SessionLogDetail({ sessionId: propId }: { sessionId?: st
   const location = useLocation();
   const [session, setSession] = useState<SessionLogMeta | null>(null);
   const [analysis, setAnalysis] = useState<SessionLogAnalysis | null>(null);
+  const [richAnalysis, setRichAnalysis] = useState<RichAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const toast = useToast();
@@ -315,33 +436,44 @@ export default function SessionLogDetail({ sessionId: propId }: { sessionId?: st
       setSession(passed);
       setAnalysis(passed.analysis ?? null);
       setLoading(false);
-      return;
+    } else {
+      setSession(null);
+      setAnalysis(null);
+      setRichAnalysis(null);
+      setLoading(true);
+      api.listSessionLogs().then((list) => {
+        const match = list.find((s) => s.id === id) ?? null;
+        setSession(match);
+        if (match?.analysis) setAnalysis(match.analysis);
+      }).catch(() => {}).finally(() => setLoading(false));
     }
-    setSession(null);
-    setAnalysis(null);
-    setLoading(true);
-    // Try fetching the specific session, fall back to list scan
-    api.getSessionLog(id)
-      .then(() => {
-        // Session exists -- build a minimal meta from the list endpoint
-        return api.listSessionLogs().then((list) => {
-          const match = list.find((s) => s.id === id) ?? null;
-          setSession(match);
-          if (match?.analysis) setAnalysis(match.analysis);
+    // Fetch rich analysis from cached file
+    fetch(`/api/session-logs/${id}/analysis`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (!data) return;
+        const a = data.analysis ?? data;
+        setRichAnalysis({
+          status: analysis?.status ?? a.outcome ?? "unknown",
+          detail: analysis?.detail ?? a.summary ?? "",
+          ts: data.analyzedAt ?? new Date().toISOString(),
+          summary: a.summary,
+          outcome: a.outcome,
+          filesChanged: a.files_changed,
+          toolsUsed: a.tools_used,
+          keyDecisions: a.key_decisions,
         });
+        // Also set basic analysis if not already set
+        if (!analysis) {
+          setAnalysis({
+            status: a.outcome ?? "analyzed",
+            detail: a.summary ?? "",
+            ts: data.analyzedAt ?? new Date().toISOString(),
+          });
+        }
       })
-      .catch(() => {
-        // Session might still be in the list even if direct fetch failed
-        api.listSessionLogs()
-          .then((list) => {
-            const match = list.find((s) => s.id === id) ?? null;
-            setSession(match);
-            if (match?.analysis) setAnalysis(match.analysis);
-          })
-          .catch(() => {});
-      })
-      .finally(() => setLoading(false));
-  }, [id]);
+      .catch(() => {});
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAnalyze = useCallback(async () => {
     if (!id) return;
@@ -349,14 +481,27 @@ export default function SessionLogDetail({ sessionId: propId }: { sessionId?: st
     try {
       const result = await api.analyzeSessionLog(id);
       setAnalysis(result);
+      // Also try to get the rich analysis
+      const rich = (result as any).analysis ?? result;
+      setRichAnalysis({
+        status: result.status,
+        detail: result.detail,
+        ts: result.ts,
+        summary: rich.summary,
+        outcome: rich.outcome,
+        filesChanged: rich.files_changed,
+        toolsUsed: rich.tools_used,
+        keyDecisions: rich.key_decisions,
+      });
     } catch { toast.error("Failed to analyze session log"); }
     setAnalyzing(false);
-  }, [id]);
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return (
       <PageLayout>
         <Skeleton variant="text" width={200} height={40} sx={{ mb: 2 }} />
+        <Skeleton variant="rounded" height={100} sx={{ mb: 1.5 }} />
         <Skeleton variant="rounded" height={300} />
       </PageLayout>
     );
@@ -364,5 +509,13 @@ export default function SessionLogDetail({ sessionId: propId }: { sessionId?: st
   if (!session) {
     return <PageLayout><Alert severity="warning">Session log not found.</Alert></PageLayout>;
   }
-  return <DetailContent session={session} analysis={analysis} analyzing={analyzing} onAnalyze={handleAnalyze} />;
+  return (
+    <DetailContent
+      session={session}
+      analysis={analysis}
+      richAnalysis={richAnalysis}
+      analyzing={analyzing}
+      onAnalyze={handleAnalyze}
+    />
+  );
 }

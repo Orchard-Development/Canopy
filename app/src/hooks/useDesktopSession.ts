@@ -5,6 +5,7 @@ import { useFrameCanvas } from "./useFrameCanvas";
 interface DesktopSessionState {
   title: string;
   isLive: boolean;
+  error: string | null;
 }
 
 interface CropRegion {
@@ -74,6 +75,7 @@ interface WindowTarget {
 // without the overhead of encoding/decoding each frame.
 const DEFAULT_FPS = 30;
 const DEFAULT_MAX_WIDTH = 1920;
+const FRAME_TIMEOUT_MS = 5000;
 
 /**
  * Subscribe to desktop mirror frames and provide interactive input.
@@ -91,12 +93,21 @@ export function useDesktopSession(
   const [state, setState] = useState<DesktopSessionState>({
     title: initialTitle || "Desktop Window",
     isLive: true,
+    error: null,
   });
+  const [retryCount, setRetryCount] = useState(0);
 
   const { canvasRef, drawFrame, mapCoords, cleanup } = useFrameCanvas();
   const refsToClean = useRef<Array<{ event: string; ref: number }>>([]);
   const viewerRef = useRef(getViewer());
   const windowTargetRef = useRef(windowTarget);
+  const hasReceivedFrame = useRef(false);
+
+  const retry = useCallback(() => {
+    hasReceivedFrame.current = false;
+    setState({ title: initialTitle || "Desktop Window", isLive: true, error: null });
+    setRetryCount((c) => c + 1);
+  }, [initialTitle]);
 
   // -- Input handlers: direct IPC when in Electron, channel fallback --
 
@@ -186,6 +197,19 @@ export function useDesktopSession(
     [channel, sessionId, state.isLive, mapCoords],
   );
 
+  // -- Detect Electron unavailable --
+  useEffect(() => {
+    if (!sessionId) return;
+    const viewer = viewerRef.current;
+    // In non-Electron env with no channel, surface error immediately
+    if (!viewer && !channel) {
+      const timer = setTimeout(() => {
+        setState((s) => ({ ...s, error: "Desktop app not connected", isLive: false }));
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [sessionId, channel, retryCount]);
+
   // -- Electron path: persistent getUserMedia stream --
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -195,6 +219,7 @@ export function useDesktopSession(
     let stream: MediaStream | null = null;
     let videoEl: HTMLVideoElement | null = null;
     let rafId: number | null = null;
+    let frameTimeoutId: number | null = null;
 
     const wt = windowTargetRef.current;
     const mirrorTarget = wt && Object.keys(wt).length > 0
@@ -242,6 +267,7 @@ export function useDesktopSession(
     // Use requestAnimationFrame for smooth, vsync-aligned rendering.
     // Throttle to DEFAULT_FPS to avoid wasting GPU cycles.
     let lastFrameTime = 0;
+    const streamStartedAt = performance.now();
     const frameDuration = 1000 / DEFAULT_FPS;
 
     function renderLoop() {
@@ -273,6 +299,12 @@ export function useDesktopSession(
       const vw = videoEl.videoWidth;
       const vh = videoEl.videoHeight;
       if (vw === 0 || vh === 0) return;
+
+      if (!hasReceivedFrame.current) {
+        const latency = Math.round(performance.now() - streamStartedAt);
+        console.log(`[desktop-mirror] first frame rendered latency=${latency}ms session=${sessionId}`);
+      }
+      hasReceivedFrame.current = true;
 
       // For window sources, the stream IS the window content --
       // draw the full frame directly. For screen sources with a
@@ -322,14 +354,20 @@ export function useDesktopSession(
     }
 
     // Kick off the mirror
+    console.log(`[desktop-mirror] startMirror called session=${sessionId} target=${JSON.stringify(mirrorTarget)}`);
+
     viewer
       .startMirror({ sessionId, target: mirrorTarget, fps: DEFAULT_FPS })
       .then(async (result) => {
         if (stopped) return;
         if (!result.ok) {
           if (result.error?.includes("superseded")) return;
-          console.error("[desktop-mirror] start failed:", result.error);
-          setState((s) => ({ ...s, isLive: false }));
+          console.log(`[desktop-mirror] error: ${result.error}`);
+          setState((s) => ({
+            ...s,
+            isLive: false,
+            error: result.error || "Failed to start mirror session",
+          }));
           return;
         }
 
@@ -346,15 +384,29 @@ export function useDesktopSession(
 
           try {
             await startStream(result.sourceId);
+            const tracks = stream?.getTracks().length ?? 0;
+            console.log(`[desktop-mirror] getUserMedia opened source=${result.sourceId} tracks=${tracks}`);
           } catch (err) {
-            console.error("[desktop-mirror] getUserMedia failed:", err);
+            console.log(`[desktop-mirror] error: getUserMedia failed - ${err}`);
             // Fall back to IPC frame path
             fallbackToIpcFrames();
           }
         } else {
-          // Old main process without sourceId -- use legacy IPC frame path
+          console.log("[desktop-mirror] no sourceId, falling back to IPC frame path");
           fallbackToIpcFrames();
         }
+
+        // Frame timeout: if no frames arrive within FRAME_TIMEOUT_MS, surface error
+        frameTimeoutId = window.setTimeout(() => {
+          if (!stopped && !hasReceivedFrame.current) {
+            console.log("[desktop-mirror] error: frame timeout -- no frames received");
+            setState((s) => ({
+              ...s,
+              error: "No frames received -- the target window may not be visible",
+              isLive: false,
+            }));
+          }
+        }, FRAME_TIMEOUT_MS);
       });
 
     // Legacy fallback: subscribe to viewer:frame IPC events
@@ -374,6 +426,12 @@ export function useDesktopSession(
 
     return () => {
       stopped = true;
+      console.log(`[desktop-mirror] session stopped reason=unmount session=${sessionId}`);
+
+      if (frameTimeoutId) {
+        clearTimeout(frameTimeoutId);
+        frameTimeoutId = null;
+      }
 
       // Clean up stream
       if (stream) {
@@ -399,22 +457,41 @@ export function useDesktopSession(
       viewer.stopMirror(sessionId);
       cleanup();
     };
-  }, [sessionId, initialTitle, drawFrame, cleanup]);
+  }, [sessionId, initialTitle, drawFrame, cleanup, retryCount]);
 
   // -- Channel path: frames via Phoenix channel (web/remote) --
   useEffect(() => {
     if (!sessionId || !channel || viewerRef.current) return;
 
+    console.log(`[desktop-mirror] channel path session=${sessionId}`);
     channel.push("desktop:open", { session_id: sessionId });
 
+    const channelStartedAt = performance.now();
     const frameRef = channel.on(
       "desktop:frame",
       (p: { session_id: string; data: string }) => {
         if (p.session_id === sessionId) {
+          if (!hasReceivedFrame.current) {
+            const latency = Math.round(performance.now() - channelStartedAt);
+            console.log(`[desktop-mirror] first frame rendered latency=${latency}ms session=${sessionId} path=channel`);
+          }
+          hasReceivedFrame.current = true;
           drawFrame(p.data);
         }
       },
     );
+
+    // Frame timeout for channel path
+    const channelFrameTimeout = window.setTimeout(() => {
+      if (!hasReceivedFrame.current) {
+        console.log("[desktop-mirror] error: channel frame timeout -- no frames received");
+        setState((s) => ({
+          ...s,
+          error: "No frames received -- desktop may not be connected",
+          isLive: false,
+        }));
+      }
+    }, FRAME_TIMEOUT_MS);
 
     const openRef = channel.on(
       "desktop:opened",
@@ -441,13 +518,14 @@ export function useDesktopSession(
     ];
 
     return () => {
+      clearTimeout(channelFrameTimeout);
       for (const { event, ref } of refsToClean.current) {
         channel.off(event, ref);
       }
       refsToClean.current = [];
       cleanup();
     };
-  }, [sessionId, channel, drawFrame, cleanup]);
+  }, [sessionId, channel, drawFrame, cleanup, retryCount]);
 
   // -- Both paths: listen for engine close event via channel --
   useEffect(() => {
@@ -457,21 +535,14 @@ export function useDesktopSession(
       "desktop:closed",
       (p: { session_id: string }) => {
         if (p.session_id === sessionId) {
+          console.log(`[desktop-mirror] session stopped reason=engine_closed session=${sessionId}`);
           setState((s) => ({ ...s, isLive: false }));
         }
       },
     );
 
-    // Auto-close when the chat worker finishes or errors out
-    const doneRef = channel.on("done", () => {
-      setState((s) => ({ ...s, isLive: false }));
-      const viewer = viewerRef.current;
-      if (viewer) {
-        viewer.stopMirror(sessionId);
-      }
-    });
-
     const errorRef = channel.on("error", () => {
+      console.log(`[desktop-mirror] error: channel error session=${sessionId}`);
       setState((s) => ({ ...s, isLive: false }));
       const viewer = viewerRef.current;
       if (viewer) {
@@ -481,7 +552,6 @@ export function useDesktopSession(
 
     return () => {
       channel.off("desktop:closed", closeRef);
-      channel.off("done", doneRef);
       channel.off("error", errorRef);
     };
   }, [sessionId, channel]);
@@ -489,10 +559,12 @@ export function useDesktopSession(
   return {
     title: state.title,
     isLive: state.isLive,
+    error: state.error,
     canvasRef,
     handleClick,
     handleKeyDown,
     handleScroll,
+    retry,
   };
 }
 

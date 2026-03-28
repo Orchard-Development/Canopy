@@ -1402,7 +1402,78 @@ export const api = {
 
   judgmentGenerateReport: () =>
     postJson<{ data: { path: string; status: string } }>("/api/judgment/report", {}),
+
+  // -- Scheduled Tasks --
+  getScheduledTasks: () =>
+    get<{ tasks: Array<{
+      id: string; title: string; description: string | null;
+      action_type: string; payload: Record<string, unknown>;
+      schedule: string | null; run_at: string | null;
+      recurring: boolean; enabled: boolean;
+      last_run_at: string | null; next_run_at: string | null;
+      created_by: string; status: string;
+      inserted_at: string; updated_at: string;
+    }> }>("/api/scheduled-tasks"),
+
+  createScheduledTask: (body: {
+    title: string; action_type: string;
+    run_at?: string; schedule?: string;
+    message?: string; prompt?: string; description?: string;
+  }) => postJson<{
+    id: string; title: string; action_type: string;
+    next_run_at: string | null; recurring: boolean; enabled: boolean; status: string;
+  }>("/api/scheduled-tasks", body),
+
+  deleteScheduledTask: (id: string) =>
+    fetch(resolveUrl(`/api/scheduled-tasks/${id}`), { method: "DELETE", headers: authHeaders() })
+      .then((r) => r.json() as Promise<{ ok: boolean }>),
+
+  toggleScheduledTask: (id: string) =>
+    postJson<{
+      id: string; enabled: boolean; status: string;
+    }>(`/api/scheduled-tasks/${id}/toggle`, {}),
+
+  updateScheduledTask: (id: string, body: {
+    title?: string; prompt?: string; description?: string;
+    run_at?: string; schedule?: string; enabled?: boolean;
+  }) => patchJson<{
+    id: string; title: string; action_type: string;
+    next_run_at: string | null; recurring: boolean; enabled: boolean; status: string;
+  }>(`/api/scheduled-tasks/${id}`, body),
+
+  triggerScheduledTask: (id: string) =>
+    postJson<{ ok: boolean; triggered: string }>(`/api/scheduled-tasks/${id}/trigger`, {}),
+
+  // -- Database explorer --
+  dbSchema: () => get<DbSchemaResponse>("/api/db/schema"),
+
+  dbQuery: (sql: string) => postJson<DbQueryResponse>("/api/db/query", { sql }),
 };
+
+// -- Database explorer types --
+export interface DbSchemaColumn {
+  name: string;
+  type: string;
+  pk: boolean;
+  notnull: boolean;
+}
+
+export interface DbSchemaTable {
+  name: string;
+  columns: DbSchemaColumn[];
+}
+
+export interface DbSchemaResponse {
+  tables: DbSchemaTable[];
+}
+
+export interface DbQueryResponse {
+  columns: string[];
+  rows: unknown[][];
+  count: number;
+  timeMs: number;
+  capped: boolean;
+}
 
 export interface SecurityFinding {
   id: string;

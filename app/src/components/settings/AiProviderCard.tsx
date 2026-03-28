@@ -45,6 +45,11 @@ export interface SettingsData {
   avatar_base64?: string;
   gateway_enabled?: string;
   gateway_provider?: string;
+  model_classify?: string;
+  model_internal?: string;
+  model_dispatch_agent?: string;
+  model_opencode_primary?: string;
+  model_opencode_subagent?: string;
 }
 
 interface ModelOption {

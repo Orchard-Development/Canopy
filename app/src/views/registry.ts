@@ -25,8 +25,9 @@ export const COMPONENT_MAP: Record<string, LazyExoticComponent<ComponentType>> =
   "bundled:RootsView": lazy(() => import("./RootsView")),
   "bundled:ApplicationViewer": lazy(() => import("./ApplicationViewer")),
   "bundled:Autoresearch": lazy(() => import("./Autoresearch")),
-  "bundled:Judgment": lazy(() => import("./Judgment")),
   "bundled:Swarm": lazy(() => import("./Swarm")),
+  "bundled:ScheduledTasks": lazy(() => import("./ScheduledTasks")),
+  "bundled:DatabaseExplorer": lazy(() => import("./database-explorer/DatabaseExplorer")),
 };
 
 /**
@@ -64,6 +65,12 @@ export const views: ViewEntry[] = [
     label: "Capabilities",
     icon: "Extension",
     component: lazy(() => import("./Capabilities")),
+  },
+  {
+    path: "/scheduled-tasks",
+    label: "Scheduled Tasks",
+    icon: "Schedule",
+    component: lazy(() => import("./ScheduledTasks")),
   },
   {
     path: "/settings",

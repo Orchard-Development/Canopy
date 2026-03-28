@@ -11,17 +11,20 @@
 import type { Channel } from "phoenix";
 
 interface OrchardViewer {
-  screenshot: () => Promise<string>;
-  snapshot: () => Promise<Record<string, unknown>>;
-  click: (x: number, y: number, button?: "left" | "right") => Promise<unknown>;
-  type: (text: string) => Promise<unknown>;
-  relayKey: (event: { key: string; modifiers?: string[] }) => Promise<unknown>;
   relayClick: (event: {
     localX: number;
     localY: number;
     button: "left" | "right" | "middle";
     type: "click" | "double_click";
   }) => Promise<unknown>;
+  relayScroll: (event: {
+    localX: number;
+    localY: number;
+    deltaX: number;
+    deltaY: number;
+  }) => Promise<unknown>;
+  relayType: (event: { text: string }) => Promise<unknown>;
+  relayKey: (event: { key: string; modifiers?: string[] }) => Promise<unknown>;
 }
 
 function getViewer(): OrchardViewer | null {
@@ -77,21 +80,24 @@ async function dispatch(
   params: Record<string, unknown>,
 ): Promise<unknown> {
   switch (method) {
-    case "screenshot":
-      return viewer.screenshot();
-
-    case "snapshot":
-      return viewer.snapshot();
-
     case "click":
-      return viewer.click(
-        params.x as number,
-        params.y as number,
-        (params.button as "left" | "right") ?? "left",
-      );
+      return viewer.relayClick({
+        localX: params.x as number,
+        localY: params.y as number,
+        button: (params.button as "left" | "right" | "middle") ?? "left",
+        type: (params.type as "click" | "double_click") ?? "click",
+      });
+
+    case "scroll":
+      return viewer.relayScroll({
+        localX: params.x as number,
+        localY: params.y as number,
+        deltaX: (params.deltaX as number) ?? 0,
+        deltaY: (params.deltaY as number) ?? 0,
+      });
 
     case "type":
-      return viewer.type(params.text as string);
+      return viewer.relayType({ text: params.text as string });
 
     case "key":
       return viewer.relayKey({

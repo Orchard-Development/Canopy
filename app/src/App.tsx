@@ -24,6 +24,7 @@ import { useViewRegistry } from "./hooks/useViewRegistry";
 import { COMPONENT_MAP } from "./views/registry";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { GuidedTour } from "./components/GuidedTour";
+import { RecentSessionsModal } from "./components/sessions/RecentSessionsModal";
 import { AuthProvider } from "./hooks/useAuth";
 import { LoginGate } from "./components/settings/LoginGate";
 import { TunnelAuthProvider } from "./hooks/useTunnelAuth";
@@ -35,6 +36,7 @@ import { AddViewPicker } from "./components/AddViewPicker";
 import { useActiveProject } from "./hooks/useActiveProject";
 import { useToastProvider, ToastProvider, useToast } from "./hooks/useToast";
 import { useEventBusProvider, EventBusProvider, useEventBus } from "./hooks/useEventBus";
+import { SettingsProvider } from "./contexts/SettingsContext";
 import { useEngineEvents } from "./hooks/useEngineEvents";
 import { useUserActivity } from "./hooks/useUserActivity";
 import { ProjectThemeBridge } from "./components/ProjectThemeBridge";
@@ -438,6 +440,7 @@ function AppLayout({ onResetOnboarding, onResetTour, showTour, onTourComplete, p
         onCloseTerminal={() => setTerminalOpenPersist(false)}
         onEnableGrid={() => window.dispatchEvent(new CustomEvent("ctx:terminal-grid", { detail: { enabled: true } }))}
       />
+      <RecentSessionsModal onNavigate={(path) => navigate(path)} />
     </Box>
   );
 }
@@ -535,6 +538,7 @@ export function App() {
           <DevModeContext.Provider value={devModeState}>
           <ThemeProvider theme={theme}>
             <CssBaseline />
+            <SettingsProvider>
             <EventBusProvider value={eventBus}>
             <DashboardChannelProvider>
             <ToastProviderBridge>
@@ -568,6 +572,7 @@ export function App() {
             </ToastProviderBridge>
             </DashboardChannelProvider>
             </EventBusProvider>
+            </SettingsProvider>
           </ThemeProvider>
           </DevModeContext.Provider>
         </ColorModeContext.Provider>

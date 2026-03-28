@@ -1,5 +1,6 @@
 import { createContext, useContext, useCallback, useState, useEffect, type ReactNode, createElement } from "react";
 import { useEvents, type EngineEvent, type EventSeverity, type EventActionMeta } from "./useEventBus";
+import { useSettingsContext } from "../contexts/SettingsContext";
 
 export type ToastSeverity = EventSeverity;
 
@@ -38,18 +39,20 @@ let nextId = 1;
 export function useToastProvider(): { api: ToastApi; visible: ToastEntry[] } {
   const [visible, setVisible] = useState<ToastEntry[]>([]);
   const { events } = useEvents();
+  const { settings } = useSettingsContext();
 
   // React to new events from the bus
   const lastSeenRef = useCallback(() => { /* ref holder */ }, []);
   const [lastSeenId, setLastSeenId] = useState(0);
 
   useEffect(() => {
+    const toastCategories = buildToastSet(settings);
     const newEvents = events.filter((e) => e.id > lastSeenId);
     if (newEvents.length === 0) return;
     setLastSeenId(newEvents[newEvents.length - 1].id);
 
     for (const event of newEvents) {
-      if (!isToastWorthy(event)) continue;
+      if (!isToastWorthy(event, toastCategories)) continue;
       const entry: ToastEntry = {
         id: nextId++,
         message: event.message,
@@ -59,7 +62,7 @@ export function useToastProvider(): { api: ToastApi; visible: ToastEntry[] } {
       };
       setVisible((prev) => [...prev.slice(-(MAX_VISIBLE - 1)), entry]);
     }
-  }, [events, lastSeenId]);
+  }, [events, lastSeenId, settings]);
 
   // Manual toast API (for non-event toasts)
   const show = useCallback((opts: { message: string; severity?: ToastSeverity; duration?: number | null; action?: ReactNode }) => {
@@ -95,22 +98,31 @@ export function useToast(): ToastApi {
   return ctx;
 }
 
-/** Only these categories produce toasts. Everything else is bell-only. */
-const TOAST_CATEGORIES = new Set([
-  "engine",     // toast:show from engine
-  "session",    // session lifecycle (start/end/exit)
-  "prompt",     // user prompt submitted
-  "subagent",   // subagent start/stop
-  "task",       // task completed
-  "proposal",   // proposal created
-  "autocommit", // commit results
-  "autopush",   // push results
+const DEFAULT_TOAST_CATEGORIES = new Set([
+  "engine", "session", "prompt", "subagent", "task", "proposal", "autocommit", "autopush",
 ]);
 
-function isToastWorthy(event: EngineEvent): boolean {
+const ALL_CATEGORIES = [
+  "engine", "session", "prompt", "subagent", "task", "proposal", "autocommit", "autopush",
+  "tool", "context", "permission", "config", "worktree", "elicitation", "notification",
+  "agent", "project", "analysis", "autopull",
+];
+
+function buildToastSet(settings: Record<string, string>): Set<string> {
+  const set = new Set<string>();
+  for (const cat of ALL_CATEGORIES) {
+    const val = settings[`notifications.toast.${cat}`];
+    if (val === undefined ? DEFAULT_TOAST_CATEGORIES.has(cat) : val === "true") {
+      set.add(cat);
+    }
+  }
+  return set;
+}
+
+function isToastWorthy(event: EngineEvent, categories: Set<string>): boolean {
   // Errors always toast regardless of category
   if (event.severity === "error") return true;
-  return TOAST_CATEGORIES.has(event.category);
+  return categories.has(event.category);
 }
 
 /** Convert actionMeta into a clickable CTA button for the toast. */

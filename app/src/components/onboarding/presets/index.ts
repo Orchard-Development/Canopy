@@ -14,6 +14,7 @@ import { aurora, amethyst, neon, highcon } from "./vibrant";
 import { crimson, scarlet } from "./red";
 
 export const MOOD_PRESETS: MoodPreset[] = [
+  highcon,
   mono,
   midnight,
   ocean,
@@ -30,5 +31,4 @@ export const MOOD_PRESETS: MoodPreset[] = [
   terra,
   neon,
   ivory,
-  highcon,
 ];

@@ -12,6 +12,11 @@ import ChatIcon from "@mui/icons-material/Chat";
 import CloseIcon from "@mui/icons-material/Close";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
+import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutlined";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
@@ -19,9 +24,79 @@ import { api, type SessionLogMeta } from "../../lib/api";
 import { terminalOptions } from "../../lib/xterm-theme";
 import { labelForCommand } from "../../lib/session-log-utils";
 import { StatusChip, ProfileChip } from "./SessionChips";
+import { useNavigate } from "react-router-dom";
+
+const MSG_COLLAPSED_HEIGHT = 160;
+
+function MessageBubble({ message }: { message: { role: string; text: string } }) {
+  const theme = useTheme();
+  const [expanded, setExpanded] = useState(false);
+  const [overflows, setOverflows] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (ref.current && ref.current.scrollHeight > MSG_COLLAPSED_HEIGHT) {
+      setOverflows(true);
+    }
+  }, [message.text]);
+
+  const isUser = message.role === "user";
+
+  return (
+    <Box
+      sx={{
+        py: 1.5, px: 2, borderBottom: 1, borderColor: "divider",
+        bgcolor: isUser ? alpha(theme.palette.primary.main, 0.04) : "transparent",
+        position: "relative",
+      }}
+    >
+      <Typography
+        variant="caption"
+        fontWeight={700}
+        color={isUser ? "primary.main" : "text.secondary"}
+        sx={{ mb: 0.5, display: "block" }}
+      >
+        {isUser ? "You" : "Assistant"}
+      </Typography>
+      <Box
+        ref={ref}
+        sx={{
+          maxHeight: expanded ? undefined : MSG_COLLAPSED_HEIGHT,
+          overflow: "hidden",
+          position: "relative",
+          ...(!expanded && overflows && {
+            "&::after": {
+              content: '""',
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: 40,
+              background: `linear-gradient(transparent, ${isUser ? alpha(theme.palette.primary.main, 0.04) : theme.palette.background.paper})`,
+              pointerEvents: "none",
+            },
+          }),
+        }}
+      >
+        <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+          {message.text}
+        </Typography>
+      </Box>
+      {overflows && (
+        <Button
+          size="small"
+          onClick={() => setExpanded(!expanded)}
+          startIcon={expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+          sx={{ mt: 0.5, textTransform: "none", fontSize: 11 }}
+        >
+          {expanded ? "Show less" : "Show more"}
+        </Button>
+      )}
+    </Box>
+  );
+}
 
 function MessagesPanel({ sessionId }: { sessionId: string }) {
-  const theme = useTheme();
   const [messages, setMessages] = useState<Array<{ role: string; text: string; ts?: string }>>([]);
   const [loading, setLoading] = useState(true);
 
@@ -61,34 +136,7 @@ function MessagesPanel({ sessionId }: { sessionId: string }) {
         ) : (
           <Stack spacing={0}>
             {messages.map((m, i) => (
-              <Box
-                key={i}
-                sx={{
-                  py: 1.5, px: 2, borderBottom: 1, borderColor: "divider",
-                  bgcolor: m.role === "user"
-                    ? alpha(theme.palette.primary.main, 0.04)
-                    : "transparent",
-                }}
-              >
-                <Typography
-                  variant="caption"
-                  fontWeight={700}
-                  color={m.role === "user" ? "primary.main" : "text.secondary"}
-                  sx={{ mb: 0.5, display: "block" }}
-                >
-                  {m.role === "user" ? "You" : "Assistant"}
-                </Typography>
-                <Typography
-                  variant="body2"
-                  sx={{
-                    whiteSpace: "pre-wrap", wordBreak: "break-word",
-                    maxHeight: m.role === "assistant" ? 200 : undefined,
-                    overflow: m.role === "assistant" ? "hidden" : undefined,
-                  }}
-                >
-                  {m.text}
-                </Typography>
-              </Box>
+              <MessageBubble key={i} message={m} />
             ))}
           </Stack>
         )}
@@ -154,6 +202,112 @@ function TerminalPanel({ sessionId }: { sessionId: string }) {
   );
 }
 
+interface AnalysisSummary {
+  summary?: string;
+  filesChanged?: string[];
+  outcome?: string;
+  toolsUsed?: string[];
+  keyDecisions?: string[];
+}
+
+function AnalysisBanner({ sessionId }: { sessionId: string }) {
+  const [analysis, setAnalysis] = useState<AnalysisSummary | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+
+  useEffect(() => {
+    fetch(`/api/session-logs/${sessionId}/analysis`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (!data) return;
+        const a = data.analysis ?? data;
+        setAnalysis({
+          summary: a.summary,
+          filesChanged: a.files_changed,
+          outcome: a.outcome,
+          toolsUsed: a.tools_used,
+          keyDecisions: a.key_decisions,
+        });
+      })
+      .catch(() => {});
+  }, [sessionId]);
+
+  const handleAnalyze = () => {
+    setAnalyzing(true);
+    api.analyzeSessionLog(sessionId)
+      .then((data) => {
+        const a = (data as any).analysis ?? data;
+        setAnalysis({
+          summary: a.summary,
+          filesChanged: a.files_changed,
+          outcome: a.outcome,
+          toolsUsed: a.tools_used,
+          keyDecisions: a.key_decisions,
+        });
+      })
+      .catch(() => {})
+      .finally(() => setAnalyzing(false));
+  };
+
+  if (!analysis) {
+    return (
+      <Box sx={{ px: 2, py: 0.75, borderBottom: 1, borderColor: "divider" }}>
+        <Button
+          size="small"
+          startIcon={analyzing ? <CircularProgress size={12} /> : <AutoFixHighIcon />}
+          onClick={handleAnalyze}
+          disabled={analyzing}
+          sx={{ textTransform: "none", fontSize: 12 }}
+        >
+          {analyzing ? "Analyzing..." : "Analyze session"}
+        </Button>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ px: 2, py: 1, borderBottom: 1, borderColor: "divider", bgcolor: (t) => alpha(t.palette.info.main, 0.04) }}>
+      {analysis.summary && (
+        <Typography variant="caption" sx={{ display: "block", mb: 0.5, lineHeight: 1.4 }}>
+          {analysis.summary}
+        </Typography>
+      )}
+      <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+        {analysis.outcome && (
+          <Chip
+            label={analysis.outcome}
+            size="small"
+            color={analysis.outcome === "success" ? "success" : analysis.outcome === "failure" ? "error" : "warning"}
+            sx={{ height: 20, fontSize: 11 }}
+          />
+        )}
+        {analysis.filesChanged && analysis.filesChanged.length > 0 && (
+          <Stack direction="row" spacing={0.5} alignItems="center">
+            <InsertDriveFileOutlinedIcon sx={{ fontSize: 12, color: "text.disabled" }} />
+            <Typography variant="caption" color="text.disabled">
+              {analysis.filesChanged.length} file{analysis.filesChanged.length !== 1 ? "s" : ""}
+            </Typography>
+          </Stack>
+        )}
+        {analysis.keyDecisions && analysis.keyDecisions.length > 0 && (
+          <Typography variant="caption" color="text.disabled">
+            {analysis.keyDecisions.length} decision{analysis.keyDecisions.length !== 1 ? "s" : ""}
+          </Typography>
+        )}
+        <Box sx={{ flex: 1 }} />
+        <Button
+          size="small"
+          startIcon={analyzing ? <CircularProgress size={12} /> : <AutoFixHighIcon />}
+          onClick={handleAnalyze}
+          disabled={analyzing}
+          sx={{ textTransform: "none", fontSize: 11 }}
+        >
+          Re-analyze
+        </Button>
+      </Stack>
+    </Box>
+  );
+}
+
 export function SessionViewerModal({
   session,
   sessions,
@@ -167,6 +321,7 @@ export function SessionViewerModal({
   onNavigate: (s: SessionLogMeta) => void;
   onResume: (id: string, fork: boolean) => void;
 }) {
+  const navigate = useNavigate();
   const currentIndex = session ? sessions.findIndex((s) => s.id === session.id) : -1;
   const hasPrev = currentIndex > 0;
   const hasNext = currentIndex >= 0 && currentIndex < sessions.length - 1;
@@ -217,8 +372,15 @@ export function SessionViewerModal({
         <ProfileChip s={session} />
         <StatusChip s={session} />
         {session.resumable && <Chip label="resumable" size="small" color="success" variant="outlined" sx={{ height: 20, fontSize: 11 }} />}
+        <Tooltip title="Open full detail page">
+          <IconButton size="small" onClick={() => { onClose(); navigate(`/sessions/${session.id}`); }}>
+            <OpenInNewIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
         <IconButton size="small" onClick={onClose}><CloseIcon fontSize="small" /></IconButton>
       </DialogTitle>
+
+      {/* Profile one-liner */}
       {session.profile?.oneLiner && (
         <Box sx={{ px: 2, pb: 0.5 }}>
           <Typography variant="caption" color="text.secondary" sx={{ fontStyle: "italic" }}>
@@ -227,45 +389,48 @@ export function SessionViewerModal({
           </Typography>
         </Box>
       )}
+
+      {/* Analysis banner */}
+      <AnalysisBanner sessionId={session.id} />
+
+      {/* Split panes */}
       <Box sx={{
         display: "flex", gap: 1, px: 1.5, pb: 1,
-        height: session.profile?.oneLiner ? "calc(80vh - 148px)" : "calc(80vh - 120px)",
+        height: "calc(70vh - 60px)",
         overflow: "hidden",
       }}>
         <Paper
           variant="outlined"
-          sx={{
-            flex: 1, minWidth: 0, overflow: "hidden",
-            borderColor: (t) => alpha(t.palette.primary.main, 0.2),
-          }}
+          sx={{ flex: 1, minWidth: 0, overflow: "hidden", borderColor: (t) => alpha(t.palette.primary.main, 0.2) }}
         >
           <MessagesPanel sessionId={session.id} />
         </Paper>
         <Paper
           variant="outlined"
-          sx={{
-            flex: 1, minWidth: 0, overflow: "hidden",
-            borderColor: (t) => alpha(t.palette.secondary.main, 0.2),
-          }}
+          sx={{ flex: 1, minWidth: 0, overflow: "hidden", borderColor: (t) => alpha(t.palette.secondary.main, 0.2) }}
         >
           <TerminalPanel sessionId={session.id} />
         </Paper>
       </Box>
-      {session.resumable && (
-        <DialogActions sx={{ px: 2, py: 1 }}>
-          {session.summary && (
-            <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }} noWrap>
-              {session.summary}
-            </Typography>
-          )}
-          <Button size="small" startIcon={<PlayArrowIcon />} variant="contained" onClick={() => { onResume(session.id, false); onClose(); }}>
-            Resume
-          </Button>
-          <Button size="small" startIcon={<CallSplitIcon />} onClick={() => { onResume(session.id, true); onClose(); }}>
-            Fork
-          </Button>
-        </DialogActions>
-      )}
+
+      {/* Footer */}
+      <DialogActions sx={{ px: 2, py: 1 }}>
+        {session.summary && (
+          <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }} noWrap>
+            {session.summary}
+          </Typography>
+        )}
+        {session.resumable && (
+          <>
+            <Button size="small" startIcon={<PlayArrowIcon />} variant="contained" onClick={() => { onResume(session.id, false); onClose(); }}>
+              Resume
+            </Button>
+            <Button size="small" startIcon={<CallSplitIcon />} onClick={() => { onResume(session.id, true); onClose(); }}>
+              Fork
+            </Button>
+          </>
+        )}
+      </DialogActions>
     </Dialog>
   );
 }
