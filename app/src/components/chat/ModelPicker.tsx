@@ -9,6 +9,15 @@ import {
 } from "@mui/material";
 import { api, type AiModelOption } from "../../lib/api";
 
+const PROVIDER_BADGE: Record<string, { color: string; label: string }> = {
+  anthropic: { color: "warning.main", label: "Claude" },
+  xai: { color: "info.main", label: "Grok" },
+  gemini: { color: "secondary.main", label: "Gemini" },
+  openai: { color: "success.main", label: "OpenAI" },
+  groq: { color: "error.main", label: "Groq" },
+  openrouter: { color: "#7c3aed", label: "OpenRouter" },
+};
+
 interface Props {
   value: string;
   onChange: (modelId: string) => void;
@@ -52,18 +61,14 @@ export function ModelPicker({ value, onChange, onModelsLoaded }: Props) {
                     px: 0.5,
                     py: 0.25,
                     borderRadius: 0.5,
-                    bgcolor: m.provider === "anthropic"
-                      ? "warning.main"
-                      : m.provider === "xai"
-                        ? "info.main"
-                        : "success.main",
+                    bgcolor: PROVIDER_BADGE[m.provider]?.color ?? "grey.600",
                     color: "common.white",
                     fontWeight: 700,
                     textTransform: "uppercase",
                     lineHeight: 1,
                   }}
                 >
-                  {m.provider === "anthropic" ? "Claude" : m.provider === "xai" ? "Grok" : "OpenAI"}
+                  {PROVIDER_BADGE[m.provider]?.label ?? m.provider}
                 </Box>
                 {m.label}
               </Box>

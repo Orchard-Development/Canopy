@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import type { Channel } from "phoenix";
 import { getSocket } from "@/lib/phoenix-socket";
 import { EVENTS } from "@/lib/events";
+import { attachDesktopRpcBridge } from "@/lib/desktop-rpc-bridge";
+import type { TokenUsage } from "@/types/chat";
 
 export interface ChatChannelCallbacks {
   onToken: (text: string) => void;
@@ -12,6 +14,7 @@ export interface ChatChannelCallbacks {
   onDone: (data: { model?: string; provider?: string; conversationId?: string }) => void;
   onError: (message: string) => void;
   onState: (data: { state: string }) => void;
+  onUsage?: (usage: TokenUsage) => void;
   /** Called on join when the worker is idle — DB messages are the source of truth. */
   onMessagesLoaded?: (messages: Array<Record<string, unknown>>) => void;
 }
@@ -122,8 +125,10 @@ export function useChatChannel(
 
     lastSeqRef.current = 0; // Reset sequence on new channel
     const refs = registerHandlers(ch, cbRef, lastSeqRef);
+    const detachRpc = attachDesktopRpcBridge(ch);
 
     return () => {
+      detachRpc();
       unregisterHandlers(ch, refs);
       ch.leave();
       // Also splice this channel out of the socket array so it cannot
@@ -213,6 +218,13 @@ function registerHandlers(
     event: EVENTS.chat.done,
     ref: ch.on(EVENTS.chat.done, (p: Record<string, unknown>) => {
       cbRef.current?.onDone(p as { model?: string; provider?: string; conversationId?: string });
+    }),
+  });
+
+  refs.push({
+    event: EVENTS.chat.usage,
+    ref: ch.on(EVENTS.chat.usage, (p: { usage: TokenUsage }) => {
+      cbRef.current?.onUsage?.(p.usage);
     }),
   });
 

@@ -28,14 +28,14 @@ export function AppPicker({ onSelect }: AppPickerProps) {
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    if (!window.ctx?.viewer?.listWindows) {
+    if (!window.orchard?.viewer?.listWindows) {
       setError("Application Viewer requires the desktop app");
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      const list = await window.ctx.viewer.listWindows();
+      const list = await window.orchard.viewer.listWindows();
       setWindows(list);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to list windows");

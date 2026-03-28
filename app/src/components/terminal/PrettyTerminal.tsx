@@ -4,8 +4,9 @@ import SendIcon from "@mui/icons-material/Send";
 import CloseIcon from "@mui/icons-material/Close";
 import { alpha, useTheme } from "@mui/material/styles";
 import { MarkdownContent } from "../MarkdownContent";
+import { ImageLightbox } from "../chat/ImageLightbox";
 import { useSessionMessages, type SessionMessage } from "../../hooks/useSessionMessages";
-import { useChannel } from "../../hooks/useChannel";
+import { useDashboardChannel } from "../../hooks/useDashboardChannel";
 import { useChannelEvent } from "../../hooks/useChannelEvent";
 import { EVENTS } from "../../lib/events";
 import { parseBufferToMessages } from "./parseBuffer";
@@ -106,7 +107,7 @@ export function PrettyTerminal({ sessionId, bufferText, onSend }: Props) {
   }, [parsed.draft, userEdited, sessionId]);
 
   // Listen for session output/state via Phoenix channel to trigger re-fetch
-  const { channel } = useChannel("dashboard");
+  const { channel } = useDashboardChannel();
   const outputEvent = useChannelEvent<{ id: string }>(channel, EVENTS.session.output);
   const stateEvent = useChannelEvent<{ id: string; state: string }>(channel, EVENTS.session.state);
   const prettierEvent = useChannelEvent<{ id: string; summaries: Array<{ turn: number; summary: string }> }>(
@@ -440,6 +441,34 @@ export function PrettyTerminal({ sessionId, bufferText, onSend }: Props) {
   );
 }
 
+function SessionImageGallery({ images, hasText }: { images: string[]; hasText: boolean }) {
+  const [lightbox, setLightbox] = useState<string | null>(null);
+  return (
+    <>
+      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: hasText ? 1 : 0 }}>
+        {images.map((src, i) => (
+          <Box
+            key={i}
+            component="img"
+            src={src}
+            sx={{
+              maxWidth: "100%",
+              maxHeight: 300,
+              borderRadius: 1,
+              objectFit: "contain",
+              cursor: "zoom-in",
+            }}
+            onClick={() => setLightbox(src)}
+          />
+        ))}
+      </Box>
+      {lightbox && (
+        <ImageLightbox src={lightbox} onClose={() => setLightbox(null)} />
+      )}
+    </>
+  );
+}
+
 function MessageBubble({
   message, userBg, assistantBg, isDark, isSummary,
 }: {
@@ -467,23 +496,7 @@ function MessageBubble({
         }}
       >
         {message.images && message.images.length > 0 && (
-          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: message.text ? 1 : 0 }}>
-            {message.images.map((src, i) => (
-              <Box
-                key={i}
-                component="img"
-                src={src}
-                sx={{
-                  maxWidth: "100%",
-                  maxHeight: 300,
-                  borderRadius: 1,
-                  objectFit: "contain",
-                  cursor: "pointer",
-                }}
-                onClick={() => window.open(src, "_blank")}
-              />
-            ))}
-          </Box>
+          <SessionImageGallery images={message.images} hasText={!!message.text} />
         )}
         {isUser ? (
           message.text ? (

@@ -27,7 +27,10 @@ import { DispatchBanner } from "./DispatchBanner";
 import { ToolCallsSummary } from "./ToolCallCard";
 import { ChatFormCard } from "./ChatFormCard";
 import { FileEmbed } from "./FileEmbed";
+import { ImageLightbox } from "./ImageLightbox";
+import { LiveFilePreview } from "./LiveFilePreview";
 import { BrowserEmbed, BrowsingIndicator } from "./BrowserEmbed";
+import { DesktopEmbed } from "./DesktopEmbed";
 import { getForm } from "../../lib/forms";
 import type { DispatchPayload } from "../../lib/api";
 
@@ -271,7 +274,6 @@ function extractFileEmbeds(toolCalls?: ToolCall[]): FileEmbedData[] {
   const items: FileEmbedData[] = [];
 
   for (const tc of toolCalls) {
-    if (tc.name !== "show_file") continue;
     if (tc.status !== "complete" || tc.isError) continue;
     const result = tc.result as Record<string, unknown> | undefined;
     if (!result?.show_file) continue;
@@ -283,6 +285,29 @@ function extractFileEmbeds(toolCalls?: ToolCall[]): FileEmbedData[] {
       filename: result.filename as string,
       size: result.size as number,
     });
+  }
+
+  return items;
+}
+
+interface FilePreviewData {
+  path: string;
+  preview?: string;
+}
+
+function extractFilePreviews(toolCalls?: ToolCall[]): FilePreviewData[] {
+  if (!toolCalls) return [];
+  const seen = new Set<string>();
+  const items: FilePreviewData[] = [];
+
+  for (const tc of toolCalls) {
+    if (tc.status !== "complete" || tc.isError) continue;
+    const result = tc.result as Record<string, unknown> | undefined;
+    if (!result?.file_preview) continue;
+    const path = result.path as string;
+    if (!path || seen.has(path)) continue;
+    seen.add(path);
+    items.push({ path, preview: result.preview as string | undefined });
   }
 
   return items;
@@ -311,6 +336,37 @@ function extractBrowserSession(toolCalls?: ToolCall[]): BrowserSessionData | nul
   return last;
 }
 
+interface WindowTarget {
+  title?: string;
+  app?: string;
+  pid?: number;
+  bundleId?: string;
+}
+
+interface DesktopSessionData {
+  sessionId: string;
+  windowTitle: string;
+  windowTarget?: WindowTarget;
+}
+
+function extractDesktopSession(toolCalls?: ToolCall[]): DesktopSessionData | null {
+  if (!toolCalls) return null;
+
+  let last: DesktopSessionData | null = null;
+  for (const tc of toolCalls) {
+    if (tc.name !== "open_window") continue;
+    if (tc.status !== "complete" || tc.isError) continue;
+    const result = tc.result as Record<string, unknown> | undefined;
+    if (!result?.session_id) continue;
+    last = {
+      sessionId: result.session_id as string,
+      windowTitle: (result.window_title as string) || "Desktop Window",
+      windowTarget: (result.window_target as WindowTarget) || undefined,
+    };
+  }
+  return last;
+}
+
 function isBrowsing(toolCalls?: ToolCall[]): boolean {
   if (!toolCalls) return false;
   return toolCalls.some(
@@ -319,39 +375,45 @@ function isBrowsing(toolCalls?: ToolCall[]): boolean {
 }
 
 function GeneratedMedia({ items }: { items: MediaItem[] }) {
+  const [lightbox, setLightbox] = useState<string | null>(null);
   if (items.length === 0) return null;
   return (
-    <Box sx={{ mt: 1, display: "flex", flexDirection: "column", gap: 1 }}>
-      {items.map((item, i) =>
-        item.type === "video" ? (
-          <Box
-            key={i}
-            component="video"
-            src={item.url}
-            controls
-            autoPlay
-            loop
-            muted
-            sx={{ maxWidth: "100%", maxHeight: 400, borderRadius: 1 }}
-          />
-        ) : (
-          <Box
-            key={i}
-            component="img"
-            src={item.url}
-            alt="Generated image"
-            sx={{
-              maxWidth: "100%",
-              maxHeight: 400,
-              borderRadius: 1,
-              cursor: "pointer",
-              "&:hover": { opacity: 0.9 },
-            }}
-            onClick={() => window.open(item.url, "_blank")}
-          />
-        ),
+    <>
+      <Box sx={{ mt: 1, display: "flex", flexDirection: "column", gap: 1 }}>
+        {items.map((item, i) =>
+          item.type === "video" ? (
+            <Box
+              key={i}
+              component="video"
+              src={item.url}
+              controls
+              autoPlay
+              loop
+              muted
+              sx={{ maxWidth: "100%", maxHeight: 400, borderRadius: 1 }}
+            />
+          ) : (
+            <Box
+              key={i}
+              component="img"
+              src={item.url}
+              alt="Generated image"
+              sx={{
+                maxWidth: "100%",
+                maxHeight: 400,
+                borderRadius: 1,
+                cursor: "zoom-in",
+                "&:hover": { opacity: 0.9 },
+              }}
+              onClick={() => setLightbox(item.url)}
+            />
+          ),
+        )}
+      </Box>
+      {lightbox && (
+        <ImageLightbox src={lightbox} alt="Generated image" onClose={() => setLightbox(null)} />
       )}
-    </Box>
+    </>
   );
 }
 
@@ -396,6 +458,51 @@ function toolCallFallback(toolCalls?: ToolCall[]): string | null {
   return `Running: ${names}`;
 }
 
+/** Subtle left-gutter strip for tool call activity, separate from chat flow. */
+function ActivityStrip({ message }: { message: ChatMessage }) {
+  const hasActive = message.toolCalls?.some(
+    (tc) => tc.status === "calling" || tc.status === "executing",
+  );
+  const fallback = toolCallFallback(message.toolCalls);
+
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        gap: 1,
+        pl: 1,
+        py: 0.5,
+        ml: 0.5,
+        borderLeft: 2,
+        borderColor: hasActive ? "primary.main" : "divider",
+        opacity: hasActive ? 0.85 : 0.55,
+        transition: "opacity 0.3s, border-color 0.3s",
+        "&:hover": { opacity: 1 },
+      }}
+    >
+      {hasActive && <CircularProgress size={10} sx={{ flexShrink: 0 }} />}
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{
+          fontFamily: "monospace",
+          fontSize: 11,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          flex: 1,
+        }}
+      >
+        {fallback || `${message.toolCalls?.length ?? 0} tool calls`}
+      </Typography>
+      {message.toolCalls && message.toolCalls.length > 0 && (
+        <ToolCallsSummary calls={message.toolCalls} />
+      )}
+    </Box>
+  );
+}
+
 function AssistantBubble({
   message,
   fontSize = 14,
@@ -411,11 +518,36 @@ function AssistantBubble({
 }) {
   const media = extractMedia(message.toolCalls);
   const fileEmbeds = extractFileEmbeds(message.toolCalls);
+  const filePreviews = extractFilePreviews(message.toolCalls);
   const formData = extractFormData(message.toolCalls);
   const formDef = formData ? getForm(formData.formType) : null;
-  const fallback = !message.content ? toolCallFallback(message.toolCalls) : null;
   const browserSession = extractBrowserSession(message.toolCalls);
+  const desktopSession = extractDesktopSession(message.toolCalls);
   const browsing = isBrowsing(message.toolCalls);
+
+  const hasContent = !!message.content;
+  const hasToolCalls = !!(message.toolCalls && message.toolCalls.length > 0);
+  const hasRichEmbed = media.length > 0 || fileEmbeds.length > 0 || filePreviews.length > 0
+    || browserSession || desktopSession || browsing || formDef;
+
+  // Tool-call-only message with no text and no rich embeds: render as subtle activity strip
+  if (!hasContent && hasToolCalls && !hasRichEmbed) {
+    return (
+      <Box sx={{ width: "100%" }}>
+        <ActivityStrip message={message} />
+        {message.dispatch?.suggested && onDispatch && (
+          <DispatchBanner
+            summary={message.dispatch.summary}
+            ready={!!message.dispatchPayload}
+            quick={!!message.dispatch.quick}
+            onDispatch={(s) =>
+              onDispatch(s, message.dispatchPayload ?? null, !!message.dispatch?.quick)
+            }
+          />
+        )}
+      </Box>
+    );
+  }
 
   return (
     <Stack
@@ -425,7 +557,7 @@ function AssistantBubble({
       sx={{ width: "100%" }}
     >
       <SmartToyIcon sx={{ mt: 0.5, color: "primary.main", fontSize: 20 }} />
-      <Box sx={{ maxWidth: "80%" }}>
+      <Box sx={{ maxWidth: "80%", minWidth: 0 }}>
         <Paper
           elevation={0}
           sx={{
@@ -442,9 +574,7 @@ function AssistantBubble({
         >
           {message.content
             ? <MarkdownContent content={message.content} />
-            : fallback
-              ? <Typography variant="body2" color="text.secondary" sx={{ fontStyle: "italic" }}>{fallback}</Typography>
-              : !message.toolCalls?.length && <StreamingCursor />}
+            : !hasToolCalls && <StreamingCursor />}
           <MediaGeneratingIndicator toolCalls={message.toolCalls} />
           <GeneratedMedia items={media} />
           {browsing && <BrowsingIndicator />}
@@ -455,8 +585,19 @@ function AssistantBubble({
               initialUrl={browserSession.url}
             />
           )}
+          {desktopSession && (
+            <DesktopEmbed
+              sessionId={desktopSession.sessionId}
+              channel={chatChannel ?? null}
+              windowTitle={desktopSession.windowTitle}
+              windowTarget={desktopSession.windowTarget}
+            />
+          )}
           {fileEmbeds.map((fe, i) => (
             <FileEmbed key={i} {...fe} />
+          ))}
+          {filePreviews.map((fp) => (
+            <LiveFilePreview key={fp.path} path={fp.path} initialPreview={fp.preview} />
           ))}
         </Paper>
         {formDef && (
@@ -466,9 +607,8 @@ function AssistantBubble({
             onSubmitted={onFormSubmit}
           />
         )}
-        {message.toolCalls && message.toolCalls.length > 0 && (
-          <ToolCallsSummary calls={message.toolCalls} />
-        )}
+        {/* Tool calls rendered as subtle strip below the bubble */}
+        {hasToolCalls && <ActivityStrip message={message} />}
         <Typography
           variant="caption"
           color="text.disabled"

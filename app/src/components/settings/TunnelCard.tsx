@@ -14,7 +14,7 @@ import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorIcon from "@mui/icons-material/Error";
 import { useSearchParams } from "react-router-dom";
-import { useChannel } from "@/hooks/useChannel";
+import { useDashboardChannel } from "@/hooks/useDashboardChannel";
 import { useChannelEvent } from "@/hooks/useChannelEvent";
 import { EVENTS } from "@/lib/events";
 
@@ -43,7 +43,7 @@ export function TunnelCard({ tunnelName, hostAuth, tunnelEnabled, allowAnyUser, 
   const [, setParams] = useSearchParams();
 
   // Channel-driven status updates (the BEAM way)
-  const { channel } = useChannel("dashboard");
+  const { channel } = useDashboardChannel();
   const statusEvent = useChannelEvent<{ data: TunnelStatus }>(
     channel,
     EVENTS.tunnel.status,

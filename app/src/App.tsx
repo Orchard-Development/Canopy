@@ -4,9 +4,9 @@ import { ThemeProvider, CssBaseline, Box, CircularProgress, useMediaQuery, useTh
 import { buildThemes, getInitialMode } from "./lib/theme";
 import { BrandingContext, SetBrandingContext, DEFAULT_BRANDING, fetchBranding, type BrandingConfig } from "./lib/branding";
 import { ColorModeContext } from "./hooks/useColorMode";
-import { useChannel } from "./hooks/useChannel";
 import { useChannelEvent } from "./hooks/useChannelEvent";
 import { EVENTS } from "./lib/events";
+import { DashboardChannelProvider, useDashboardChannel } from "./hooks/useDashboardChannel";
 import { ProjectProvider } from "./hooks/useProject";
 import { ActiveProjectProvider } from "./hooks/useActiveProject";
 import { AppHeader } from "./components/AppHeader";
@@ -36,6 +36,7 @@ import { useActiveProject } from "./hooks/useActiveProject";
 import { useToastProvider, ToastProvider, useToast } from "./hooks/useToast";
 import { useEventBusProvider, EventBusProvider, useEventBus } from "./hooks/useEventBus";
 import { useEngineEvents } from "./hooks/useEngineEvents";
+import { useUserActivity } from "./hooks/useUserActivity";
 import { ProjectThemeBridge } from "./components/ProjectThemeBridge";
 import { ToastHost } from "./components/ToastHost";
 
@@ -233,7 +234,7 @@ function AppLayout({ onResetOnboarding, onResetTour, showTour, onTourComplete, p
   }, [navigate]);
 
   // Phoenix channel: external dispatchers (CLI, API) request the UI to open a terminal
-  const { channel: appDashChannel } = useChannel("dashboard");
+  const { channel: appDashChannel } = useDashboardChannel();
   const terminalOpenEvent = useChannelEvent<{ sessionId?: string; label?: string }>(appDashChannel, EVENTS.session.open);
   useEffect(() => {
     if (!terminalOpenEvent?.sessionId) return;
@@ -242,6 +243,9 @@ function AppLayout({ onResetOnboarding, onResetTour, showTour, onTourComplete, p
 
   // Engine channel events -> EventBus (feeds both toasts and notification bell)
   useEngineEvents(appDashChannel);
+
+  // User activity tracking -- captures all in-app interactions
+  useUserActivity(appDashChannel);
 
   // Engine event polling -- poll for new sessions and proposals
   const { emit: emitEvent } = useEventBus();
@@ -532,6 +536,7 @@ export function App() {
           <ThemeProvider theme={theme}>
             <CssBaseline />
             <EventBusProvider value={eventBus}>
+            <DashboardChannelProvider>
             <ToastProviderBridge>
             <TunnelAuthProvider>
             <AuthProvider>
@@ -561,6 +566,7 @@ export function App() {
             </AuthProvider>
             </TunnelAuthProvider>
             </ToastProviderBridge>
+            </DashboardChannelProvider>
             </EventBusProvider>
           </ThemeProvider>
           </DevModeContext.Provider>

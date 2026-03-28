@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useChannel } from "./useChannel";
+import { useDashboardChannel } from "./useDashboardChannel";
 import { useChannelEvent } from "./useChannelEvent";
 import { EVENTS } from "../lib/events";
 import { api } from "../lib/api";
@@ -19,7 +19,7 @@ export interface TerminalAction {
  * Returns pending actions and a function to mark them complete.
  */
 export function useTerminalActions() {
-  const { channel } = useChannel("dashboard");
+  const { channel } = useDashboardChannel();
   const [actions, setActions] = useState<TerminalAction[]>([]);
 
   // Seed from REST on mount

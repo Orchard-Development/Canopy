@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
-import { useChannel } from "./useChannel";
+import { useDashboardChannel } from "./useDashboardChannel";
 import { useChannelEvent } from "./useChannelEvent";
 import { EVENTS } from "../lib/events";
 import { api, type TunnelConnection } from "@/lib/api";
 
 export function useTunnelConnections() {
-  const { channel } = useChannel("dashboard");
+  const { channel } = useDashboardChannel();
   const [connections, setConnections] = useState<TunnelConnection[]>([]);
 
   // Poll for pending connections only when tunnels are enabled

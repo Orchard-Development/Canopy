@@ -306,6 +306,17 @@ export const TerminalCard = forwardRef(function TerminalCard(
               </Tooltip>
             )}
           </Box>
+          {tab.lastPrompt && (
+            <Tooltip title={tab.lastPrompt}>
+              <Typography variant="caption" noWrap sx={{
+                fontSize: 10,
+                color: "text.primary",
+                pb: 0.25,
+              }}>
+                &gt; {tab.lastPrompt}
+              </Typography>
+            </Tooltip>
+          )}
           {tab.summary && (
             <Tooltip title={tab.summary}>
               <Typography variant="caption" noWrap sx={{

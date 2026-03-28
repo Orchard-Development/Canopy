@@ -25,6 +25,8 @@ export const COMPONENT_MAP: Record<string, LazyExoticComponent<ComponentType>> =
   "bundled:RootsView": lazy(() => import("./RootsView")),
   "bundled:ApplicationViewer": lazy(() => import("./ApplicationViewer")),
   "bundled:Autoresearch": lazy(() => import("./Autoresearch")),
+  "bundled:Judgment": lazy(() => import("./Judgment")),
+  "bundled:Swarm": lazy(() => import("./Swarm")),
 };
 
 /**

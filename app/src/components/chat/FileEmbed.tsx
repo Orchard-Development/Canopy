@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Box, Typography, Link } from "@mui/material";
 import DownloadIcon from "@mui/icons-material/Download";
 import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
+import { ImageLightbox } from "./ImageLightbox";
 
 interface Props {
   url: string;
@@ -18,20 +19,24 @@ function formatSize(bytes: number): string {
 }
 
 function ImageEmbed({ url, filename }: { url: string; filename: string }) {
+  const [open, setOpen] = useState(false);
   return (
-    <Box
-      component="img"
-      src={url}
-      alt={filename}
-      sx={{
-        maxWidth: "100%",
-        maxHeight: 400,
-        borderRadius: 1,
-        cursor: "pointer",
-        "&:hover": { opacity: 0.9 },
-      }}
-      onClick={() => window.open(url, "_blank")}
-    />
+    <>
+      <Box
+        component="img"
+        src={url}
+        alt={filename}
+        sx={{
+          maxWidth: "100%",
+          maxHeight: 400,
+          borderRadius: 1,
+          cursor: "zoom-in",
+          "&:hover": { opacity: 0.9 },
+        }}
+        onClick={() => setOpen(true)}
+      />
+      {open && <ImageLightbox src={url} alt={filename} onClose={() => setOpen(false)} />}
+    </>
   );
 }
 
@@ -48,7 +53,7 @@ function IframeEmbed({ url, height = 400 }: { url: string; height?: number }) {
         borderRadius: 1,
         bgcolor: "background.default",
       }}
-      sandbox="allow-same-origin"
+      sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
     />
   );
 }

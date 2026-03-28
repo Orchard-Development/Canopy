@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { Channel } from "phoenix";
+import { useFrameCanvas } from "./useFrameCanvas";
 
 interface BrowserSessionState {
   url: string;
@@ -24,66 +25,8 @@ export function useBrowserSession(
     title: "",
     isLive: true,
   });
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const rafRef = useRef<number>(0);
-  const pendingFrameRef = useRef<string | null>(null);
+  const { canvasRef, drawFrame, mapCoords, cleanup } = useFrameCanvas();
   const refsToClean = useRef<Array<{ event: string; ref: number }>>([]);
-  // Track the native resolution of the screencast for coordinate mapping
-  const nativeSizeRef = useRef<{ w: number; h: number }>({ w: 800, h: 500 });
-
-  // Draw a base64 JPEG frame onto the canvas
-  const drawFrame = useCallback((base64Data: string) => {
-    pendingFrameRef.current = base64Data;
-
-    if (rafRef.current) return;
-
-    rafRef.current = requestAnimationFrame(() => {
-      rafRef.current = 0;
-      const data = pendingFrameRef.current;
-      if (!data || !canvasRef.current) return;
-      pendingFrameRef.current = null;
-
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
-      const img = new Image();
-      img.onload = () => {
-        if (canvas.width !== img.width || canvas.height !== img.height) {
-          canvas.width = img.width;
-          canvas.height = img.height;
-          nativeSizeRef.current = { w: img.width, h: img.height };
-        }
-        ctx.drawImage(img, 0, 0);
-      };
-      const binary = atob(data);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) {
-        bytes[i] = binary.charCodeAt(i);
-      }
-      const blob = new Blob([bytes], { type: "image/jpeg" });
-      const url = URL.createObjectURL(blob);
-      img.src = url;
-      // Clean up blob URL after load
-      img.addEventListener("load", () => URL.revokeObjectURL(url), { once: true });
-    });
-  }, []);
-
-  // Map a CSS-pixel click position on the canvas to native CDP coordinates
-  const mapCoords = useCallback(
-    (clientX: number, clientY: number): { x: number; y: number } | null => {
-      const canvas = canvasRef.current;
-      if (!canvas) return null;
-      const rect = canvas.getBoundingClientRect();
-      const scaleX = nativeSizeRef.current.w / rect.width;
-      const scaleY = nativeSizeRef.current.h / rect.height;
-      return {
-        x: Math.round((clientX - rect.left) * scaleX),
-        y: Math.round((clientY - rect.top) * scaleY),
-      };
-    },
-    [],
-  );
 
   // Send a click to the browser at canvas coordinates
   const handleClick = useCallback(
@@ -170,12 +113,9 @@ export function useBrowserSession(
         channel.off(event, ref);
       }
       refsToClean.current = [];
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = 0;
-      }
+      cleanup();
     };
-  }, [sessionId, channel, drawFrame]);
+  }, [sessionId, channel, drawFrame, cleanup]);
 
   return {
     url: state.url,

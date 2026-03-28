@@ -27,7 +27,9 @@ import FilterAltOffIcon from "@mui/icons-material/FilterAltOff";
 import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import HistoryIcon from "@mui/icons-material/History";
+import ListAltIcon from "@mui/icons-material/ListAlt";
 import { SessionHistoryDialog } from "./SessionHistoryDialog";
+import { SessionSummaryList } from "./SessionSummaryList";
 import { TerminalPanel } from "./TerminalPanel";
 import { TerminalGrid } from "./TerminalGrid";
 import type { GridSpan } from "../ResizableGrid";
@@ -182,6 +184,7 @@ export interface TerminalTab {
   source?: string;
   forkedFrom?: string;
   node?: string;
+  lastPrompt?: string;
 }
 
 export interface TerminalPreset {
@@ -261,6 +264,7 @@ export function TerminalDrawerContent({
   hasActiveProject,
   scrollToSessionId,
 }: Props) {
+  const [summaryMode, setSummaryMode] = useState(false);
   const [refreshKeys, setRefreshKeys] = useState<Record<string, number>>({});
   const handleRefresh = () => {
     const tab = tabs[activeTab];
@@ -402,7 +406,7 @@ export function TerminalDrawerContent({
               {expanded ? <CloseFullscreenIcon fontSize="small" /> : <OpenInFullIcon fontSize="small" />}
             </IconButton>
           </Tooltip>
-          {gridMode && (
+          {gridMode && !summaryMode && (
             <Box sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
               <Tooltip title="Fill gaps">
                 <IconButton
@@ -490,11 +494,23 @@ export function TerminalDrawerContent({
               </IconButton>
             </Tooltip>
           )}
-          <Tooltip title={gridMode ? "Tab view" : "Grid view"}>
-            <IconButton data-tour="tour-terminal-grid" size="small" onClick={() => setGridMode(!gridMode)} sx={{ mr: 0.5 }}>
-              {gridMode ? <ViewStreamIcon fontSize="small" /> : <GridViewIcon fontSize="small" />}
+          <Tooltip title={summaryMode ? "Exit summary view" : "Summary view"}>
+            <IconButton
+              size="small"
+              onClick={() => setSummaryMode(!summaryMode)}
+              color={summaryMode ? "primary" : "default"}
+              sx={{ mr: 0.5 }}
+            >
+              <ListAltIcon fontSize="small" />
             </IconButton>
           </Tooltip>
+          {!summaryMode && (
+            <Tooltip title={gridMode ? "Tab view" : "Grid view"}>
+              <IconButton data-tour="tour-terminal-grid" size="small" onClick={() => setGridMode(!gridMode)} sx={{ mr: 0.5 }}>
+                {gridMode ? <ViewStreamIcon fontSize="small" /> : <GridViewIcon fontSize="small" />}
+              </IconButton>
+            </Tooltip>
+          )}
           <IconButton size="small" onClick={onClose} sx={{ mr: 0.5 }}>
             <CloseIcon fontSize="small" />
           </IconButton>
@@ -513,7 +529,7 @@ export function TerminalDrawerContent({
           </Menu>
         </Box>
         {/* Row 2: Tabs (tab mode only) */}
-        {!gridMode && (
+        {!gridMode && !summaryMode && (
           <Tabs
             value={activeTab}
             onChange={(_, value) => setActiveTab(value)}
@@ -635,7 +651,20 @@ export function TerminalDrawerContent({
         )}
       </Box>
 
-      {gridMode ? (
+      {summaryMode ? (
+        <SessionSummaryList
+          tabs={tabs}
+          profiles={profiles}
+          onCardFocus={(id) => {
+            setSummaryMode(false);
+            onCardFocus?.(id);
+          }}
+          onKill={onTabClose}
+          onViewLog={onViewLog}
+          onOpenLogFile={onOpenLogFile}
+          onAiSync={onAiSync}
+        />
+      ) : gridMode ? (
         <Box ref={gridScrollRef} sx={{ flex: 1, overflow: "auto", p: 1 }}>
           <TerminalGrid
             tabs={tabs}

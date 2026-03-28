@@ -1,4 +1,4 @@
-/** Electron preload bridge exposed on window.ctx */
+/** Electron preload bridge exposed on window.orchard */
 interface CtxBridge {
   getVersion?: () => Promise<string>;
   openExternal?: (url: string) => Promise<void>;
@@ -82,4 +82,5 @@ interface ViewerBridge {
 
 interface Window {
   ctx: CtxBridge & { viewer?: ViewerBridge };
+  orchard: CtxBridge & { viewer?: ViewerBridge };
 }

@@ -13,6 +13,9 @@ import { terminalOptions, createTerminalTheme } from "../../lib/xterm-theme";
 import { supabase, supabaseConfigured } from "../../lib/supabase";
 import { sendCommand } from "../../lib/remote-commands";
 
+const MIN_COLS = 80;
+const MIN_ROWS = 10;
+
 interface Props {
   sessionId: string;
   scrollback?: string;
@@ -77,8 +80,8 @@ export function RemoteTerminal({ sessionId, scrollback, onExit }: Props) {
       if (dims) {
         sendCommand("terminal:resize", {
           sessionId,
-          cols: dims.cols,
-          rows: dims.rows,
+          cols: Math.max(MIN_COLS, dims.cols ?? 80),
+          rows: Math.max(MIN_ROWS, dims.rows ?? 24),
         });
       }
     });

@@ -24,7 +24,7 @@ import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
 import TerminalIcon from "@mui/icons-material/Terminal";
 import ArticleOutlinedIcon from "@mui/icons-material/ArticleOutlined";
 import { MarkdownContent } from "../components/MarkdownContent";
-import { useChannel } from "../hooks/useChannel";
+import { useDashboardChannel } from "../hooks/useDashboardChannel";
 import { useChannelEvent } from "../hooks/useChannelEvent";
 import { EVENTS } from "../lib/events";
 import { useActiveProject } from "../hooks/useActiveProject";
@@ -48,7 +48,7 @@ export default function ProposalDetailView() {
   const [busy, setBusy] = useState(false);
   const [evaluation, setEvaluation] = useState<string | null>(null);
   const [evaluating, setEvaluating] = useState(false);
-  const { channel } = useChannel("dashboard");
+  const { channel } = useDashboardChannel();
   const evalEvent = useChannelEvent<{ slug: string; text: string }>(channel, EVENTS.proposals.eval);
   const evalDoneEvent = useChannelEvent<{ slug: string; error?: string }>(channel, EVENTS.proposals.evalDone);
   const changedEvent = useChannelEvent<{ data: { slug?: string } }>(channel, EVENTS.proposals.changed);

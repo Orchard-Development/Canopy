@@ -7,6 +7,30 @@ const SCROLL_THRESHOLD = 100;
 const SCROLL_AMOUNT = 80;
 const SCROLL_INTERVAL = 300;
 
+/** Read all card grid positions from DOM without mutating state. */
+function readGridPositions(
+  cardEls: Map<string, HTMLElement>,
+  gridEl: HTMLElement,
+  cw: number,
+  rowHeight: number,
+  gap: number,
+): Record<string, { colStart: number; rowStart: number }> {
+  const gridRect = gridEl.getBoundingClientRect();
+  const sl = gridEl.scrollLeft;
+  const st = gridEl.scrollTop;
+  const positions: Record<string, { colStart: number; rowStart: number }> = {};
+  for (const [id, el] of cardEls) {
+    const wrapper = el.closest("[data-grid-item]") as HTMLElement | null;
+    if (!wrapper) continue;
+    const rect = wrapper.getBoundingClientRect();
+    positions[id] = {
+      colStart: Math.max(1, Math.round((rect.left - gridRect.left + sl) / (cw + gap)) + 1),
+      rowStart: Math.max(1, Math.round((rect.top - gridRect.top + st) / (rowHeight + gap)) + 1),
+    };
+  }
+  return positions;
+}
+
 function findScrollParent(el: HTMLElement | null): HTMLElement | null {
   let node = el?.parentElement ?? null;
   while (node) {
@@ -111,6 +135,34 @@ export function useGridDrag({
         }
       }
 
+      // Find horizontal neighbor to shrink instead of shift
+      let neighbor: { id: string; colStart: number; col: number } | null = null;
+      let allPositions: Record<string, { colStart: number; rowStart: number }> = {};
+      const gridElSnap = gridRef.current;
+      if (gridElSnap) {
+        allPositions = readGridPositions(cardElsRef.current, gridElSnap, cw, rowHeight, GAP);
+        const myPos = allPositions[id];
+        if (myPos) {
+          const searchCol = edge === "right"
+            ? myPos.colStart + span.col
+            : myPos.colStart - 1;
+          if (searchCol >= 1 && searchCol <= numCols) {
+            for (const [tid, tPos] of Object.entries(allPositions)) {
+              if (tid === id) continue;
+              const tSpan = spans[tid] ?? { col: colMultiplier, row: defaultRowSpan };
+              const tColEnd = tPos.colStart + tSpan.col;
+              const tRowEnd = tPos.rowStart + tSpan.row;
+              if (tPos.colStart <= searchCol && tColEnd > searchCol &&
+                  tPos.rowStart <= myPos.rowStart && tRowEnd > myPos.rowStart) {
+                neighbor = { id: tid, colStart: tPos.colStart, col: tSpan.col };
+                break;
+              }
+            }
+          }
+        }
+      }
+      const maxColGrowth = neighbor ? neighbor.col - 1 : Infinity;
+
       const updateDrag = () => {
         const scrollDelta = scrollParent ? scrollParent.scrollTop - scrollStart : 0;
         const dy = lastMouseY - cardRect.top + scrollDelta;
@@ -121,14 +173,21 @@ export function useGridDrag({
           if (!gridEl) return;
           const gridRect = gridEl.getBoundingClientRect();
           const contentX = lastMouseX - gridRect.left + gridEl.scrollLeft;
-          const newColStart = Math.max(1, Math.min(anchorRightCol - 1, Math.round(contentX / (cw + GAP)) + 1));
-          const newCol = Math.max(1, anchorRightCol - newColStart);
+          let newColStart = Math.max(1, Math.min(anchorRightCol - 1, Math.round(contentX / (cw + GAP)) + 1));
+          let newCol = Math.max(1, anchorRightCol - newColStart);
+          const growth = newCol - span.col;
+          if (growth > maxColGrowth) {
+            newCol = span.col + maxColGrowth;
+            newColStart = anchorRightCol - newCol;
+          }
           const next: DragState = { id, cardEl, targetCol: newCol, targetRow: tr, targetColStart: newColStart, targetRowStart: pinnedRowStart };
           dragRef.current = next;
           setDrag(next);
         } else {
           const dx = lastMouseX - cardRect.left;
-          const tc = Math.max(1, Math.min(numCols, Math.round((dx + GAP) / (cw + GAP))));
+          let tc = Math.max(1, Math.min(numCols, Math.round((dx + GAP) / (cw + GAP))));
+          const growth = tc - span.col;
+          if (growth > maxColGrowth) tc = span.col + maxColGrowth;
           const next: DragState = { id, cardEl, targetCol: tc, targetRow: tr };
           dragRef.current = next;
           setDrag(next);
@@ -166,14 +225,46 @@ export function useGridDrag({
       const onUp = () => {
         stopAutoScroll();
         const final = dragRef.current!;
+        const colDelta = final.targetCol - span.col;
+
         setSpans((prev) => {
-          const existing = prev[id] ?? {};
+          const next = { ...prev };
+
+          // Pin all card positions when shrinking a neighbor so CSS grid
+          // does not reflow anything horizontally
+          if (neighbor && colDelta !== 0) {
+            for (const [cid, pos] of Object.entries(allPositions)) {
+              const ex = next[cid] ?? { col: colMultiplier, row: defaultRowSpan };
+              if (!ex.colStart || !ex.rowStart) {
+                next[cid] = { ...ex, colStart: pos.colStart, rowStart: pos.rowStart };
+              }
+            }
+          }
+
+          // Update resized card
+          const existing = next[id] ?? {};
           const updated: GridSpan = { ...existing, col: final.targetCol, row: final.targetRow };
           if (final.targetColStart !== undefined) updated.colStart = final.targetColStart;
           else if (pinnedColStart !== undefined) updated.colStart = pinnedColStart;
+          else if (allPositions[id]) updated.colStart = allPositions[id].colStart;
           if (final.targetRowStart !== undefined) updated.rowStart = final.targetRowStart;
           else if (pinnedRowStart !== undefined) updated.rowStart = pinnedRowStart;
-          const next = { ...prev, [id]: updated };
+          else if (allPositions[id]) updated.rowStart = allPositions[id].rowStart;
+          next[id] = updated;
+
+          // Shrink (or grow) the horizontal neighbor by the inverse delta
+          if (neighbor && colDelta !== 0) {
+            const nEx = next[neighbor.id] ?? { col: colMultiplier, row: defaultRowSpan };
+            const newNeighborCol = Math.max(1, nEx.col - colDelta);
+            const nUpdated: GridSpan = { ...nEx, col: newNeighborCol };
+            if (edge === "right") {
+              // Neighbor is to the right -- shift its start rightward
+              nUpdated.colStart = neighbor.colStart + colDelta;
+            }
+            // Left edge: neighbor keeps its colStart, loses/gains width from its right side
+            next[neighbor.id] = nUpdated;
+          }
+
           onSpansChange?.(next);
           return next;
         });
@@ -185,7 +276,7 @@ export function useGridDrag({
       document.addEventListener("mousemove", onMove);
       document.addEventListener("mouseup", onUp);
     },
-    [spans, numCols, getCellWidth, rowHeight, defaultRowSpan, colMultiplier, onSpansChange, setSpans],
+    [spans, numCols, getCellWidth, rowHeight, defaultRowSpan, colMultiplier, onSpansChange, setSpans, freeform],
   );
 
   const pinAllPositions = useCallback(() => {

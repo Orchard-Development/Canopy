@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Box,
-  Chip,
   CircularProgress,
   Collapse,
   Typography,
@@ -9,7 +8,6 @@ import {
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorIcon from "@mui/icons-material/Error";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
-import BuildIcon from "@mui/icons-material/Build";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import type { ToolCall } from "../../types/tools";
 
@@ -24,9 +22,59 @@ function truncate(value: unknown, max = 300): string {
   return s.length <= max ? s : s.slice(0, max) + "...";
 }
 
+const isActive = (s: ToolCall["status"]) => s === "calling" || s === "executing";
+
+function formatElapsed(ms: number): string {
+  const secs = Math.floor(ms / 1000);
+  if (secs < 60) return `${secs}s`;
+  const mins = Math.floor(secs / 60);
+  const rem = secs % 60;
+  return `${mins}m ${rem}s`;
+}
+
+/** Summarize args into a readable one-liner for display next to the tool name. */
+function argsSummary(args: Record<string, unknown>): string | null {
+  const keys = Object.keys(args);
+  if (keys.length === 0) return null;
+  const parts: string[] = [];
+  for (const k of keys) {
+    const v = args[k];
+    if (typeof v === "string") {
+      parts.push(v.length > 80 ? v.slice(0, 77) + "..." : v);
+    } else if (typeof v === "number" || typeof v === "boolean") {
+      parts.push(String(v));
+    }
+  }
+  return parts.length > 0 ? parts.join(" | ") : null;
+}
+
+/** Live elapsed-time counter. Ticks every second while active. */
+function useElapsed(active: boolean): number {
+  const startRef = useRef<number>(0);
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!active) return;
+    startRef.current = Date.now();
+    setElapsed(0);
+    const id = setInterval(() => setElapsed(Date.now() - startRef.current), 1000);
+    return () => clearInterval(id);
+  }, [active]);
+
+  return elapsed;
+}
+
 /** Compact single-line row for one tool call inside the expanded panel. */
 function ToolRow({ tc }: { tc: ToolCall }) {
-  const [open, setOpen] = useState(false);
+  const active = isActive(tc.status);
+  const [open, setOpen] = useState(active);
+  const elapsed = useElapsed(active);
+  const summary = tc.args ? argsSummary(tc.args as Record<string, unknown>) : null;
+
+  // Auto-open when a tool starts running
+  useEffect(() => {
+    if (active) setOpen(true);
+  }, [active]);
 
   return (
     <Box>
@@ -47,9 +95,30 @@ function ToolRow({ tc }: { tc: ToolCall }) {
       >
         {statusIcon(tc.status)}
         <span style={{ opacity: 0.7 }}>{tc.name}</span>
-        {tc.args && Object.keys(tc.args).length > 0 && (
+        {active && summary && (
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{
+              fontFamily: "monospace",
+              fontSize: 11,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              maxWidth: 300,
+            }}
+          >
+            {summary}
+          </Typography>
+        )}
+        {!active && tc.args && Object.keys(tc.args).length > 0 && (
           <Typography variant="caption" color="text.disabled" sx={{ fontFamily: "monospace", fontSize: 11 }}>
             ({Object.keys(tc.args).join(", ")})
+          </Typography>
+        )}
+        {active && (
+          <Typography variant="caption" color="text.disabled" sx={{ ml: "auto", fontFamily: "monospace", fontSize: 11 }}>
+            {formatElapsed(elapsed)}
           </Typography>
         )}
         {tc.isError && (
@@ -63,16 +132,25 @@ function ToolRow({ tc }: { tc: ToolCall }) {
           {tc.args && Object.keys(tc.args).length > 0 && (
             <Box component="pre" sx={preStyle}>{JSON.stringify(tc.args, null, 2)}</Box>
           )}
+          {active && !tc.result && (
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, py: 0.5 }}>
+              <CircularProgress size={10} />
+              <Typography variant="caption" color="text.secondary" sx={{ fontFamily: "monospace", fontSize: 11 }}>
+                executing ({formatElapsed(elapsed)})
+              </Typography>
+            </Box>
+          )}
           {tc.result !== undefined && (
             <Box
               component="pre"
               sx={{
                 ...preStyle,
+                maxHeight: active ? 400 : 150,
                 bgcolor: tc.isError ? "error.dark" : "action.selected",
                 color: tc.isError ? "error.contrastText" : "text.primary",
               }}
             >
-              {truncate(tc.result, 1500)}
+              {truncate(tc.result, active ? 5000 : 1500)}
             </Box>
           )}
         </Box>
@@ -95,71 +173,56 @@ const preStyle = {
   fontFamily: "monospace",
 };
 
-/** Summary chip for all tool calls on a message. Shows a compact banner, expandable to details. */
+/** Compact expandable detail for tool calls, designed for the activity strip. */
 export function ToolCallsSummary({ calls }: { calls: ToolCall[] }) {
+  const hasActive = calls.some((c) => isActive(c.status));
   const [expanded, setExpanded] = useState(false);
 
-  const done = calls.filter((c) => c.status === "complete").length;
   const failed = calls.filter((c) => c.status === "error").length;
-  const running = calls.length - done - failed;
-
-  const label = running > 0
-    ? `${calls.length} tool calls (${running} running...)`
-    : failed > 0
-      ? `${calls.length} tool calls (${failed} failed)`
-      : `${calls.length} tool calls`;
-
-  const allFailed = failed > 0 && failed === calls.length;
-  const icon = running > 0
-    ? <CircularProgress size={14} />
-    : allFailed
-      ? <ErrorIcon sx={{ fontSize: 16, color: "error.main" }} />
-      : failed > 0
-        ? <WarningAmberIcon sx={{ fontSize: 16, color: "warning.main" }} />
-        : <CheckCircleIcon sx={{ fontSize: 16, color: "success.main" }} />;
 
   return (
-    <Box sx={{ mt: 0.75 }}>
-      <Chip
-        icon={<BuildIcon sx={{ fontSize: 14 }} />}
-        avatar={icon as never}
-        label={
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-            {icon}
-            <span>{label}</span>
-            <ExpandMoreIcon
-              sx={{
-                fontSize: 16,
-                ml: 0.25,
-                transform: expanded ? "rotate(180deg)" : "none",
-                transition: "transform 0.2s",
-              }}
-            />
-          </Box>
-        }
-        size="small"
-        variant="outlined"
+    <Box sx={{ flexShrink: 0 }}>
+      <Box
         onClick={() => setExpanded((p) => !p)}
         sx={{
-          fontFamily: "monospace",
-          fontSize: 12,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 0.5,
           cursor: "pointer",
-          borderColor: "divider",
-          "& .MuiChip-label": { px: 1 },
-          "& .MuiChip-icon": { display: "none" },
-          "& .MuiChip-avatar": { display: "none" },
+          px: 0.75,
+          py: 0.25,
+          borderRadius: 0.75,
+          fontSize: 11,
+          fontFamily: "monospace",
+          color: "text.disabled",
+          "&:hover": { bgcolor: "action.hover", color: "text.secondary" },
+          transition: "all 0.15s",
         }}
-      />
+      >
+        {hasActive
+          ? <CircularProgress size={10} />
+          : failed > 0
+            ? <WarningAmberIcon sx={{ fontSize: 12, color: "warning.main" }} />
+            : <CheckCircleIcon sx={{ fontSize: 12, color: "success.light", opacity: 0.6 }} />}
+        <ExpandMoreIcon
+          sx={{
+            fontSize: 14,
+            transform: expanded ? "rotate(180deg)" : "none",
+            transition: "transform 0.2s",
+          }}
+        />
+      </Box>
       <Collapse in={expanded}>
         <Box
           sx={{
             mt: 0.5,
-            p: 0.75,
+            p: 0.5,
             border: 1,
             borderColor: "divider",
-            borderRadius: 1,
-            maxHeight: 300,
+            borderRadius: 0.75,
+            maxHeight: 250,
             overflow: "auto",
+            bgcolor: "background.default",
           }}
         >
           {calls.map((tc) => (

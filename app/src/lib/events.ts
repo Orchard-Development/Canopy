@@ -84,6 +84,7 @@ export const EVENTS = {
     done: "done",
     error: "error",
     state: "state",
+    usage: "usage",
   },
   agent: {
     output: "agent:output",
@@ -99,6 +100,8 @@ export const EVENTS = {
     notification: "agent:notification",
     task: "agent:task",
     hook: "agent:hook",
+    /** Catch-all for non-hook agent events (e.g. from Python emitter). */
+    event: "agent:event",
   },
   tunnel: {
     status: "tunnel:status",
@@ -123,7 +126,21 @@ export const EVENTS = {
   toast: {
     show: "toast:show",
   },
+  userActivity: "user:activity",
   feed: "feed:event",
+  judgment: {
+    scored: "judgment:scored",
+    negative: "judgment:negative",
+    report: "judgment:report",
+  },
+  swarm: {
+    missionStarted: "swarm:mission_started",
+    missionCompleted: "swarm:mission_completed",
+    droneSpawned: "swarm:drone_spawned",
+    droneDied: "swarm:drone_died",
+    droneExited: "swarm:drone_exited",
+    waggleDance: "swarm:waggle_dance",
+  },
   views: "views:changed",
   autoresearch: {
     experimentStarted: "autoresearch:experiment_started",

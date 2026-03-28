@@ -11,12 +11,13 @@ import { ChatMessages } from "../components/chat/ChatMessages";
 import { ChatInput } from "../components/chat/ChatInput";
 import { ModelPicker } from "../components/chat/ModelPicker";
 import { ConversationHistory } from "../components/chat/ConversationHistory";
+import { CostChip } from "../components/chat/CostChip";
 import { DispatchPreview } from "../components/dispatch/DispatchPreview";
 import { AgentActivityCard } from "../components/chat/AgentActivityCard";
 import { useChat } from "../hooks/useChat";
 import { useActiveProject } from "../hooks/useActiveProject";
 import { useDispatch } from "../hooks/useDispatch";
-import { useChannel } from "../hooks/useChannel";
+import { useDashboardChannel } from "../hooks/useDashboardChannel";
 import { useAgentStream } from "../hooks/useAgentStream";
 import { useFileAttach } from "../hooks/useFileAttach";
 import type { AiModelOption, DispatchPayload, ProjectRecord } from "../lib/api";
@@ -48,7 +49,7 @@ export default function Chat() {
   const chat = useChat(project?.id);
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { channel } = useChannel("dashboard");
+  const { channel } = useDashboardChannel();
   const agentStream = useAgentStream(channel);
   const [model, setModel] = usePersistedState<string>("chat.model", "");
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -147,9 +148,9 @@ export default function Chat() {
     if (!selected) return payload;
     const command = selected.provider === "openai" ? "codex" : "claude";
     if (payload.command === command) return payload;
-    const args = command === "claude"
-      ? ["--dangerously-skip-permissions", "--model", selected.id]
-      : ["--dangerously-bypass-approvals-and-sandbox", "--model", selected.id];
+    const args = command === "codex"
+      ? ["--dangerously-bypass-approvals-and-sandbox", "--model", selected.id]
+      : ["--dangerously-skip-permissions", "--model", selected.id];
     return { ...payload, command, args };
   }
 
@@ -402,6 +403,7 @@ export default function Chat() {
                     variant="outlined"
                   />
                 )}
+                <CostChip usage={chat.usage} model={model} />
               </Box>
               <ChatMessages
                 messages={chat.messages}

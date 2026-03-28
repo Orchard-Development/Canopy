@@ -224,6 +224,12 @@ export function useEngineEvents(channel: Channel | null): void {
     const label = snakeToWords(stripPrefix(p.event));
     return { message: capitalize(label), severity: "info" };
   });
+
+  // Catch-all for non-hook agent events (e.g. from Python emitter)
+  useAgentEvent(channel, emit, EVENTS.agent.event, "agent", (p) => {
+    const label = snakeToWords(p.event || "event");
+    return { message: capitalize(label), severity: "info" };
+  });
 }
 
 // -- Helpers ------------------------------------------------------------------

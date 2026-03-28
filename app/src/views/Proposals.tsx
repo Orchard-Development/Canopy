@@ -29,7 +29,7 @@ import { api } from "../lib/api";
 import { CardGrid } from "../components/CardGrid";
 import { NewProposalDialog } from "../components/proposal/NewProposalDialog";
 import { useActiveProject } from "../hooks/useActiveProject";
-import { useChannel } from "../hooks/useChannel";
+import { useDashboardChannel } from "../hooks/useDashboardChannel";
 import { useChannelEvent } from "../hooks/useChannelEvent";
 import { EVENTS } from "../lib/events";
 
@@ -176,7 +176,7 @@ export default function Proposals() {
   const [deleteSlug, setDeleteSlug] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
-  const { channel } = useChannel("dashboard");
+  const { channel } = useDashboardChannel();
   const changedEvent = useChannelEvent(channel, EVENTS.proposals.changed);
   const createdEvent = useChannelEvent(channel, EVENTS.proposals.created);
 

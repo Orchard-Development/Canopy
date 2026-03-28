@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useChannel } from "./useChannel";
+import { useDashboardChannel } from "./useDashboardChannel";
 import { useChannelEvent } from "./useChannelEvent";
 import { EVENTS } from "../lib/events";
 import { api } from "../lib/api";
@@ -19,7 +19,7 @@ export function useAutoresearch() {
   const [lastEval, setLastEval] = useState<AutoresearchEvalResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const { channel } = useChannel("dashboard");
+  const { channel } = useDashboardChannel();
   const started = useChannelEvent(channel, EVENTS.autoresearch.experimentStarted);
   const scored = useChannelEvent(channel, EVENTS.autoresearch.scored);
   const decided = useChannelEvent(channel, EVENTS.autoresearch.decided);

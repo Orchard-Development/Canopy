@@ -3,7 +3,7 @@ import { api } from "../lib/api";
 import { fetchSettings, persistSetting } from "./usePersistedState";
 import { useChatChannel } from "./useChatChannel";
 import type { ChatChannelCallbacks } from "./useChatChannel";
-import type { ChatMessage, Attachment } from "../types/chat";
+import type { ChatMessage, Attachment, TokenUsage } from "../types/chat";
 import type { ToolCall } from "../types/tools";
 
 /** Convert backend tool_call records (Anthropic format) to the frontend ToolCall shape. */
@@ -36,6 +36,7 @@ export function useChat(projectId?: string | null) {
   const [error, setError] = useState<string | null>(null);
   const [restoring, setRestoring] = useState(true);
   const [workerState, setWorkerState] = useState<string | null>(null);
+  const [usage, setUsage] = useState<TokenUsage | null>(null);
 
   // Tracks the assistant message currently being streamed into.
   const assistantIdRef = useRef<string | null>(null);
@@ -148,6 +149,9 @@ export function useChat(projectId?: string | null) {
           content: m.content.trimEnd() + "\n\n",
         }));
       },
+      onUsage(u: TokenUsage) {
+        setUsage(u);
+      },
       onDone() {
         setSending(false);
       },
@@ -236,6 +240,7 @@ export function useChat(projectId?: string | null) {
       setError(null);
 
       createAssistantPlaceholder();
+      setUsage(null);
 
       const apiMessages = [...messages, userMsg].map(buildApiMessage);
 
@@ -354,6 +359,7 @@ export function useChat(projectId?: string | null) {
     setError(null);
     setSending(false);
     setWorkerState(null);
+    setUsage(null);
   }, [sendStop, leave]);
 
   return {
@@ -363,6 +369,7 @@ export function useChat(projectId?: string | null) {
     error,
     connected,
     workerState,
+    usage,
     chatChannel,
     send,
     editMessage,

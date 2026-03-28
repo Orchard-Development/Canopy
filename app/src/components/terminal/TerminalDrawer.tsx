@@ -11,7 +11,7 @@ import { TerminalDrawerContent, type TerminalTab } from "./TerminalDrawerContent
 import type { SessionProfile } from "./ProfileTooltip";
 import type { GridSpan } from "../ResizableGrid";
 import { ResizableDrawer } from "../ResizableDrawer";
-import { useChannel } from "../../hooks/useChannel";
+import { useDashboardChannel } from "../../hooks/useDashboardChannel";
 import { useChannelEvent } from "../../hooks/useChannelEvent";
 import { OrchardIcon } from "./OrchardIcon";
 import { OrchardModelPicker } from "./OrchardModelPicker";
@@ -241,7 +241,7 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
       } catch { /* ignore */ }
     };
 
-    const applySessions = (sessions: Array<{ id: string; label?: string; command: string; exitCode?: number; state?: string; projectId?: string; summary?: string; cwd?: string; startedAt?: string; agentType?: string; source?: string; forkedFrom?: string }>, settings: Record<string, string>) => {
+    const applySessions = (sessions: Array<{ id: string; label?: string; command: string; exitCode?: number; state?: string; projectId?: string; summary?: string; cwd?: string; startedAt?: string; agentType?: string; source?: string; forkedFrom?: string; lastPrompt?: string }>, settings: Record<string, string>) => {
       const restored: TerminalTab[] = sessions
         .filter((s) => s.exitCode == null)
         .map((s) => ({
@@ -258,6 +258,7 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
           agentType: s.agentType,
           source: s.source,
           forkedFrom: s.forkedFrom,
+          lastPrompt: s.lastPrompt,
         }));
       if (restored.length === 0) return;
       setTabs(restored);
@@ -356,6 +357,7 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
           if (info.agentType && !tab.agentType) updates.agentType = info.agentType;
           if (info.source && !tab.source) updates.source = info.source;
           if (info.forkedFrom && !tab.forkedFrom) updates.forkedFrom = info.forkedFrom;
+          if (info.lastPrompt && info.lastPrompt !== tab.lastPrompt) updates.lastPrompt = info.lastPrompt;
           if (info.exitCode !== undefined && tab.exitCode === undefined) updates.exitCode = info.exitCode;
           if (updates.label || updates.summary) updates.lastAiUpdate = Date.now();
           if (Object.keys(updates).length > 0) {
@@ -377,11 +379,12 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
 
   // Phoenix channel real-time updates (flat events, filter by payload.id)
   const [profiles, setProfiles] = useState<Record<string, SessionProfile>>({});
-  const { channel: dashChannel } = useChannel("dashboard");
+  const { channel: dashChannel } = useDashboardChannel();
   const stateEvent = useChannelEvent<{ id: string; state: string }>(dashChannel, "session:state");
   const labelEvent = useChannelEvent<{ id: string; label: string }>(dashChannel, "session:label");
   const summaryEvent = useChannelEvent<{ id: string; summary: string }>(dashChannel, "session:summary");
   const exitedEvent = useChannelEvent<{ id: string; exitCode: number }>(dashChannel, "session:exited");
+  const lastPromptEvent = useChannelEvent<{ id: string; prompt: string }>(dashChannel, "session:last_prompt");
   const profiledEvent = useChannelEvent<{ profiles: Record<string, SessionProfile> }>(dashChannel, "session:profiled");
 
   // Profile updates from the Profiler GenServer (every 30s)
@@ -424,6 +427,13 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
       prev.map((t) => (t.id === exitedEvent.id ? { ...t, exitCode: exitedEvent.exitCode ?? 0 } : t)),
     );
   }, [exitedEvent]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!lastPromptEvent) return;
+    setTabs((prev) =>
+      prev.map((t) => (t.id === lastPromptEvent.id ? { ...t, lastPrompt: lastPromptEvent.prompt } : t)),
+    );
+  }, [lastPromptEvent]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [modelPickerOpen, setModelPickerOpen] = useState(false);
 

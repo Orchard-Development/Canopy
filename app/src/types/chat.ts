@@ -10,6 +10,15 @@ export interface Attachment {
   size: number;
 }
 
+export interface TokenUsage {
+  input_tokens: number;
+  output_tokens: number;
+  cache_creation_input_tokens?: number;
+  cache_read_input_tokens?: number;
+  /** True when tokens were estimated from text length, not reported by the API. */
+  estimated?: boolean;
+}
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant" | "system";

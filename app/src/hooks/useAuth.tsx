@@ -150,14 +150,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsOwner(true);
       return;
     }
-    // On tunnel: compare against the engine's stored owner user_id
-    fetch("/api/settings")
-      .then((r) => r.json())
-      .then((settings) => {
-        if (settings["tunnel_allow_any_user"] === "true") {
+    // On tunnel: check auth policy first (public endpoint), then fall back to settings
+    async function checkTunnelOwnership() {
+      // Try the public auth-policy endpoint first (works without PIN)
+      try {
+        const policy = await fetch("/tunnel/auth-policy").then((r) => r.json());
+        if (policy.allow_any_user) {
           setIsOwner(true);
           return;
         }
+      } catch { /* endpoint unavailable, continue to settings check */ }
+
+      // Fall back to settings (requires engine auth / PIN)
+      try {
+        const r = await fetch("/api/settings");
+        if (!r.ok) {
+          setIsOwner(false);
+          return;
+        }
+        const settings = await r.json();
         const ownerUid = settings["auth.user_id"];
         if (!ownerUid) {
           // No owner set yet -- deny tunnel visitors (owner must sign in locally first)
@@ -165,8 +176,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           setIsOwner(session.user.id === ownerUid);
         }
-      })
-      .catch(() => setIsOwner(false));
+      } catch {
+        setIsOwner(false);
+      }
+    }
+    checkTunnelOwnership();
   }, [session]);
 
   async function signInWithGoogle() {

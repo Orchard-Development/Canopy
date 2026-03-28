@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import {
   Box,
   Chip,
+  CircularProgress,
   Collapse,
   IconButton,
-  Paper,
   TextField,
   Typography,
 } from "@mui/material";
@@ -64,13 +64,16 @@ export function AgentActivityCard({ session, onSendInput, onOpenTerminal, onCanc
   const isActive = session.state === "running" || session.state === "waiting";
 
   return (
-    <Paper
-      variant="outlined"
+    <Box
       sx={{
-        my: 1,
-        overflow: "hidden",
+        my: 0.5,
+        ml: 0.5,
+        pl: 1,
+        borderLeft: 2,
         borderColor: isActive ? "primary.main" : "divider",
-        borderLeftWidth: 3,
+        opacity: isActive ? 0.8 : 0.5,
+        transition: "opacity 0.3s, border-color 0.3s",
+        "&:hover": { opacity: 1 },
       }}
     >
       {/* Header */}
@@ -78,22 +81,25 @@ export function AgentActivityCard({ session, onSendInput, onOpenTerminal, onCanc
         sx={{
           display: "flex",
           alignItems: "center",
-          gap: 1,
-          px: 1.5,
-          py: 0.75,
+          gap: 0.75,
+          py: 0.25,
           cursor: "pointer",
-          "&:hover": { bgcolor: "action.hover" },
         }}
         onClick={() => setExpanded((v) => !v)}
       >
-        <Typography variant="caption" sx={{ fontWeight: 600, flex: 1 }}>
+        {isActive && <CircularProgress size={10} sx={{ flexShrink: 0 }} />}
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ fontFamily: "monospace", fontSize: 11, flex: 1 }}
+        >
           Agent {session.id.slice(0, 8)}
         </Typography>
         <Chip
           label={session.state}
           size="small"
           color={STATE_COLORS[session.state] ?? "default"}
-          sx={{ height: 20, fontSize: 11 }}
+          sx={{ height: 18, fontSize: 10, "& .MuiChip-label": { px: 0.75 } }}
         />
         {onOpenTerminal && (
           <IconButton
@@ -103,8 +109,9 @@ export function AgentActivityCard({ session, onSendInput, onOpenTerminal, onCanc
               onOpenTerminal(session.id);
             }}
             title="Open in terminal"
+            sx={{ p: 0.25 }}
           >
-            <OpenInNewIcon sx={{ fontSize: 16 }} />
+            <OpenInNewIcon sx={{ fontSize: 13 }} />
           </IconButton>
         )}
         {isActive && onCancel && (
@@ -116,17 +123,16 @@ export function AgentActivityCard({ session, onSendInput, onOpenTerminal, onCanc
               onCancel(session.id);
             }}
             title="Cancel agent"
+            sx={{ p: 0.25 }}
           >
-            <CancelIcon sx={{ fontSize: 16 }} />
+            <CancelIcon sx={{ fontSize: 13 }} />
           </IconButton>
         )}
-        <IconButton size="small">
-          {expanded ? (
-            <ExpandLessIcon sx={{ fontSize: 16 }} />
-          ) : (
-            <ExpandMoreIcon sx={{ fontSize: 16 }} />
-          )}
-        </IconButton>
+        {expanded ? (
+          <ExpandLessIcon sx={{ fontSize: 14, color: "text.disabled" }} />
+        ) : (
+          <ExpandMoreIcon sx={{ fontSize: 14, color: "text.disabled" }} />
+        )}
       </Box>
 
       {/* Output area */}
@@ -134,20 +140,19 @@ export function AgentActivityCard({ session, onSendInput, onOpenTerminal, onCanc
         <Box
           ref={outputRef}
           sx={{
-            maxHeight: 240,
+            maxHeight: 180,
             overflow: "auto",
-            px: 1.5,
-            py: 1,
-            bgcolor: "background.default",
+            py: 0.5,
             fontFamily: "monospace",
-            fontSize: 12,
-            lineHeight: 1.5,
+            fontSize: 11,
+            lineHeight: 1.4,
             whiteSpace: "pre-wrap",
             wordBreak: "break-word",
+            color: "text.secondary",
           }}
         >
           {visibleLines.length === 0 ? (
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="text.disabled" sx={{ fontSize: 11 }}>
               Waiting for output...
             </Typography>
           ) : (
@@ -159,33 +164,36 @@ export function AgentActivityCard({ session, onSendInput, onOpenTerminal, onCanc
 
         {/* Input for follow-ups (only when agent is active) */}
         {isActive && (
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, px: 1, py: 0.5 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, py: 0.25 }}>
             <TextField
               size="small"
               fullWidth
-              placeholder="Send follow-up to agent..."
+              placeholder="Follow up..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               sx={{
-                "& .MuiInputBase-root": { fontSize: 13 },
+                "& .MuiInputBase-root": { fontSize: 11, py: 0.25 },
+                "& .MuiOutlinedInput-notchedOutline": { borderColor: "divider" },
               }}
             />
-            <IconButton size="small" onClick={handleSend} disabled={!input.trim()}>
-              <SendIcon sx={{ fontSize: 16 }} />
+            <IconButton size="small" onClick={handleSend} disabled={!input.trim()} sx={{ p: 0.25 }}>
+              <SendIcon sx={{ fontSize: 13 }} />
             </IconButton>
           </Box>
         )}
 
         {/* Exit code */}
         {session.state === "exited" && (
-          <Box sx={{ px: 1.5, py: 0.5 }}>
-            <Typography variant="caption" color={session.exitCode === 0 ? "success.main" : "error.main"}>
-              Exited with code {session.exitCode ?? "unknown"}
-            </Typography>
-          </Box>
+          <Typography
+            variant="caption"
+            color={session.exitCode === 0 ? "success.main" : "error.main"}
+            sx={{ fontSize: 10, py: 0.25, display: "block" }}
+          >
+            Exited {session.exitCode ?? "unknown"}
+          </Typography>
         )}
       </Collapse>
-    </Paper>
+    </Box>
   );
 }

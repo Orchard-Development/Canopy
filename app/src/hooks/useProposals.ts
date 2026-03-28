@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useActiveProject } from "./useActiveProject";
-import { useChannel } from "./useChannel";
+import { useDashboardChannel } from "./useDashboardChannel";
 import { useChannelEvent } from "./useChannelEvent";
 import { EVENTS } from "../lib/events";
 import { api } from "../lib/api";
@@ -27,7 +27,7 @@ export function useProposals() {
   const [unseenSlugs, setUnseenSlugs] = useState<Set<string>>(new Set());
   const [lastCreated, setLastCreated] = useState<{ slug: string; title?: string } | null>(null);
 
-  const { channel } = useChannel("dashboard");
+  const { channel } = useDashboardChannel();
 
   // Channel listener for proposal created events
   const proposalCreated = useChannelEvent<{ data: { slug?: string; title?: string } }>(

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useChannel } from "./useChannel";
+import { useDashboardChannel } from "./useDashboardChannel";
 import { useChannelEventBuffer } from "./useChannelEvent";
 import { EVENTS } from "../lib/events";
 
@@ -18,7 +18,7 @@ export interface PreviewEntry {
  * Tracks unseen count for the FAB badge.
  */
 export function usePreviewEntries() {
-  const { channel } = useChannel("dashboard");
+  const { channel } = useDashboardChannel();
   const channelEntries = useChannelEventBuffer<PreviewEntry>(channel, EVENTS.preview.opened, 200);
   const [seeded, setSeeded] = useState<PreviewEntry[]>([]);
   const [unseenCount, setUnseenCount] = useState(0);

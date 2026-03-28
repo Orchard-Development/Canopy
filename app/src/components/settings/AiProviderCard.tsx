@@ -25,9 +25,15 @@ export interface SettingsData {
   anthropic_api_key?: string;
   openai_api_key?: string;
   xai_api_key?: string;
+  gemini_api_key?: string;
+  groq_api_key?: string;
+  openrouter_api_key?: string;
   default_anthropic_model?: string;
   default_openai_model?: string;
   default_xai_model?: string;
+  default_gemini_model?: string;
+  default_groq_model?: string;
+  default_openrouter_model?: string;
   profiler_mode?: string;
   ollama_model?: string;
   default_terminal_project?: string;
@@ -53,13 +59,13 @@ interface Props {
   testing: string | null;
   models: ModelOption[];
   onUpdate: (key: string, value: string) => void;
-  onTestKey: (provider: "anthropic" | "openai" | "xai") => void;
+  onTestKey: (provider: "anthropic" | "openai" | "xai" | "gemini" | "groq" | "openrouter") => void;
   onToggleVisible: (key: string) => void;
 }
 
 function ApiKeyRow(props: {
   label: string;
-  visibilityKey: "anthropic" | "openai" | "xai";
+  visibilityKey: "anthropic" | "openai" | "xai" | "gemini" | "groq" | "openrouter";
   value: string;
   placeholder: string;
   testing: boolean;
@@ -128,7 +134,7 @@ function ProviderSection(props: {
   apiKeyValue: string;
   apiKeyPlaceholder: string;
   apiKeySettingKey: string;
-  visibilityKey: "anthropic" | "openai" | "xai";
+  visibilityKey: "anthropic" | "openai" | "xai" | "gemini" | "groq" | "openrouter";
   testing: boolean;
   visible: boolean;
   models: ModelOption[];
@@ -225,6 +231,25 @@ const FALLBACK_XAI: ModelOption[] = [
   { id: "grok-3-mini", label: "Grok 3 Mini", provider: "xai" },
 ];
 
+const FALLBACK_GEMINI: ModelOption[] = [
+  { id: "gemini-3.1-pro-preview", label: "Gemini 3.1 Pro (Preview)", provider: "gemini" },
+  { id: "gemini-3-flash-preview", label: "Gemini 3 Flash (Preview)", provider: "gemini" },
+  { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro", provider: "gemini" },
+  { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", provider: "gemini" },
+];
+
+const FALLBACK_GROQ: ModelOption[] = [
+  { id: "llama-4-maverick-17b-128e-instruct", label: "Llama 4 Maverick", provider: "groq" },
+  { id: "llama-4-scout-17b-16e-instruct", label: "Llama 4 Scout", provider: "groq" },
+];
+
+const FALLBACK_OPENROUTER: ModelOption[] = [
+  { id: "qwen/qwen3-235b-a22b", label: "Qwen3 235B", provider: "openrouter" },
+  { id: "qwen/qwen3-30b-a3b", label: "Qwen3 30B", provider: "openrouter" },
+  { id: "meta-llama/llama-4-maverick", label: "Llama 4 Maverick", provider: "openrouter" },
+  { id: "meta-llama/llama-4-scout", label: "Llama 4 Scout", provider: "openrouter" },
+];
+
 export function AiProviderCard({
   settings,
   visible,
@@ -237,6 +262,9 @@ export function AiProviderCard({
   const anthropicModels = models.filter((m) => m.provider === "anthropic");
   const openaiModels = models.filter((m) => m.provider === "openai");
   const xaiModels = models.filter((m) => m.provider === "xai");
+  const geminiModels = models.filter((m) => m.provider === "gemini");
+  const groqModels = models.filter((m) => m.provider === "groq");
+  const openrouterModels = models.filter((m) => m.provider === "openrouter");
 
   const gatewayEnabled = settings.gateway_enabled === "true";
   const gatewayProvider = settings.gateway_provider || "xai";
@@ -246,6 +274,9 @@ export function AiProviderCard({
     ...(settings.anthropic_api_key ? [{ id: "anthropic", label: "Anthropic (API Key)" }] : []),
     ...(settings.openai_api_key ? [{ id: "openai", label: "OpenAI" }] : []),
     ...(settings.xai_api_key ? [{ id: "xai", label: "xAI (Grok)" }] : []),
+    ...(settings.gemini_api_key ? [{ id: "gemini", label: "Google Gemini" }] : []),
+    ...(settings.groq_api_key ? [{ id: "groq", label: "Groq (Llama)" }] : []),
+    ...(settings.openrouter_api_key ? [{ id: "openrouter", label: "OpenRouter" }] : []),
     { id: "ollama", label: "Ollama (Local)" },
   ];
 
@@ -361,6 +392,72 @@ export function AiProviderCard({
             onUpdate={onUpdate}
             onTestKey={() => onTestKey("xai")}
             onToggleVisible={() => onToggleVisible("xai")}
+          />
+
+          <ProviderSection
+            title="Google Gemini"
+            description="Powers Gemini sessions. Add your Google AI API key to use Gemini models."
+            authMode="api_key"
+            authModeKey="gemini_auth_mode"
+            apiKeyLabel="Gemini API Key"
+            apiKeyValue={settings.gemini_api_key ?? ""}
+            apiKeyPlaceholder="AIza..."
+            apiKeySettingKey="gemini_api_key"
+            visibilityKey="gemini"
+            testing={testing === "gemini"}
+            visible={!!visible.gemini}
+            models={geminiModels.length > 0 ? geminiModels : FALLBACK_GEMINI}
+            selectedModel={settings.default_gemini_model || "gemini-2.5-pro"}
+            modelSettingKey="default_gemini_model"
+            modelLabel="Default Model"
+            showAuthToggle={false}
+            onUpdate={onUpdate}
+            onTestKey={() => onTestKey("gemini")}
+            onToggleVisible={() => onToggleVisible("gemini")}
+          />
+
+          <ProviderSection
+            title="Groq (Llama)"
+            description="Ultra-fast Llama inference. Add your Groq API key to use Llama models."
+            authMode="api_key"
+            authModeKey="groq_auth_mode"
+            apiKeyLabel="Groq API Key"
+            apiKeyValue={settings.groq_api_key ?? ""}
+            apiKeyPlaceholder="gsk_..."
+            apiKeySettingKey="groq_api_key"
+            visibilityKey="groq"
+            testing={testing === "groq"}
+            visible={!!visible.groq}
+            models={groqModels.length > 0 ? groqModels : FALLBACK_GROQ}
+            selectedModel={settings.default_groq_model || "llama-4-maverick-17b-128e-instruct"}
+            modelSettingKey="default_groq_model"
+            modelLabel="Default Model"
+            showAuthToggle={false}
+            onUpdate={onUpdate}
+            onTestKey={() => onTestKey("groq")}
+            onToggleVisible={() => onToggleVisible("groq")}
+          />
+
+          <ProviderSection
+            title="OpenRouter (Qwen, Llama, DeepSeek)"
+            description="Access hundreds of models through one API key. Supports Qwen, Llama, DeepSeek, and more."
+            authMode="api_key"
+            authModeKey="openrouter_auth_mode"
+            apiKeyLabel="OpenRouter API Key"
+            apiKeyValue={settings.openrouter_api_key ?? ""}
+            apiKeyPlaceholder="sk-or-..."
+            apiKeySettingKey="openrouter_api_key"
+            visibilityKey="openrouter"
+            testing={testing === "openrouter"}
+            visible={!!visible.openrouter}
+            models={openrouterModels.length > 0 ? openrouterModels : FALLBACK_OPENROUTER}
+            selectedModel={settings.default_openrouter_model || "qwen/qwen3-235b-a22b"}
+            modelSettingKey="default_openrouter_model"
+            modelLabel="Default Model"
+            showAuthToggle={false}
+            onUpdate={onUpdate}
+            onTestKey={() => onTestKey("openrouter")}
+            onToggleVisible={() => onToggleVisible("openrouter")}
           />
         </Stack>
       </CardContent>

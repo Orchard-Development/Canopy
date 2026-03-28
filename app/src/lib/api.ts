@@ -821,6 +821,11 @@ export const api = {
       `/api/terminal/${id}/prettier`,
     ),
 
+  getTerminalHookLog: (id: string) =>
+    get<{ id: string; entries: Array<{ id: number; event_type: string; tool_name?: string; content?: string; metadata?: string; created_at: string }>; last_prompt?: string }>(
+      `/api/terminal/${id}/hook-log`,
+    ),
+
   writeToSession: (id: string, data: string) =>
     postJson<{ ok: boolean }>(`/api/terminal/${id}/input`, { data }),
 
@@ -1381,6 +1386,22 @@ export const api = {
 
   securityTools: () =>
     get<{ nuclei: boolean; retire: boolean; header_check: boolean }>("/api/security/tools"),
+
+  // Judgment profiler
+  judgmentStats: () =>
+    get<{ data: JudgmentStats }>("/api/judgment/stats"),
+
+  judgmentScores: () =>
+    get<{ data: Record<string, JudgmentSkillScore> }>("/api/judgment/scores"),
+
+  judgmentNegatives: (limit = 50) =>
+    get<{ data: JudgmentEntry[] }>(`/api/judgment/negatives?limit=${limit}`),
+
+  judgmentReport: () =>
+    get<{ data: { path: string; content: string } | null }>("/api/judgment/report"),
+
+  judgmentGenerateReport: () =>
+    postJson<{ data: { path: string; status: string } }>("/api/judgment/report", {}),
 };
 
 export interface SecurityFinding {
@@ -1798,4 +1819,46 @@ export interface AutoresearchEvalResult {
   accuracy?: number;
   leaves?: number;
   error?: string;
+}
+
+// -- Judgment profiler types --
+
+export interface JudgmentStats {
+  total: number;
+  advancing: number;
+  non_advancing: number;
+  ambiguous: number;
+  negative_rate: number;
+  top_failing_skills: Array<{ skill: string; rate: number; total: number }>;
+}
+
+export interface JudgmentSkillScore {
+  total: number;
+  negatives: number;
+  rate: number;
+  top_failure_modes: string[];
+}
+
+export interface JudgmentEntry {
+  id: string;
+  conversation_id: string;
+  timestamp: string;
+  prompt_a: string;
+  output_summary: string;
+  tool_actions: string[];
+  prompt_b: string;
+  verdict: string;
+  confidence: number;
+  signals: string[];
+  active_tools: string[];
+  session_context: { turn_number: number };
+}
+
+export interface JudgmentScoredEvent {
+  conversation_id: string;
+  verdict: string;
+  confidence: number;
+  signals: string[];
+  prompt_a_preview: string;
+  prompt_b_preview: string;
 }

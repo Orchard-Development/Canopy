@@ -1,4 +1,4 @@
-import { useChannel } from "./useChannel";
+import { useDashboardChannel } from "./useDashboardChannel";
 import { usePhoenixRefetch } from "./usePhoenixRefetch";
 
 /**
@@ -11,6 +11,6 @@ import { usePhoenixRefetch } from "./usePhoenixRefetch";
 export function useRefetchOnDashboardEvent(
   event: string,
 ): { generation: number; bump: () => void } {
-  const { channel } = useChannel("dashboard");
+  const { channel } = useDashboardChannel();
   return usePhoenixRefetch(channel, event);
 }

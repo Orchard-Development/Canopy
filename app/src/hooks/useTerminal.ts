@@ -13,6 +13,12 @@ const MIN_FONT_SIZE = 6;
 const MAX_FONT_SIZE = 40;
 const FONT_STEP = 2;
 
+// Minimum dimensions sent to the PTY. TUI programs (Claude Code, vim, etc.)
+// break badly below ~80 cols. Clamping here means the PTY gets sane dimensions
+// even when the card container is small; xterm still scrolls/clips locally.
+const MIN_COLS = 80;
+const MIN_ROWS = 10;
+
 export type SessionState = "running" | "waiting" | "idle";
 
 /** Regex matching OSC escape: \x1b]ctx:state=<state>\x07 */
@@ -25,6 +31,13 @@ interface Options {
   onExit?: (code: number) => void;
   onStateChange?: (state: SessionState) => void;
   onInput?: (sessionId: string, data: string) => void;
+}
+
+function clampDims(term: Terminal): { cols: number; rows: number } {
+  return {
+    cols: Math.max(MIN_COLS, term.cols),
+    rows: Math.max(MIN_ROWS, term.rows),
+  };
 }
 
 function escapePath(p: string) {
@@ -42,10 +55,11 @@ function uploadFile(file: File): Promise<string | null> {
     const reader = new FileReader();
     reader.onload = () => {
       const b64 = (reader.result as string).split(",")[1] ?? "";
+      const uploadPath = `playground/uploads/${Date.now()}-${file.name}`;
       fetch("/api/fs/upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: file.name, data: b64 }),
+        body: JSON.stringify({ path: uploadPath, content: b64 }),
       })
         .then((r) => {
           if (!r.ok) {
@@ -258,8 +272,17 @@ export function useTerminal({
         }
         if (el.clientWidth > 0 && el.clientHeight > 0) fit.fit();
         if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: "resize", cols: term.cols, rows: term.rows }));
+          ws.send(JSON.stringify({ type: "resize", ...clampDims(term) }));
         }
+        // After scrollback replay (which arrives as a burst of messages
+        // right after open), re-send resize to trigger SIGWINCH so the
+        // child process redraws its TUI at the correct dimensions.
+        setTimeout(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            if (el.clientWidth > 0 && el.clientHeight > 0) fit.fit();
+            ws.send(JSON.stringify({ type: "resize", ...clampDims(term) }));
+          }
+        }, 300);
       };
 
       ws.onmessage = onMessage;
@@ -294,13 +317,7 @@ export function useTerminal({
         fit.fit();
         const ws = wsRef.current;
         if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(
-            JSON.stringify({
-              type: "resize",
-              cols: term.cols,
-              rows: term.rows,
-            }),
-          );
+          ws.send(JSON.stringify({ type: "resize", ...clampDims(term) }));
         }
       }, 120);
     };
@@ -442,13 +459,7 @@ export function useTerminal({
       const term = termRef.current;
       fit.fit();
       if (term && ws.readyState === WebSocket.OPEN) {
-        ws.send(
-          JSON.stringify({
-            type: "resize",
-            cols: term.cols,
-            rows: term.rows,
-          }),
-        );
+        ws.send(JSON.stringify({ type: "resize", ...clampDims(term) }));
       }
     }
   }, [suspendResize]);
@@ -469,7 +480,7 @@ export function useTerminal({
         if (el.clientWidth === 0 || el.clientHeight === 0) return;
         fit.fit();
         if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: "resize", cols: term.cols, rows: term.rows }));
+          ws.send(JSON.stringify({ type: "resize", ...clampDims(term) }));
         }
       }, 30);
     }

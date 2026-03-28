@@ -12,6 +12,7 @@ import { WorkerCard } from "../components/engine/WorkerCard";
 import { ClaudeReadinessCard } from "../components/settings/ClaudeReadinessCard";
 import { ActivityCard } from "../components/engine/ActivityCard";
 import { AutoCommitCard } from "../components/engine/AutoCommitCard";
+import { DimensionProfilerCard } from "../components/engine/DimensionProfilerCard";
 
 export default function Engine() {
   const [health, setHealth] = useState<HealthData | null>(null);
@@ -80,6 +81,7 @@ export default function Engine() {
         <DatabaseCard health={health} />
         <McpSyncCard servers={mcpServers} />
         <AutoCommitCard />
+        <DimensionProfilerCard />
         <WorkerCard />
         <EngineLogsCard />
         <ActivityCard />

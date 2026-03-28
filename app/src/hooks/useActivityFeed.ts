@@ -20,6 +20,7 @@ const INTERESTING_PREFIXES = [
   "sessions/",
   "session_events/",
   "agent_events/",
+  "user_activity/",
   "state:",
   "terminal/action",
   "config_seeder/",
@@ -93,6 +94,27 @@ function classifyEvent(
       severity: "warning",
       sessionId: id,
     };
+  }
+
+  // User activity events
+  if (topic.startsWith("user_activity/")) {
+    const type = topic.split("/")[1];
+    const data = payload as Record<string, unknown>;
+    const actData = (data.data || data) as Record<string, unknown>;
+    const LABELS: Record<string, string> = {
+      app_switch: `Switched to ${actData.to_app || "app"}`,
+      window_change: `${actData.app || "App"}: ${(actData.to_title as string)?.slice(0, 60) || "new window"}`,
+      user_idle: "User idle",
+      user_returned: "User returned",
+      window_focus: "Orchard focused",
+      window_blur: "Orchard unfocused",
+      typing_start: "Typing",
+      typing_stop: "Stopped typing",
+      view_navigate: `Navigated to ${actData.to || "view"}`,
+      clipboard_paste: "Pasted content",
+      click: `Clicked ${actData.tag || "element"}`,
+    };
+    return { summary: LABELS[type] || `User: ${type}`, severity: "info" };
   }
 
   // Agent events

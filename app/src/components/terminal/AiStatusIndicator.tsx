@@ -3,7 +3,7 @@ import { Tooltip, Typography, Stack, IconButton } from "@mui/material";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import SyncIcon from "@mui/icons-material/Sync";
 import { keyframes } from "@mui/system";
-import { useChannel } from "../../hooks/useChannel";
+import { useDashboardChannel } from "../../hooks/useDashboardChannel";
 import { useChannelEvent } from "../../hooks/useChannelEvent";
 import { EVENTS } from "../../lib/events";
 import { api } from "../../lib/api";
@@ -42,7 +42,7 @@ export function AiStatusIndicator({ sessionId, lastAiUpdate, label, summary, siz
 
   const [statusDetail, setStatusDetail] = useState<string | null>(null);
 
-  const { channel } = useChannel("dashboard");
+  const { channel } = useDashboardChannel();
   const aiStatusEvent = useChannelEvent<{ status: string; detail?: string }>(channel, EVENTS.ai.status);
 
   useEffect(() => {

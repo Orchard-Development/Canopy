@@ -11,7 +11,7 @@ import {
   keyframes,
 } from "@mui/material";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
-import { useChannel } from "../hooks/useChannel";
+import { useDashboardChannel } from "../hooks/useDashboardChannel";
 import { useChannelEvent, useChannelEventBuffer } from "../hooks/useChannelEvent";
 import { EVENTS } from "../lib/events";
 
@@ -40,7 +40,7 @@ const PHASE_LABELS: Record<string, string> = {
 
 export function Pulse() {
   const [expanded, setExpanded] = useState(false);
-  const { channel } = useChannel("dashboard");
+  const { channel } = useDashboardChannel();
   const status = useChannelEvent<ProfilerStatus>(channel, EVENTS.profiler.status);
   const activities = useChannelEventBuffer<ProfilerActivity>(channel, EVENTS.profiler.activity, 10);
 

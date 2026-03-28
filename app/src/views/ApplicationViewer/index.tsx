@@ -14,7 +14,7 @@ export default function ApplicationViewer() {
   const [attached, setAttached] = useState(false);
   const [target, setTarget] = useState<ViewerTarget | null>(null);
   const [showPicker, setShowPicker] = useState(true);
-  const viewer = window.ctx?.viewer;
+  const viewer = window.orchard?.viewer;
 
   useEffect(() => {
     if (!viewer?.onDetached) return;
@@ -28,14 +28,16 @@ export default function ApplicationViewer() {
   const handleSelect = useCallback(
     async (t: ViewerTarget) => {
       if (!viewer) return;
-      setShowPicker(false);
-      // Bounds will be sent via onBoundsChange after attach
-      const result = await viewer.attach(t, { x: 0, y: 0, width: 800, height: 600 });
-      if (result.ok) {
-        setAttached(true);
-        setTarget(t);
-      } else {
-        setShowPicker(true);
+      try {
+        // Bounds will be sent via onBoundsChange after attach
+        const result = await viewer.attach(t, { x: 0, y: 0, width: 800, height: 600 });
+        if (result.ok) {
+          setShowPicker(false);
+          setAttached(true);
+          setTarget(t);
+        }
+      } catch {
+        // attach failed -- keep picker visible
       }
     },
     [viewer],

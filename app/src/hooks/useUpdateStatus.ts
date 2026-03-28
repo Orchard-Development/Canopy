@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, type UpdateStatus } from "../lib/api";
-import { useChannel } from "./useChannel";
+import { useDashboardChannel } from "./useDashboardChannel";
 import { useChannelEvent } from "./useChannelEvent";
 
 const EMPTY: UpdateStatus = {
@@ -16,7 +16,7 @@ const EMPTY: UpdateStatus = {
 
 export function useUpdateStatus(): UpdateStatus {
   const [statusLocal, setStatusLocal] = useState<UpdateStatus>(EMPTY);
-  const { channel } = useChannel("dashboard");
+  const { channel } = useDashboardChannel();
   const channelStatus = useChannelEvent<UpdateStatus>(channel, "status:updated");
 
   useEffect(() => {

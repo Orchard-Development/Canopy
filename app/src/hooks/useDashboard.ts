@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useChannel } from "./useChannel";
+import { useDashboardChannel } from "./useDashboardChannel";
 import { useChannelEvent } from "./useChannelEvent";
 
 interface SessionStartedEvent {
@@ -40,7 +40,8 @@ interface DashboardState {
  * Receives the full state on join and incremental updates via pushes.
  */
 export function useDashboard(): DashboardState {
-  const { data, channel, connected } = useChannel<DashboardJoinPayload>("dashboard");
+  const { data: rawData, channel, connected } = useDashboardChannel();
+  const data = rawData as DashboardJoinPayload | null;
 
   const [sessions, setSessions] = useState<unknown[]>([]);
   const [stats, setStats] = useState<Record<string, unknown>>({});

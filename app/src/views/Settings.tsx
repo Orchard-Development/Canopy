@@ -76,12 +76,16 @@ function useSettings() {
     }
   }
 
-  async function testKey(provider: "anthropic" | "openai" | "xai") {
-    const key = provider === "anthropic"
-      ? settings.anthropic_api_key
-      : provider === "xai"
-        ? settings.xai_api_key
-        : settings.openai_api_key;
+  async function testKey(provider: "anthropic" | "openai" | "xai" | "gemini" | "groq" | "openrouter") {
+    const keyMap: Record<string, string | undefined> = {
+      anthropic: settings.anthropic_api_key,
+      openai: settings.openai_api_key,
+      xai: settings.xai_api_key,
+      gemini: settings.gemini_api_key,
+      groq: settings.groq_api_key,
+      openrouter: settings.openrouter_api_key,
+    };
+    const key = keyMap[provider];
     if (!key) return;
 
     setTesting(provider);

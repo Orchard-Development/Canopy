@@ -10,7 +10,7 @@ import {
 } from "@mui/material";
 import RssFeedIcon from "@mui/icons-material/RssFeed";
 import { useProject } from "../hooks/useProject";
-import { useChannel } from "../hooks/useChannel";
+import { useDashboardChannel } from "../hooks/useDashboardChannel";
 import { useChannelEventBuffer } from "../hooks/useChannelEvent";
 import { EVENTS } from "../lib/events";
 import { api, type FeedEvent } from "../lib/api";
@@ -34,7 +34,7 @@ export default function Feed() {
   const [viewMode, setViewMode] = useState<ViewMode>("chains");
   const [loading, setLoading] = useState(true);
 
-  const { channel } = useChannel("dashboard");
+  const { channel } = useDashboardChannel();
   const allLiveEvents = useChannelEventBuffer<FeedEvent>(channel, EVENTS.feed);
   // Filter to only events for the active project
   const liveEvents = project
