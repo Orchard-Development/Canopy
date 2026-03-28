@@ -21,6 +21,7 @@ import { useActiveProject } from "../hooks/useActiveProject";
 import { useRefetchOnDashboardEvent } from "../hooks/useRefetchOnDashboardEvent";
 import { EVENTS } from "../lib/events";
 import { labelForCommand } from "../lib/session-log-utils";
+import { requestTerminalOpen } from "../hooks/useDispatch";
 import { timeAgo } from "../lib/time";
 import { ProfileChip } from "../components/sessions/SessionChips";
 import { SessionViewerModal } from "../components/sessions/SessionViewerModal";
@@ -365,9 +366,15 @@ export default function ProjectSessions() {
 
   const handleResume = useCallback(async (id: string, fork: boolean) => {
     setResuming(id);
-    try { await api.resumeSession(id, fork); } catch { /* terminal opens via channel event */ }
+    try {
+      const result = await api.resumeSession(id, fork);
+      const label = all.find((s) => s.id === id)?.label || "Claude Code";
+      requestTerminalOpen(result.id, label);
+    } catch (err) {
+      console.error("Failed to resume session:", err);
+    }
     setResuming(null);
-  }, []);
+  }, [all]);
 
   if (loading) {
     return (

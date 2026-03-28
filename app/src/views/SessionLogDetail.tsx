@@ -271,10 +271,14 @@ function DetailContent({
   const handleResume = useCallback(async (fork: boolean) => {
     setResuming(true);
     try {
-      await api.resumeSession(session.id, fork);
-    } catch { /* terminal will open via channel event */ }
+      const result = await api.resumeSession(session.id, fork);
+      const label = session.label || labelForCommand(session.command);
+      requestTerminalOpen(result.id, label);
+    } catch (err) {
+      console.error("Failed to resume session:", err);
+    }
     setResuming(false);
-  }, [session.id]);
+  }, [session.id, session.label, session.command]);
 
   useEffect(() => {
     const el = containerRef.current;

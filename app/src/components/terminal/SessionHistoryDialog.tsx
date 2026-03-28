@@ -65,11 +65,15 @@ export function SessionHistoryDialog({ open, onClose, projectCwd }: Props) {
     if (!selected) return;
     setResuming(true);
     try {
-      await api.resumeSession(selected, fork);
+      const result = await api.resumeSession(selected, fork);
+      const label = selectedSession ? labelForCommand(selectedSession.command) : "Claude Code";
+      requestTerminalOpen(result.id, label);
       onClose();
-    } catch { /* terminal opens via channel event */ }
+    } catch (err) {
+      console.error("Failed to resume session:", err);
+    }
     setResuming(false);
-  }, [selected, onClose]);
+  }, [selected, selectedSession, onClose]);
 
   const handleFocusTerminal = useCallback(() => {
     if (!selected) return;
