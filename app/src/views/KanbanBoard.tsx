@@ -1,5 +1,6 @@
-import { useState, useCallback, useRef } from "react";
-import { Box, Typography, Skeleton } from "@mui/material";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { Box, Typography, Skeleton, Button } from "@mui/material";
+import Add from "@mui/icons-material/Add";
 import {
   DndContext,
   DragOverlay,
@@ -19,6 +20,7 @@ import { useActiveProject } from "../hooks/useActiveProject";
 import { useToast } from "../hooks/useToast";
 import { KanbanColumn } from "../components/kanban/KanbanColumn";
 import { TicketCard } from "../components/kanban/TicketCard";
+import { TicketDialog } from "../components/kanban/TicketDialog";
 
 function SkeletonColumn() {
   return (
@@ -73,6 +75,12 @@ export default function KanbanBoard() {
   const [activeTicket, setActiveTicket] = useState<Ticket | null>(null);
   const [overColumnId, setOverColumnId] = useState<ColumnId | null>(null);
   const snapshotRef = useRef<Ticket[]>([]);
+
+  // Dialog state (Plan 03: ticket CRUD dialogs)
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const lastDragEndRef = useRef(0);
 
   // Sensors: pointer (5px activation distance) + touch (200ms delay)
   const sensors = useSensors(
@@ -209,6 +217,51 @@ export default function KanbanBoard() {
     [tickets, setTickets, toast],
   );
 
+  // -- Dialog handlers (Plan 03) -----------------------------------------------
+
+  // Track drag end time to prevent accidental dialog open after drop
+  const origHandleDragEnd = handleDragEnd;
+  const handleDragEndWithTrack = useCallback(
+    async (event: DragEndEvent) => {
+      lastDragEndRef.current = Date.now();
+      return origHandleDragEnd(event);
+    },
+    [origHandleDragEnd],
+  );
+
+  const openCreateDialog = useCallback(() => {
+    setDialogMode("create");
+    setSelectedTicket(null);
+    setDialogOpen(true);
+  }, []);
+
+  const handleCardClick = useCallback((ticket: Ticket) => {
+    // Guard against accidental click right after drag
+    if (Date.now() - lastDragEndRef.current < 300) return;
+    setDialogMode("edit");
+    setSelectedTicket(ticket);
+    setDialogOpen(true);
+  }, []);
+
+  const closeDialog = useCallback(() => {
+    setDialogOpen(false);
+  }, []);
+
+  // Keyboard shortcut: "N" opens create dialog when no input is focused
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const tag = document.activeElement?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (document.activeElement?.getAttribute("contenteditable") === "true") return;
+      if (e.key === "n" || e.key === "N") {
+        e.preventDefault();
+        openCreateDialog();
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [openCreateDialog]);
+
   // No project selected
   if (!project) {
     return (
@@ -237,8 +290,14 @@ export default function KanbanBoard() {
       title="Board"
       fill
       actions={
-        // Placeholder for "Create Ticket" button -- populated in Plan 03
-        <Box />
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<Add />}
+          onClick={openCreateDialog}
+        >
+          Create Ticket
+        </Button>
       }
     >
       {/* Placeholder for filter bar -- populated in Plan 04 */}
@@ -250,7 +309,7 @@ export default function KanbanBoard() {
         collisionDetection={closestCorners}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
-        onDragEnd={handleDragEnd}
+        onDragEnd={handleDragEndWithTrack}
       >
         <Box
           sx={{
@@ -270,6 +329,7 @@ export default function KanbanBoard() {
                   label={COLUMN_LABELS[col]}
                   tickets={ticketsByColumn[col]}
                   isOver={overColumnId === col}
+                  onCardClick={handleCardClick}
                 />
               ))}
         </Box>
@@ -285,6 +345,15 @@ export default function KanbanBoard() {
           ) : null}
         </DragOverlay>
       </DndContext>
+
+      {/* Ticket CRUD dialog (Plan 03) */}
+      <TicketDialog
+        open={dialogOpen}
+        onClose={closeDialog}
+        ticket={selectedTicket}
+        projectId={project.id}
+        mode={dialogMode}
+      />
     </PageLayout>
   );
 }
