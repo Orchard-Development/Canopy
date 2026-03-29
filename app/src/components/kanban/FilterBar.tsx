@@ -7,10 +7,12 @@ import {
   Autocomplete,
   IconButton,
   InputAdornment,
+  Button,
 } from "@mui/material";
 import Search from "@mui/icons-material/Search";
 import Clear from "@mui/icons-material/Clear";
 import FilterListOff from "@mui/icons-material/FilterListOff";
+import Add from "@mui/icons-material/Add";
 import { TypeIcon } from "./TypeIcon";
 import { LabelChip } from "./LabelChip";
 
@@ -58,6 +60,7 @@ interface FilterBarProps {
   onChange: (filters: FilterState) => void;
   allLabels: string[];
   searchInputRef?: RefObject<HTMLInputElement | null>;
+  onCreate?: () => void;
 }
 
 // -- Component ---------------------------------------------------------------
@@ -67,6 +70,7 @@ export function FilterBar({
   onChange,
   allLabels,
   searchInputRef,
+  onCreate,
 }: FilterBarProps) {
   const [localSearch, setLocalSearch] = useState(filters.search);
 
@@ -119,91 +123,10 @@ export function FilterBar({
     <Stack
       direction="row"
       alignItems="center"
-      spacing={0.75}
-      sx={{ flexWrap: "wrap", px: 3, py: 1.5, flexShrink: 0, rowGap: 0.75 }}
+      spacing={1}
+      sx={{ flexWrap: "wrap", py: 1.5, flexShrink: 0, rowGap: 1 }}
     >
-      {/* Type filter chips */}
-      <Stack direction="row" spacing={0.5} alignItems="center">
-        {TICKET_TYPES.map((t) => (
-          <Chip
-            key={t.value}
-            icon={<TypeIcon type={t.value} fontSize="small" />}
-            label={t.label}
-            variant={filters.types.includes(t.value) ? "filled" : "outlined"}
-            color={filters.types.includes(t.value) ? "primary" : "default"}
-            onClick={() => toggleType(t.value)}
-            size="small"
-            sx={{ px: 0.5 }}
-          />
-        ))}
-      </Stack>
-
-      <Box sx={{ width: "1px", height: 20, bgcolor: "divider", mx: 0.5 }} />
-
-      {/* Priority filter chips */}
-      <Stack direction="row" spacing={0.5} alignItems="center">
-        {TICKET_PRIORITIES.map((p) => (
-          <Chip
-            key={p.value}
-            label={p.label}
-            variant={
-              filters.priorities.includes(p.value) ? "filled" : "outlined"
-            }
-            color={
-              filters.priorities.includes(p.value) ? "primary" : "default"
-            }
-            onClick={() => togglePriority(p.value)}
-            size="small"
-          />
-        ))}
-      </Stack>
-
-      <Box sx={{ width: "1px", height: 20, bgcolor: "divider", mx: 0.5 }} />
-
-      {/* Status filter chips */}
-      <Stack direction="row" spacing={0.5} alignItems="center">
-        {TICKET_STATUSES.map((s) => (
-          <Chip
-            key={s.value}
-            label={s.label}
-            variant={
-              filters.statuses.includes(s.value) ? "filled" : "outlined"
-            }
-            color={
-              filters.statuses.includes(s.value) ? "secondary" : "default"
-            }
-            onClick={() => toggleStatus(s.value)}
-            size="small"
-          />
-        ))}
-      </Stack>
-
-      <Box sx={{ width: "1px", height: 20, bgcolor: "divider", mx: 0.5 }} />
-
-      {/* Label filter autocomplete */}
-      <Autocomplete
-        multiple
-        size="small"
-        options={allLabels}
-        value={filters.labels}
-        onChange={(_e, newValue) =>
-          onChange({ ...filters, labels: newValue })
-        }
-        renderTags={(value, getTagProps) =>
-          value.map((label, index) => {
-            const { key, ...tagProps } = getTagProps({ index });
-            return (
-              <LabelChip key={key} label={label} {...tagProps} />
-            );
-          })
-        }
-        renderInput={(params) => (
-          <TextField {...params} placeholder="Labels" />
-        )}
-        sx={{ width: 200 }}
-      />
-
-      {/* Search input with debounce */}
+      {/* Search input */}
       <TextField
         size="small"
         placeholder="Search tickets..."
@@ -233,8 +156,89 @@ export function FilterBar({
             ) : null,
           },
         }}
-        sx={{ width: 250 }}
+        sx={{ width: 220 }}
       />
+
+      {/* Label filter */}
+      <Autocomplete
+        multiple
+        size="small"
+        options={allLabels}
+        value={filters.labels}
+        onChange={(_e, newValue) =>
+          onChange({ ...filters, labels: newValue })
+        }
+        renderTags={(value, getTagProps) =>
+          value.map((label, index) => {
+            const { key, ...tagProps } = getTagProps({ index });
+            return (
+              <LabelChip key={key} label={label} {...tagProps} />
+            );
+          })
+        }
+        renderInput={(params) => (
+          <TextField {...params} placeholder="Labels" />
+        )}
+        sx={{ width: 180 }}
+      />
+
+      <Box sx={{ width: "1px", height: 20, bgcolor: "divider" }} />
+
+      {/* Type chips */}
+      <Stack direction="row" spacing={0.5} alignItems="center">
+        {TICKET_TYPES.map((t) => (
+          <Chip
+            key={t.value}
+            icon={<TypeIcon type={t.value} fontSize="small" />}
+            label={t.label}
+            variant={filters.types.includes(t.value) ? "filled" : "outlined"}
+            color={filters.types.includes(t.value) ? "primary" : "default"}
+            onClick={() => toggleType(t.value)}
+            size="small"
+            sx={{ px: 0.5 }}
+          />
+        ))}
+      </Stack>
+
+      <Box sx={{ width: "1px", height: 20, bgcolor: "divider" }} />
+
+      {/* Priority chips */}
+      <Stack direction="row" spacing={0.5} alignItems="center">
+        {TICKET_PRIORITIES.map((p) => (
+          <Chip
+            key={p.value}
+            label={p.label}
+            variant={
+              filters.priorities.includes(p.value) ? "filled" : "outlined"
+            }
+            color={
+              filters.priorities.includes(p.value) ? "primary" : "default"
+            }
+            onClick={() => togglePriority(p.value)}
+            size="small"
+          />
+        ))}
+      </Stack>
+
+      <Box sx={{ width: "1px", height: 20, bgcolor: "divider" }} />
+
+      {/* Status chips */}
+      <Stack direction="row" spacing={0.5} alignItems="center">
+        {TICKET_STATUSES.map((s) => (
+          <Chip
+            key={s.value}
+            label={s.label}
+            variant={
+              filters.statuses.includes(s.value) ? "filled" : "outlined"
+            }
+            color={
+              filters.statuses.includes(s.value) ? "secondary" : "default"
+            }
+            onClick={() => toggleStatus(s.value)}
+            size="small"
+          />
+        ))}
+      </Stack>
 
       {/* Clear all filters */}
       {hasActiveFilters && (
@@ -248,6 +252,20 @@ export function FilterBar({
         >
           <FilterListOff fontSize="small" />
         </IconButton>
+      )}
+
+      {/* Spacer + Create button */}
+      <Box sx={{ flex: 1 }} />
+      {onCreate && (
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<Add />}
+          onClick={onCreate}
+          sx={{ whiteSpace: "nowrap", flexShrink: 0 }}
+        >
+          Create Ticket
+        </Button>
       )}
     </Stack>
   );

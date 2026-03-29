@@ -320,7 +320,11 @@ export default function KanbanBoard() {
   // No project selected
   if (!project) {
     return (
-      <PageLayout title="Board" fill>
+      <Box sx={{ p: 2, display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
+        <Typography variant="h5" sx={{ mb: 0.5 }}>Board</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Manage and track tickets across your project
+        </Typography>
         <Box
           sx={{
             display: "flex",
@@ -333,7 +337,7 @@ export default function KanbanBoard() {
             Select a project to view the board
           </Typography>
         </Box>
-      </PageLayout>
+      </Box>
     );
   }
 
@@ -341,35 +345,20 @@ export default function KanbanBoard() {
   const isLoading = !connected && tickets.length === 0;
 
   return (
-    <PageLayout
-      title="Board"
-      fill
-      badge={
-        <Typography variant="body2" color="text.secondary" sx={{ ml: 0.5 }}>
-          Manage and track tickets across your project
-        </Typography>
-      }
-    >
+    <Box sx={{ p: 2, display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
+      <Typography variant="h5" sx={{ mb: 0.5 }}>Board</Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        Manage and track tickets across your project
+      </Typography>
+
       {/* Filter bar with create button */}
-      <Stack direction="row" alignItems="center" sx={{ flexShrink: 0 }}>
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <FilterBar
-            filters={filters}
-            onChange={setFilters}
-            allLabels={allLabels}
-            searchInputRef={searchInputRef}
-          />
-        </Box>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<Add />}
-          onClick={openCreateDialog}
-          sx={{ whiteSpace: "nowrap", mx: 2, flexShrink: 0 }}
-        >
-          Create Ticket
-        </Button>
-      </Stack>
+      <FilterBar
+        filters={filters}
+        onChange={setFilters}
+        allLabels={allLabels}
+        searchInputRef={searchInputRef}
+        onCreate={openCreateDialog}
+      />
 
       {/* Column container with drag-and-drop */}
       <DndContext
@@ -445,6 +434,6 @@ export default function KanbanBoard() {
         projectId={project.id}
         mode={dialogMode}
       />
-    </PageLayout>
+    </Box>
   );
 }
