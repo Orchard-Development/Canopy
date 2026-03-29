@@ -263,76 +263,66 @@ function AppLayout({ onResetOnboarding, onResetTour, showTour, onTourComplete, p
   // User activity tracking -- captures all in-app interactions
   useUserActivity(appDashChannel);
 
-  // Engine event polling -- poll for new sessions and proposals
+  // Engine event detection -- listen for channel pushes instead of polling
   const { emit: emitEvent } = useEventBus();
-  const knownSessionIds = useRef<Set<string>>(new Set());
-  const knownProposalSlugs = useRef<Set<string>>(new Set());
-  const initialLoadDone = useRef(false);
 
   useEffect(() => {
-    let active = true;
-    let inflight = false;
-    const poll = async () => {
-      if (inflight) return;
-      inflight = true;
-      try {
-        const ac = new AbortController();
-        const timeout = setTimeout(() => ac.abort(), 5000);
-        const [sessions, proposalList] = await Promise.all([
-          fetch("/api/terminal", { signal: ac.signal }).then((r) => r.json()),
-          fetch("/api/proposals", { signal: ac.signal }).then((r) => r.json()).catch(() => []),
-        ]);
-        clearTimeout(timeout);
-        const sessionIds = new Set<string>((sessions as { id: string }[]).map((s) => s.id));
-        const proposalSlugs = new Set<string>((proposalList as { slug: string }[]).map((p) => p.slug));
+    if (!appDashChannel) return;
 
-        if (!initialLoadDone.current) {
-          knownSessionIds.current = sessionIds;
-          knownProposalSlugs.current = proposalSlugs;
-          initialLoadDone.current = true;
-          return;
-        }
+    // Track known IDs to detect "new" events (same logic as before,
+    // but triggered by push instead of poll)
+    const knownSessionIds = new Set<string>();
+    const knownProposalSlugs = new Set<string>();
+    let initialized = false;
 
-        // New sessions
-        for (const s of sessions as { id: string; command?: string; label?: string }[]) {
-          if (!knownSessionIds.current.has(s.id)) {
-            const cmd = s.command ?? "";
-            const base = cmd.split("/").pop() ?? cmd;
-            const label = s.label || ({ claude: "Claude Code", codex: "Codex" }[base] ?? base) || "Shell";
-            emitEvent({
-              category: "session",
-              event: "dispatched",
-              message: `Terminal dispatched: ${label}`,
-              severity: "info",
-              actionMeta: { type: "focus-session", sessionId: s.id, label },
-            });
-          }
-        }
+    // Seed with current state on first join
+    fetch("/api/terminal").then(r => r.json()).then((sessions: { id: string }[]) => {
+      sessions.forEach(s => knownSessionIds.add(s.id));
+      initialized = true;
+    }).catch(() => { initialized = true; });
 
-        // New proposals
-        for (const p of proposalList as { slug: string; title?: string }[]) {
-          if (!knownProposalSlugs.current.has(p.slug)) {
-            const label = p.title || p.slug;
-            emitEvent({
-              category: "proposal",
-              event: "created",
-              message: `Proposal ready: ${label}`,
-              severity: "success",
-              actionMeta: { type: "view-proposal", slug: p.slug },
-            });
-          }
-        }
+    fetch("/api/proposals").then(r => r.json()).then((proposals: { slug: string }[]) => {
+      proposals.forEach(p => knownProposalSlugs.add(p.slug));
+    }).catch(() => {});
 
-        knownSessionIds.current = sessionIds;
-        knownProposalSlugs.current = proposalSlugs;
-      } catch { /* ignore */ } finally {
-        inflight = false;
-      }
+    // Listen for new sessions
+    // Dashboard channel pushes: %{id: id, info: info} (see dashboard_channel.ex:97)
+    const sessionRef = appDashChannel.on("session:started", (payload: { id: string; info?: { command?: string; label?: string } }) => {
+      if (!initialized || knownSessionIds.has(payload.id)) return;
+      knownSessionIds.add(payload.id);
+      const cmd = payload.info?.command ?? "";
+      const base = cmd.split("/").pop() ?? cmd;
+      const label = payload.info?.label || ({ claude: "Claude Code", codex: "Codex" }[base] ?? base) || "Shell";
+      emitEvent({
+        category: "session",
+        event: "dispatched",
+        message: `Terminal dispatched: ${label}`,
+        severity: "info",
+        actionMeta: { type: "focus-session", sessionId: payload.id, label },
+      });
+    });
+
+    // Listen for new proposals
+    // Dashboard channel pushes: %{data: data} (see dashboard_channel.ex:303)
+    const proposalRef = appDashChannel.on("proposal:created", (payload: { data: { slug: string; title?: string } }) => {
+      const proposal = payload.data;
+      if (knownProposalSlugs.has(proposal.slug)) return;
+      knownProposalSlugs.add(proposal.slug);
+      const label = proposal.title || proposal.slug;
+      emitEvent({
+        category: "proposal",
+        event: "created",
+        message: `Proposal ready: ${label}`,
+        severity: "success",
+        actionMeta: { type: "view-proposal", slug: proposal.slug },
+      });
+    });
+
+    return () => {
+      appDashChannel.off("session:started", sessionRef);
+      appDashChannel.off("proposal:created", proposalRef);
     };
-    poll();
-    const interval = setInterval(() => { if (active) poll(); }, 3000);
-    return () => { active = false; clearInterval(interval); };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [appDashChannel, emitEvent]);
 
   // Listen for onboarding reset requests from Settings
   useEffect(() => {
