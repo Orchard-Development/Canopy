@@ -1,6 +1,7 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { Box, Typography, Skeleton, Button } from "@mui/material";
 import Add from "@mui/icons-material/Add";
+import { FilterBar, getDefaultFilters, type FilterState } from "../components/kanban/FilterBar";
 import {
   DndContext,
   DragOverlay,
@@ -68,8 +69,53 @@ function findTicketColumn(tickets: Ticket[], ticketId: string): ColumnId | null 
 
 export default function KanbanBoard() {
   const { project } = useActiveProject();
-  const { ticketsByColumn, connected, tickets, setTickets } = useKanban();
+  const { ticketsByColumn, connected, tickets, setTickets, projectId } = useKanban();
   const toast = useToast();
+
+  // Filter state (Plan 04)
+  const [filters, setFilters] = useState<FilterState>(getDefaultFilters());
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Compute unique labels from all tickets
+  const allLabels = useMemo(
+    () => [...new Set(tickets.flatMap((t) => t.labels))].sort(),
+    [tickets],
+  );
+
+  // Apply filters to ticketsByColumn (client-side, AND logic)
+  const filteredTicketsByColumn = useMemo(() => {
+    const result = {} as Record<ColumnId, Ticket[]>;
+    for (const col of COLUMNS) {
+      result[col] = ticketsByColumn[col].filter((ticket) => {
+        if (filters.types.length > 0 && !filters.types.includes(ticket.type)) return false;
+        if (filters.priorities.length > 0 && !filters.priorities.includes(ticket.priority)) return false;
+        if (filters.labels.length > 0 && !filters.labels.some((l) => ticket.labels.includes(l))) return false;
+        if (filters.search) {
+          const q = filters.search.toLowerCase();
+          const inTitle = ticket.title.toLowerCase().includes(q);
+          const inDesc = ticket.description?.toLowerCase().includes(q) ?? false;
+          if (!inTitle && !inDesc) return false;
+        }
+        return true;
+      });
+    }
+    return result;
+  }, [ticketsByColumn, filters]);
+
+  // Check if any filter is active
+  const hasActiveFilters =
+    filters.types.length > 0 ||
+    filters.priorities.length > 0 ||
+    filters.labels.length > 0 ||
+    filters.search !== "";
+
+  // Check if all filtered columns are empty
+  const allColumnsEmpty = hasActiveFilters && COLUMNS.every((col) => filteredTicketsByColumn[col].length === 0);
+
+  // Reset filters on project switch
+  useEffect(() => {
+    setFilters(getDefaultFilters());
+  }, [projectId]);
 
   // Drag state
   const [activeTicket, setActiveTicket] = useState<Ticket | null>(null);
@@ -247,9 +293,16 @@ export default function KanbanBoard() {
     setDialogOpen(false);
   }, []);
 
-  // Keyboard shortcut: "N" opens create dialog when no input is focused
+  // Keyboard shortcuts: "N" opens create dialog, Cmd/Ctrl+F focuses search
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      // Cmd/Ctrl+F: focus search input (works even from inputs)
+      if ((e.metaKey || e.ctrlKey) && e.key === "f") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+
       const tag = document.activeElement?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
       if (document.activeElement?.getAttribute("contenteditable") === "true") return;
@@ -300,8 +353,13 @@ export default function KanbanBoard() {
         </Button>
       }
     >
-      {/* Placeholder for filter bar -- populated in Plan 04 */}
-      <Box sx={{ flexShrink: 0 }} />
+      {/* Filter bar (Plan 04) */}
+      <FilterBar
+        filters={filters}
+        onChange={setFilters}
+        allLabels={allLabels}
+        searchInputRef={searchInputRef}
+      />
 
       {/* Column container with drag-and-drop */}
       <DndContext
@@ -327,12 +385,35 @@ export default function KanbanBoard() {
                   key={col}
                   status={col}
                   label={COLUMN_LABELS[col]}
-                  tickets={ticketsByColumn[col]}
+                  tickets={filteredTicketsByColumn[col]}
                   isOver={overColumnId === col}
                   onCardClick={handleCardClick}
                 />
               ))}
         </Box>
+
+        {/* No results state (Plan 04) */}
+        {allColumnsEmpty && (
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              py: 6,
+            }}
+          >
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 1 }}>
+              No tickets match your filters
+            </Typography>
+            <Button
+              size="small"
+              onClick={() => setFilters(getDefaultFilters())}
+            >
+              Clear filters
+            </Button>
+          </Box>
+        )}
 
         <DragOverlay
           dropAnimation={{
