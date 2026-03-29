@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
 
+defaults:
+  run:
+    working-directory: pages
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -17,6 +21,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
+          cache-dependency-path: pages/package-lock.json
 
       - run: npm ci
       - run: npm run build
@@ -25,4 +30,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=context-site
+          command: pages deploy pages/dist --project-name=context-site
