@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
-import { Box, Typography, Skeleton, Button } from "@mui/material";
+import { Box, Stack, Typography, Skeleton, Button } from "@mui/material";
 import Add from "@mui/icons-material/Add";
 import { FilterBar, getDefaultFilters, type FilterState } from "../components/kanban/FilterBar";
 import {
@@ -349,25 +349,27 @@ export default function KanbanBoard() {
           Manage and track tickets across your project
         </Typography>
       }
-      actions={
+    >
+      {/* Filter bar with create button */}
+      <Stack direction="row" alignItems="center" sx={{ flexShrink: 0 }}>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <FilterBar
+            filters={filters}
+            onChange={setFilters}
+            allLabels={allLabels}
+            searchInputRef={searchInputRef}
+          />
+        </Box>
         <Button
           variant="contained"
           color="primary"
           startIcon={<Add />}
           onClick={openCreateDialog}
-          sx={{ whiteSpace: "nowrap" }}
+          sx={{ whiteSpace: "nowrap", mx: 2, flexShrink: 0 }}
         >
           Create Ticket
         </Button>
-      }
-    >
-      {/* Filter bar */}
-      <FilterBar
-        filters={filters}
-        onChange={setFilters}
-        allLabels={allLabels}
-        searchInputRef={searchInputRef}
-      />
+      </Stack>
 
       {/* Column container with drag-and-drop */}
       <DndContext
