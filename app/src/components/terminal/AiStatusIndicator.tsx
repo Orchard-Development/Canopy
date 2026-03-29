@@ -3,8 +3,8 @@ import { Tooltip, Typography, Stack, IconButton } from "@mui/material";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import SyncIcon from "@mui/icons-material/Sync";
 import { keyframes } from "@mui/system";
-import { useDashboardChannel } from "../../hooks/useDashboardChannel";
 import { useChannelEvent } from "../../hooks/useChannelEvent";
+import { useDashboardChannel } from "../../hooks/useDashboardChannel";
 import { EVENTS } from "../../lib/events";
 import { api } from "../../lib/api";
 

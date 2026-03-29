@@ -5,6 +5,8 @@ import { buildThemes, getInitialMode } from "./lib/theme";
 import { BrandingContext, SetBrandingContext, DEFAULT_BRANDING, fetchBranding, type BrandingConfig } from "./lib/branding";
 import { ColorModeContext } from "./hooks/useColorMode";
 import { useChannelEvent } from "./hooks/useChannelEvent";
+import { DashboardChannelProvider } from "@/contexts/DashboardChannelContext";
+import { useDashboardChannel } from "@/hooks/useDashboardChannel";
 import { EVENTS } from "./lib/events";
 import { DashboardChannelProvider, useDashboardChannel } from "./hooks/useDashboardChannel";
 import { ProjectProvider } from "./hooks/useProject";

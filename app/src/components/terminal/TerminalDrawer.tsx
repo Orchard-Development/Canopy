@@ -11,8 +11,8 @@ import { TerminalDrawerContent, type TerminalTab } from "./TerminalDrawerContent
 import type { SessionProfile } from "./ProfileTooltip";
 import type { GridSpan } from "../ResizableGrid";
 import { ResizableDrawer } from "../ResizableDrawer";
-import { useDashboardChannel } from "../../hooks/useDashboardChannel";
 import { useChannelEvent } from "../../hooks/useChannelEvent";
+import { useDashboardChannel } from "../../hooks/useDashboardChannel";
 import { OrchardIcon } from "./OrchardIcon";
 import { OrchardModelPicker } from "./OrchardModelPicker";
 
@@ -124,12 +124,6 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
 
   const tabsRef = useRef(tabs);
   tabsRef.current = tabs;
-
-  const activeTabRef = useRef(activeTab);
-  activeTabRef.current = activeTab;
-
-  // When an agent terminal auto-closes, navigate back to whichever terminal was active before it was opened
-  const returnToIdRef = useRef<string | null>(null);
 
   const pendingFocusSync = useRef(false);
   const prevOpen = useRef(open);
@@ -247,7 +241,7 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
       } catch { /* ignore */ }
     };
 
-    const applySessions = (sessions: Array<{ id: string; label?: string; command: string; exitCode?: number; state?: string; projectId?: string; summary?: string; cwd?: string; startedAt?: string; agentType?: string; source?: string; forkedFrom?: string; lastPrompt?: string }>, settings: Record<string, string>) => {
+    const applySessions = (sessions: Array<{ id: string; label?: string; command: string; exitCode?: number; state?: string; projectId?: string; summary?: string; cwd?: string; startedAt?: string; agentType?: string; source?: string; forkedFrom?: string }>, settings: Record<string, string>) => {
       const restored: TerminalTab[] = sessions
         .filter((s) => s.exitCode == null)
         .map((s) => ({
@@ -264,7 +258,6 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
           agentType: s.agentType,
           source: s.source,
           forkedFrom: s.forkedFrom,
-          lastPrompt: s.lastPrompt,
         }));
       if (restored.length === 0) return;
       setTabs(restored);
@@ -311,12 +304,6 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
       // Always scroll to the session (even if already attached)
       setScrollToSessionId(sessionId);
       setTimeout(() => setScrollToSessionId(null), 100);
-
-      // Save current tab as return-to target before switching to the new session
-      const currentTab = tabsRef.current[activeTabRef.current];
-      if (currentTab && currentTab.id !== sessionId && currentTab.exitCode === undefined) {
-        returnToIdRef.current = currentTab.id;
-      }
 
       if (attachedSessions.current.has(sessionId)) {
         // Session already exists -- just focus it
@@ -369,7 +356,6 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
           if (info.agentType && !tab.agentType) updates.agentType = info.agentType;
           if (info.source && !tab.source) updates.source = info.source;
           if (info.forkedFrom && !tab.forkedFrom) updates.forkedFrom = info.forkedFrom;
-          if (info.lastPrompt && info.lastPrompt !== tab.lastPrompt) updates.lastPrompt = info.lastPrompt;
           if (info.exitCode !== undefined && tab.exitCode === undefined) updates.exitCode = info.exitCode;
           if (updates.label || updates.summary) updates.lastAiUpdate = Date.now();
           if (Object.keys(updates).length > 0) {
@@ -380,30 +366,8 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
         }).catch((err) => {
           // Session no longer exists on the server -- remove the dead tab
           if (err?.message?.includes("404")) {
-            const removedFilteredIdx = tabsRef.current.findIndex((t) => t.id === tab.id);
-            const wasActive = removedFilteredIdx >= 0 && removedFilteredIdx === activeTabRef.current;
             setTabs((prev) => prev.filter((t) => t.id !== tab.id));
             attachedSessions.current.delete(tab.id);
-            if (wasActive) {
-              // Navigate back to the terminal that was active before the agent session was opened
-              setTimeout(() => {
-                const returnId = returnToIdRef.current;
-                if (returnId) {
-                  const idx = tabsRef.current.findIndex((t) => t.id === returnId && t.exitCode === undefined);
-                  if (idx >= 0) {
-                    setActiveTab(idx);
-                    returnToIdRef.current = null;
-                    return;
-                  }
-                }
-                // Fallback: last live tab
-                const liveIdx = tabsRef.current.reduce(
-                  (best, t, i) => (t.exitCode === undefined && t.id !== tab.id ? i : best),
-                  -1,
-                );
-                if (liveIdx >= 0) setActiveTab(liveIdx);
-              }, 0);
-            }
           }
         });
       }
@@ -418,7 +382,6 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
   const labelEvent = useChannelEvent<{ id: string; label: string }>(dashChannel, "session:label");
   const summaryEvent = useChannelEvent<{ id: string; summary: string }>(dashChannel, "session:summary");
   const exitedEvent = useChannelEvent<{ id: string; exitCode: number }>(dashChannel, "session:exited");
-  const lastPromptEvent = useChannelEvent<{ id: string; prompt: string }>(dashChannel, "session:last_prompt");
   const profiledEvent = useChannelEvent<{ profiles: Record<string, SessionProfile> }>(dashChannel, "session:profiled");
 
   // Profile updates from the Profiler GenServer (every 30s)
@@ -461,13 +424,6 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
       prev.map((t) => (t.id === exitedEvent.id ? { ...t, exitCode: exitedEvent.exitCode ?? 0 } : t)),
     );
   }, [exitedEvent]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (!lastPromptEvent) return;
-    setTabs((prev) =>
-      prev.map((t) => (t.id === lastPromptEvent.id ? { ...t, lastPrompt: lastPromptEvent.prompt } : t)),
-    );
-  }, [lastPromptEvent]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [modelPickerOpen, setModelPickerOpen] = useState(false);
 

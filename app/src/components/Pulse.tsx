@@ -11,8 +11,8 @@ import {
   keyframes,
 } from "@mui/material";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
-import { useDashboardChannel } from "../hooks/useDashboardChannel";
 import { useChannelEvent, useChannelEventBuffer } from "../hooks/useChannelEvent";
+import { useDashboardChannel } from "../hooks/useDashboardChannel";
 import { EVENTS } from "../lib/events";
 
 interface ProfilerStatus {

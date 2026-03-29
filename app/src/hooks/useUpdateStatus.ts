@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, type UpdateStatus } from "../lib/api";
-import { useDashboardChannel } from "./useDashboardChannel";
 import { useChannelEvent } from "./useChannelEvent";
+import { useDashboardChannel } from "./useDashboardChannel";
 
 const EMPTY: UpdateStatus = {
   branch: "unknown",

@@ -1,8 +1,8 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { api, getRemoteOrchard, onRemoteOrchardChange } from "../lib/api";
 import { useActiveProject } from "./useActiveProject";
-import { useDashboardChannel } from "./useDashboardChannel";
 import { useChannelEvent } from "./useChannelEvent";
+import { useDashboardChannel } from "./useDashboardChannel";
 import { useDefaultCwd } from "../lib/use-default-cwd";
 import { randomWord } from "../lib/random-word";
 import type { TerminalTab } from "../components/terminal/TerminalDrawerContent";

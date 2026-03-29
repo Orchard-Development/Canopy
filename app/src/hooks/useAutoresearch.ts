@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { useDashboardChannel } from "./useDashboardChannel";
 import { useChannelEvent } from "./useChannelEvent";
+import { useDashboardChannel } from "./useDashboardChannel";
 import { EVENTS } from "../lib/events";
 import { api } from "../lib/api";
 import type {

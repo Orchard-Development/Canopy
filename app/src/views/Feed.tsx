@@ -10,8 +10,8 @@ import {
 } from "@mui/material";
 import RssFeedIcon from "@mui/icons-material/RssFeed";
 import { useProject } from "../hooks/useProject";
-import { useDashboardChannel } from "../hooks/useDashboardChannel";
 import { useChannelEventBuffer } from "../hooks/useChannelEvent";
+import { useDashboardChannel } from "../hooks/useDashboardChannel";
 import { EVENTS } from "../lib/events";
 import { api, type FeedEvent } from "../lib/api";
 import { groupIntoChains, ChainCard } from "../components/FeedChain";

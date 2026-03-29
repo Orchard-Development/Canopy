@@ -29,8 +29,8 @@ import { api } from "../lib/api";
 import { CardGrid } from "../components/CardGrid";
 import { NewProposalDialog } from "../components/proposal/NewProposalDialog";
 import { useActiveProject } from "../hooks/useActiveProject";
-import { useDashboardChannel } from "../hooks/useDashboardChannel";
 import { useChannelEvent } from "../hooks/useChannelEvent";
+import { useDashboardChannel } from "../hooks/useDashboardChannel";
 import { EVENTS } from "../lib/events";
 
 interface ProposalSummary {
