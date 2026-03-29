@@ -15,7 +15,7 @@ import { useActiveProject } from "../../hooks/useActiveProject";
 import { DirectoryPicker } from "../DirectoryPicker";
 
 function isElectron(): boolean {
-  return typeof window.ctx?.pickDirectory === "function";
+  return typeof window.orchard?.pickDirectory === "function";
 }
 
 export function ImportExistingTab() {
@@ -29,7 +29,7 @@ export function ImportExistingTab() {
 
   async function handleBrowse() {
     if (isElectron()) {
-      const dir = await window.ctx!.pickDirectory!();
+      const dir = await window.orchard!.pickDirectory!();
       if (dir) setRootPath(dir);
     } else {
       setPickerOpen(true);

@@ -82,13 +82,13 @@ function palFromConfig(p: BrandingConfig["dark"], gradient: string) {
 }
 
 function syncBootTheme(config: BrandingConfig, mode?: string): void {
-  if (!window.ctx?.saveBootTheme) return;
+  if (!window.orchard?.saveBootTheme) return;
   const payload: Record<string, string> = {
     dark: JSON.stringify(palFromConfig(config.dark, config.accentGradient || "")),
     light: JSON.stringify(palFromConfig(config.light, config.accentGradient || "")),
   };
   if (mode) payload.mode = mode;
-  window.ctx.saveBootTheme(payload);
+  window.orchard.saveBootTheme(payload);
 }
 
 async function generateFromDescription(description: string): Promise<BrandingConfig> {

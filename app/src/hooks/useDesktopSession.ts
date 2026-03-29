@@ -55,7 +55,7 @@ interface OrchardViewer {
 }
 
 function getViewer(): OrchardViewer | null {
-  const w = window as Record<string, unknown>;
+  const w = window as unknown as Record<string, unknown>;
   const orchard = w.orchard as { viewer?: Record<string, unknown> } | undefined;
   const viewer = orchard?.viewer;
   if (viewer && typeof viewer.startMirror === "function") {
@@ -421,7 +421,7 @@ export function useDesktopSession(
           drawFrame(data.data);
         }
       };
-      viewer.onFrame(ipcFrameHandler);
+      viewer!.onFrame(ipcFrameHandler);
     }
 
     return () => {
@@ -449,9 +449,9 @@ export function useDesktopSession(
       }
 
       // Clean up IPC listeners
-      viewer.offRegionUpdate(regionHandler);
+      viewer!.offRegionUpdate(regionHandler as (...args: unknown[]) => void);
       if (ipcFrameHandler) {
-        viewer.offFrame(ipcFrameHandler);
+        viewer!.offFrame(ipcFrameHandler as (...args: unknown[]) => void);
       }
 
       viewer.stopMirror(sessionId);

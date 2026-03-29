@@ -97,7 +97,7 @@ const PRICING: Record<string, { input: number; output: number; cacheWrite?: numb
 };
 
 /** Fallback pricing by provider prefix when exact model isn't in the table. */
-const PROVIDER_FALLBACK: Record<string, { input: number; output: number }> = {
+const PROVIDER_FALLBACK: Record<string, { input: number; output: number; cacheWrite?: number; cacheRead?: number }> = {
   "claude": { input: 3, output: 15 },
   "gpt": { input: 2.5, output: 15 },
   "grok": { input: 2, output: 6 },

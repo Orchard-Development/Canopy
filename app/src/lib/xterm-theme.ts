@@ -1,4 +1,5 @@
 import { alpha, darken, lighten, type Theme } from "@mui/material/styles";
+import "../fonts/nerd-font.css";
 
 /**
  * Hand-tuned ANSI palettes that complement the app theme while providing
@@ -64,7 +65,7 @@ export function createTerminalTheme(theme: Theme) {
 export function terminalOptions(theme: Theme) {
   return {
     theme: createTerminalTheme(theme),
-    fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
+    fontFamily: "'JetBrains Mono NF', 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
     fontSize: 14,
     lineHeight: 1.35,
     letterSpacing: 0.3,

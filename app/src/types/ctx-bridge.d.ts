@@ -87,6 +87,5 @@ interface ViewerBridge {
 }
 
 interface Window {
-  ctx: CtxBridge & { viewer?: ViewerBridge };
   orchard: CtxBridge & { viewer?: ViewerBridge };
 }

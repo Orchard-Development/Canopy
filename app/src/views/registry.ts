@@ -30,6 +30,7 @@ export const COMPONENT_MAP: Record<string, LazyExoticComponent<ComponentType>> =
   "bundled:DatabaseExplorer": lazy(() => import("./database-explorer/DatabaseExplorer")),
   "bundled:OpenClaw": lazy(() => import("./OpenClaw")),
   "bundled:KanbanBoard": lazy(() => import("./KanbanBoard")),
+  "bundled:Judgment": lazy(() => import("./Judgment")),
 };
 
 /**

@@ -28,7 +28,7 @@ interface OrchardViewer {
 }
 
 function getViewer(): OrchardViewer | null {
-  const w = window as Record<string, unknown>;
+  const w = window as unknown as Record<string, unknown>;
   const orchard = w.orchard as { viewer?: OrchardViewer } | undefined;
   return orchard?.viewer ?? null;
 }

@@ -47,9 +47,9 @@ export function PageLayout({
           direction={isMobile ? "column" : "row"}
           alignItems={isMobile ? "flex-start" : "center"}
           spacing={1}
-          sx={{ mb: 2, flexShrink: 0 }}
+          sx={{ mb: 2, flexShrink: 0, flexWrap: "wrap", rowGap: 1 }}
         >
-          <Stack direction="row" alignItems="center" spacing={1} sx={{ minWidth: 0 }}>
+          <Stack direction="row" alignItems="center" spacing={1} sx={{ minWidth: 0, flexWrap: "wrap", rowGap: 0.5 }}>
             {icon}
             <Typography variant={isMobile ? "h6" : "h5"} fontWeight={700} noWrap>
               {title}

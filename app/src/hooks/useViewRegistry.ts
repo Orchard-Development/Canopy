@@ -212,7 +212,7 @@ const DEFAULT_VIEWS: ViewEntry[] = [
     sourceId: null,
     position: 77,
     removable: true,
-    visible: true,
+    visible: false,
     placement: "main",
   },
   {

@@ -328,7 +328,7 @@ function DetailContent({
         </>
       }
       actions={
-        <Stack direction="row" spacing={0.5} alignItems="center">
+        <Stack direction="row" spacing={0.5} alignItems="center" sx={{ flexWrap: "wrap", rowGap: 0.5 }}>
           <ButtonGroup size="small" variant="outlined">
             <Button
               startIcon={<ChatIcon />}

@@ -231,8 +231,8 @@ function ResetCard() {
     try {
       await fetch("/api/reset", { method: "POST" });
       // Use Electron full restart if available (relaunches entire app)
-      if (typeof window.ctx?.fullRestart === "function") {
-        window.ctx.fullRestart();
+      if (typeof window.orchard?.fullRestart === "function") {
+        window.orchard.fullRestart();
         return;
       }
       // Browser fallback: reload -- engine is still running with fresh DB

@@ -548,13 +548,13 @@ export function App() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ "ui.colorMode": next }),
           }).catch(() => {});
-          if (window.ctx?.saveBootTheme) {
+          if (window.orchard?.saveBootTheme) {
             const pal = (p: BrandingConfig["dark"]) => JSON.stringify({
               primary: p.primary, accent: p.accent || p.primary,
               background: p.background, surface: p.surface, text: p.text,
               gradient: branding.accentGradient || "",
             });
-            window.ctx.saveBootTheme({ dark: pal(branding.dark), light: pal(branding.light), mode: next });
+            window.orchard.saveBootTheme({ dark: pal(branding.dark), light: pal(branding.light), mode: next });
           }
           return next;
         }),

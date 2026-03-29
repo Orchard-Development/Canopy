@@ -117,7 +117,7 @@ export function ProjectSwitcher() {
     ? `${active.name}${activeNode ? " (remote)" : ""}`
     : "No project";
 
-  const activeBranding = active ? getBranding(active) : {};
+  const activeBranding = active ? getBranding(active) : { logoUrl: undefined, faviconUrl: undefined };
 
   function handleSelect(p: ProjectRecord) {
     setRemoteOrchard(null, null);

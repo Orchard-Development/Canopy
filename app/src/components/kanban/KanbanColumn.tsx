@@ -9,10 +9,10 @@ import { TicketCard } from "./TicketCard";
 // -- Column accent colors ----------------------------------------------------
 
 const COLUMN_COLORS: Record<string, string> = {
-  open: "#6b7280",       // neutral gray
+  todo: "#6b7280",        // neutral gray
   in_progress: "#3b82f6", // blue
   review: "#f59e0b",      // amber
-  closed: "#22c55e",      // green
+  done: "#22c55e",        // green
 };
 
 interface KanbanColumnProps {

@@ -106,15 +106,15 @@ export function AppHeader({ onMenuToggle, showMenuButton, onFocusSession, onView
             </IconButton>
           </Tooltip>
 
-          {window.ctx?.windowClose && (
+          {window.orchard?.windowClose && (
             <Box sx={{ display: "flex", gap: 0.25, ml: 0.5, borderLeft: 1, borderColor: "divider", pl: 1 }}>
-              <IconButton onClick={() => window.ctx.windowMinimize?.()} size="small" sx={{ opacity: 0.5, "&:hover": { opacity: 1 } }}>
+              <IconButton onClick={() => window.orchard.windowMinimize?.()} size="small" sx={{ opacity: 0.5, "&:hover": { opacity: 1 } }}>
                 <RemoveIcon sx={{ fontSize: 16 }} />
               </IconButton>
-              <IconButton onClick={() => window.ctx.windowMaximize?.()} size="small" sx={{ opacity: 0.5, "&:hover": { opacity: 1 } }}>
+              <IconButton onClick={() => window.orchard.windowMaximize?.()} size="small" sx={{ opacity: 0.5, "&:hover": { opacity: 1 } }}>
                 <CropSquareIcon sx={{ fontSize: 14 }} />
               </IconButton>
-              <IconButton onClick={() => window.ctx.windowClose?.()} size="small" sx={{ opacity: 0.5, "&:hover": { opacity: 1, color: "error.main" } }}>
+              <IconButton onClick={() => window.orchard.windowClose?.()} size="small" sx={{ opacity: 0.5, "&:hover": { opacity: 1, color: "error.main" } }}>
                 <CloseIcon sx={{ fontSize: 16 }} />
               </IconButton>
             </Box>

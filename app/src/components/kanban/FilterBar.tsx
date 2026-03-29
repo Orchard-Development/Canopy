@@ -50,10 +50,10 @@ const TICKET_PRIORITIES = [
 ] as const;
 
 const TICKET_STATUSES = [
-  { value: "open", label: "Open" },
+  { value: "todo", label: "To Do" },
   { value: "in_progress", label: "In Progress" },
   { value: "review", label: "Review" },
-  { value: "closed", label: "Closed" },
+  { value: "done", label: "Done" },
 ] as const;
 
 // -- Props -------------------------------------------------------------------
