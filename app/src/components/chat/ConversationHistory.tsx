@@ -60,8 +60,6 @@ export function ConversationHistory({
     refresh();
   };
 
-  if (!open) return null;
-
   return (
     <Box
       sx={{
@@ -69,7 +67,7 @@ export function ConversationHistory({
         flexShrink: 0,
         borderRight: 1,
         borderColor: "divider",
-        display: "flex",
+        display: open ? "flex" : "none",
         flexDirection: "column",
         overflow: "hidden",
       }}

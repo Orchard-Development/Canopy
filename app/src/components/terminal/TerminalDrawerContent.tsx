@@ -166,6 +166,48 @@ function computeGapFill(
   return out;
 }
 
+type SessionStatus = "running" | "needs_input" | "needs_review" | "complete" | "error";
+
+const _AGENT_TYPES = new Set(["claude", "codex", "openai", "opencode"]);
+
+function deriveStatus(tab: TerminalTab): SessionStatus {
+  const state = tab.state ?? "";
+  if (state === "waiting" || state === "idle") return "needs_input";
+  if (tab.exitCode !== undefined) {
+    if (tab.exitCode !== 0) return "error";
+    if (_AGENT_TYPES.has((tab.agentType ?? "").toLowerCase())) return "needs_review";
+    return "complete";
+  }
+  return "running";
+}
+
+const STATUS_CHIP: Record<SessionStatus, { label: string; color: string } | null> = {
+  running: null,
+  needs_input: { label: "input", color: "#F9A825" },
+  needs_review: { label: "review", color: "#7B1FA2" },
+  complete: { label: "done", color: "#2E7D32" },
+  error: { label: "error", color: "#C62828" },
+};
+
+function SessionStatusChip({ status }: { status: SessionStatus }) {
+  const cfg = STATUS_CHIP[status];
+  if (!cfg) return null;
+  return (
+    <Chip
+      size="small"
+      label={cfg.label}
+      sx={{
+        height: 14,
+        fontSize: 9,
+        bgcolor: `${cfg.color}22`,
+        color: cfg.color,
+        border: `1px solid ${cfg.color}55`,
+        "& .MuiChip-label": { px: 0.5 },
+      }}
+    />
+  );
+}
+
 export interface TerminalTab {
   id: string;
   label: string;
@@ -568,6 +610,7 @@ export function TerminalDrawerContent({
               const label = tab.label || `${commandName(tab.command)} ${tab.nickname}`;
               const resolvedState = tab.exitCode !== undefined ? "idle" : (tab.state ?? "running");
               const profile = profiles?.[tab.id];
+              const status = deriveStatus(tab);
               return (
                 <Tab
                   key={tab.id}
@@ -622,14 +665,7 @@ export function TerminalDrawerContent({
                             </Typography>
                           )}
                         </Box>
-                        {tab.exitCode !== undefined && (
-                          <Chip
-                            size="small"
-                            label={tab.exitCode}
-                            color={tab.exitCode === 0 ? "success" : "error"}
-                            sx={{ height: 16, fontSize: 10, "& .MuiChip-label": { px: 0.5 } }}
-                          />
-                        )}
+                        <SessionStatusChip status={status} />
                         {tab.node && (
                           <Chip
                             size="small"

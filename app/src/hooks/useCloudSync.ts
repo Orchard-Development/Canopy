@@ -10,6 +10,7 @@ const EXCLUDED_KEYS = new Set([
   "terminal.gridColumns",
   "terminal.gridSpans",
   "terminal.drawerWidth",
+  "_branding", // reserved key; written to /api/branding separately, never to flat settings
 ]);
 
 interface CloudSync {
@@ -41,10 +42,18 @@ export function useCloudSync(): CloudSync {
     setPushing(true);
     setError(null);
     try {
-      const res = await fetch("/api/settings");
-      if (!res.ok) throw new Error("Failed to fetch local settings");
-      const settings = await res.json();
+      const [settingsRes, brandingRes] = await Promise.all([
+        fetch("/api/settings"),
+        fetch("/api/branding"),
+      ]);
+      if (!settingsRes.ok) throw new Error("Failed to fetch local settings");
+      const settings = await settingsRes.json();
       const syncable = filterSyncable(settings);
+
+      if (brandingRes.ok) {
+        const brandingData = await brandingRes.json();
+        syncable["_branding"] = JSON.stringify(brandingData);
+      }
 
       const { error: upsertError } = await supabase
         .from("user_settings")
@@ -84,6 +93,20 @@ export function useCloudSync(): CloudSync {
       if (!data) throw new Error("No cloud settings found");
 
       const settings = data.settings as Record<string, string>;
+
+      const brandingJson = settings["_branding"];
+      if (brandingJson) {
+        try {
+          const brandingData = JSON.parse(brandingJson);
+          await fetch("/api/branding", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(brandingData),
+          });
+        } catch { /* malformed branding, skip */ }
+        delete settings["_branding"];
+      }
+
       const res = await fetch("/api/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },

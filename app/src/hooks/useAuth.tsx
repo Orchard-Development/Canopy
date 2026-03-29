@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
-import { supabase, supabaseConfigured } from "../lib/supabase";
+import { supabase, supabaseConfigured, supabaseUrl, supabaseAnonKey } from "../lib/supabase";
 
 interface AuthState {
   session: Session | null;
@@ -150,32 +150,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsOwner(true);
       return;
     }
-    // On tunnel: check auth policy first (public endpoint), then fall back to settings
+    // On tunnel: layered ownership check
     async function checkTunnelOwnership() {
-      // Try the public auth-policy endpoint first (works without PIN)
+      // 1. Check if the user already has a valid engine tunnel session (from PIN or email gate)
+      try {
+        const info = await fetch("/tunnel/session-info").then((r) => r.json());
+        if (info.valid) { setIsOwner(true); return; }
+      } catch { /* continue */ }
+
+      // 2. Check auth-policy: allow_any_user or owner UID match
+      let policyAllows = false;
       try {
         const policy = await fetch("/tunnel/auth-policy").then((r) => r.json());
-        if (policy.allow_any_user) {
-          setIsOwner(true);
-          return;
-        }
-      } catch { /* endpoint unavailable, continue to settings check */ }
+        const isOwnerByUid = policy.owner_uid && policy.owner_uid === session?.user?.id;
+        policyAllows = policy.allow_any_user || isOwnerByUid;
+      } catch { /* continue */ }
 
-      // Fall back to settings (requires engine auth / PIN)
+      // 3. If policy allows, exchange the Supabase token for an engine session
+      if (policyAllows && session?.access_token) {
+        try {
+          const res = await fetch("/tunnel/auth-supabase", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              access_token: session.access_token,
+              supabase_url: supabaseUrl,
+              anon_key: supabaseAnonKey,
+            }),
+          });
+          if (res.ok) { setIsOwner(true); return; }
+        } catch { /* continue */ }
+        // Policy said yes but session exchange failed — still grant UI access
+        setIsOwner(true);
+        return;
+      }
+
+      // 4. Fall back to settings (requires engine auth / PIN)
       try {
         const r = await fetch("/api/settings");
-        if (!r.ok) {
-          setIsOwner(false);
-          return;
-        }
+        if (!r.ok) { setIsOwner(false); return; }
         const settings = await r.json();
         const ownerUid = settings["auth.user_id"];
-        if (!ownerUid) {
-          // No owner set yet -- deny tunnel visitors (owner must sign in locally first)
-          setIsOwner(false);
-        } else {
-          setIsOwner(session.user.id === ownerUid);
-        }
+        setIsOwner(ownerUid ? session?.user?.id === ownerUid : false);
       } catch {
         setIsOwner(false);
       }

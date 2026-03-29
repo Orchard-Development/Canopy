@@ -1,18 +1,9 @@
 import { useState } from "react";
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Divider,
-  TextField,
-  Typography,
-} from "@mui/material";
-import GoogleIcon from "@mui/icons-material/Google";
-import EmailIcon from "@mui/icons-material/Email";
-import BlockIcon from "@mui/icons-material/Block";
 import { useAuth } from "../../hooks/useAuth";
+import { LockBackground } from "./LockBackground";
+import { wrap, card, inputStyle, btnPrimary, btnSecondary, errBox, successBox, dividerRow, linkBtn } from "./loginStyles";
+
+const logoUrl = "/logo-icon.png";
 
 export function LoginGate({ children }: { children: React.ReactNode }) {
   const { user, loading, configured, isOwner } = useAuth();
@@ -20,44 +11,62 @@ export function LoginGate({ children }: { children: React.ReactNode }) {
   if (!configured) return <>{children}</>;
   if (loading) return null;
   if (!user) return <LoginForm />;
-
-  // Ownership check still resolving
   if (isOwner === null) return null;
-
-  // Authenticated but not the node owner -- block access
   if (!isOwner) return <AccessDenied email={user.email ?? "unknown"} />;
 
   return <>{children}</>;
 }
 
+type RequestState = "idle" | "requesting" | "sent" | "error";
+
 function AccessDenied({ email }: { email: string }) {
   const { signOut } = useAuth();
+  const [requestState, setRequestState] = useState<RequestState>("idle");
+
+  async function handleRequestAccess() {
+    setRequestState("requesting");
+    try {
+      const res = await fetch("/tunnel/request-access", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      setRequestState(res.ok ? "sent" : "error");
+    } catch {
+      setRequestState("error");
+    }
+  }
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        minHeight: "60vh",
-      }}
-    >
-      <Card sx={{ maxWidth: 400, width: "100%" }}>
-        <CardContent sx={{ p: 3, textAlign: "center" }}>
-          <BlockIcon sx={{ fontSize: 48, color: "error.main", mb: 2 }} />
-          <Typography variant="h5" gutterBottom>
-            Access denied
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Signed in as <strong>{email}</strong>, but this account is not the
-            owner of this node.
-          </Typography>
-          <Button variant="outlined" onClick={signOut}>
-            Sign out
-          </Button>
-        </CardContent>
-      </Card>
-    </Box>
+    <div style={wrap}>
+      <LockBackground />
+      <div style={card}>
+        <img src={logoUrl} alt="Orchard" width={64} height={64} style={{ borderRadius: 14, marginBottom: 20 }} />
+        <div style={{ fontSize: "1.5rem", fontWeight: 600, marginBottom: 8 }}>Access denied</div>
+        <div style={{ fontSize: "0.85rem", color: "rgba(224,224,224,0.6)", textAlign: "center", marginBottom: 28 }}>
+          Signed in as <strong style={{ color: "#e0e0e0" }}>{email}</strong>, but this account is not the owner of this node.
+        </div>
+        {requestState === "sent" && (
+          <div style={successBox}>
+            Request sent. The node owner has been notified.{" "}
+            <button style={linkBtn} onClick={() => setRequestState("idle")}>Send again</button>
+          </div>
+        )}
+        {requestState === "error" && (
+          <div style={errBox}>Failed to send request. Try again.</div>
+        )}
+        {requestState !== "sent" && (
+          <button
+            style={btnPrimary}
+            onClick={handleRequestAccess}
+            disabled={requestState === "requesting"}
+          >
+            {requestState === "requesting" ? "Requesting..." : "Request access"}
+          </button>
+        )}
+        <button style={btnSecondary} onClick={signOut}>Sign out</button>
+      </div>
+    </div>
   );
 }
 
@@ -87,9 +96,7 @@ export function LoginForm() {
     if (!email || !password) return;
     setSubmitting(true);
     setError(null);
-    const result = isSignUp
-      ? await signUp(email, password)
-      : await signInWithPassword(email, password);
+    const result = isSignUp ? await signUp(email, password) : await signInWithPassword(email, password);
     setSubmitting(false);
     if (result.error) setError(result.error);
   }
@@ -100,101 +107,64 @@ export function LoginForm() {
   }
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        minHeight: "60vh",
-      }}
-    >
-      <Card sx={{ maxWidth: 400, width: "100%" }}>
-        <CardContent sx={{ p: 3 }}>
-          <Typography variant="h5" gutterBottom align="center">
-            {isSignUp ? "Create account" : "Sign in"}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
-            {isSignUp ? "Create an account to get started." : "Sign in to continue."}
-          </Typography>
+    <div style={wrap}>
+      <LockBackground />
+      <div style={card}>
+        <img src={logoUrl} alt="Orchard" width={64} height={64} style={{ borderRadius: 14, marginBottom: 20 }} />
+        <div style={{ fontSize: "1.6rem", fontWeight: 600, marginBottom: 6 }}>
+          {isSignUp ? "Create account" : "Orchard"}
+        </div>
+        <div style={{ fontSize: "0.85rem", color: "rgba(224,224,224,0.5)", marginBottom: 28 }}>
+          {isSignUp ? "Create an account to get started." : "Sign in to continue."}
+        </div>
 
-          <Button
-            variant="outlined"
-            fullWidth
-            startIcon={<GoogleIcon />}
-            onClick={signInWithGoogle}
-            sx={{ mb: 2 }}
-          >
-            Continue with Google
-          </Button>
+        <button style={btnSecondary} onClick={signInWithGoogle}>Continue with Google</button>
 
-          <Divider sx={{ my: 2 }}>or</Divider>
+        <div style={dividerRow}>
+          <div style={{ flex: 1, height: 1, background: "rgba(224,224,224,0.1)" }} />
+          <span>or</span>
+          <div style={{ flex: 1, height: 1, background: "rgba(224,224,224,0.1)" }} />
+        </div>
 
-          {sent ? (
-            <Alert severity="success">
-              Check your email for a sign-in link.
-            </Alert>
-          ) : (
-            <>
-              <TextField
-                fullWidth
-                label="Email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+        {sent ? (
+          <div style={successBox}>Check your email for a sign-in link.</div>
+        ) : (
+          <>
+            <input
+              style={inputStyle}
+              type="email"
+              placeholder="your@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+            />
+            {mode === "password" && (
+              <input
+                style={inputStyle}
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-                sx={{ mb: 2 }}
               />
+            )}
+            {error && <div style={errBox}>{error}</div>}
+            <button style={btnPrimary} onClick={handleSubmit} disabled={submitting}>
+              {submitting ? "Loading..." : mode === "magic-link" ? "Send magic link" : isSignUp ? "Sign up" : "Sign in"}
+            </button>
+            <div style={{ display: "flex", justifyContent: "space-between", width: "100%", marginTop: 4 }}>
+              <button style={linkBtn} onClick={() => setMode(mode === "password" ? "magic-link" : "password")}>
+                {mode === "password" ? "Use magic link" : "Use password"}
+              </button>
               {mode === "password" && (
-                <TextField
-                  fullWidth
-                  label="Password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-                  sx={{ mb: 2 }}
-                />
+                <button style={linkBtn} onClick={() => setIsSignUp(!isSignUp)}>
+                  {isSignUp ? "Have an account? Sign in" : "No account? Sign up"}
+                </button>
               )}
-              {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-              {mode === "password" ? (
-                <Button
-                  variant="contained"
-                  fullWidth
-                  onClick={handlePassword}
-                  disabled={!email || !password || submitting}
-                  disableElevation
-                >
-                  {submitting ? "Loading..." : isSignUp ? "Sign up" : "Sign in"}
-                </Button>
-              ) : (
-                <Button
-                  variant="contained"
-                  fullWidth
-                  startIcon={<EmailIcon />}
-                  onClick={handleMagicLink}
-                  disabled={!email || submitting}
-                  disableElevation
-                >
-                  {submitting ? "Sending..." : "Send magic link"}
-                </Button>
-              )}
-              <Box sx={{ mt: 2, display: "flex", justifyContent: "space-between" }}>
-                <Button
-                  size="small"
-                  onClick={() => setMode(mode === "password" ? "magic-link" : "password")}
-                >
-                  {mode === "password" ? "Use magic link" : "Use password"}
-                </Button>
-                {mode === "password" && (
-                  <Button size="small" onClick={() => setIsSignUp(!isSignUp)}>
-                    {isSignUp ? "Have an account? Sign in" : "No account? Sign up"}
-                  </Button>
-                )}
-              </Box>
-            </>
-          )}
-        </CardContent>
-      </Card>
-    </Box>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
 }

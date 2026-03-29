@@ -1098,6 +1098,23 @@ export const api = {
   denyTunnelConnection: (id: string) =>
     del<{ ok: boolean; id: string }>(`/api/tunnel/authorize/${id}`),
 
+  // Tunnel sessions
+  listTunnelSessions: () =>
+    get<{ sessions: TunnelSession[] }>("/api/tunnel/sessions"),
+
+  revokeTunnelSession: (token: string) =>
+    del<{ ok: boolean }>(`/api/tunnel/sessions/${token}`),
+
+  // Tunnel email allowlist
+  listTunnelEmails: () =>
+    get<{ emails: TunnelEmail[] }>("/api/tunnel/allowed-emails"),
+
+  addTunnelEmail: (email: string, role: string) =>
+    postJson<{ ok: boolean; email: string; role: string }>("/api/tunnel/allowed-emails", { email, role }),
+
+  deleteTunnelEmail: (email: string) =>
+    del<{ ok: boolean }>(`/api/tunnel/allowed-emails/${encodeURIComponent(email)}`),
+
   // Onboarding
   onboardingPropose: (problem: string, name: string, tool: "claude" | "codex") =>
     postJson<{ sessionId: string; slug: string }>("/api/onboarding/propose", { problem, name, tool }),
@@ -1418,7 +1435,7 @@ export const api = {
   createScheduledTask: (body: {
     title: string; action_type: string;
     run_at?: string; schedule?: string;
-    message?: string; prompt?: string; description?: string;
+    message?: string; prompt?: string; script?: string; description?: string;
   }) => postJson<{
     id: string; title: string; action_type: string;
     next_run_at: string | null; recurring: boolean; enabled: boolean; status: string;
@@ -1434,7 +1451,7 @@ export const api = {
     }>(`/api/scheduled-tasks/${id}/toggle`, {}),
 
   updateScheduledTask: (id: string, body: {
-    title?: string; prompt?: string; description?: string;
+    title?: string; prompt?: string; script?: string; description?: string;
     run_at?: string; schedule?: string; enabled?: boolean;
   }) => patchJson<{
     id: string; title: string; action_type: string;
@@ -1448,7 +1465,66 @@ export const api = {
   dbSchema: () => get<DbSchemaResponse>("/api/db/schema"),
 
   dbQuery: (sql: string) => postJson<DbQueryResponse>("/api/db/query", { sql }),
+
+  // -- OpenClaw (messaging channels) --
+  openclawStatus: () =>
+    get<OpenClawStatus>("/api/openclaw/status"),
+
+  openclawStart: () =>
+    postJson<{ ok: boolean }>("/api/openclaw/start", {}),
+
+  openclawStop: () =>
+    postJson<{ ok: boolean }>("/api/openclaw/stop", {}),
+
+  openclawRestart: () =>
+    postJson<{ ok: boolean }>("/api/openclaw/restart", {}),
+
+  openclawChannels: () =>
+    get<{ channels: OpenClawChannel[] }>("/api/openclaw/channels"),
+
+  openclawUpdateChannel: (name: string, updates: Record<string, unknown>) =>
+    putJson<{ ok: boolean }>(`/api/openclaw/channels/${name}`, updates),
+
+  openclawSetEnabled: (enabled: boolean) =>
+    putJson<{ ok: boolean; enabled: boolean }>("/api/openclaw/enabled", { enabled }),
+
+  openclawCreateChannel: (name: string, opts?: Record<string, unknown>) =>
+    postJson<{ ok: boolean }>("/api/openclaw/channels", { name, ...opts }),
+
+  openclawDeleteChannel: (name: string) =>
+    del<{ ok: boolean }>(`/api/openclaw/channels/${name}`),
+
+  openclawInstall: () =>
+    postJson<{ ok: boolean; output: string; error?: string }>("/api/openclaw/install", {}),
 };
+
+// -- OpenClaw types --
+export interface OpenClawStatus {
+  installed: boolean;
+  status: "running" | "stopped" | "restarting" | "error";
+  started_at: string | null;
+  version: string | null;
+  port: number;
+  enabled: boolean;
+  channels_configured: number;
+}
+
+export interface OpenClawChannel {
+  name: string;
+  enabled: boolean;
+  status: "connected" | "disconnected" | "error" | "unknown";
+  last_message_at: string | null;
+  message_count_24h: number;
+}
+
+export interface OpenClawMessage {
+  channel: string;
+  sender: string;
+  text: string;
+  session_id: string | null;
+  direction: "inbound" | "outbound";
+  timestamp: number;
+}
 
 // -- Database explorer types --
 export interface DbSchemaColumn {
@@ -1550,6 +1626,21 @@ export interface TunnelConnection {
   ip: string;
   userAgent: string;
   createdAt: string;
+}
+
+export interface TunnelSession {
+  token: string;
+  email?: string;
+  type?: string;
+  role?: string;
+  remote_ip?: string;
+  created_at: string;
+  permissions: string[];
+}
+
+export interface TunnelEmail {
+  email: string;
+  role: string;
 }
 
 export interface AiModelOption {

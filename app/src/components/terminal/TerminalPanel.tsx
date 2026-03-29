@@ -2,11 +2,8 @@ import { Box } from "@mui/material";
 import { alpha, darken, useTheme } from "@mui/material/styles";
 import { useTerminal } from "../../hooks/useTerminal";
 import { api } from "../../lib/api";
+import { PrettyTerminal } from "./PrettyTerminal";
 
-// NOTE: Pretty mode is disabled. The concept is kept for future reference but
-// the UI toggle has been removed and the render path is hard-blocked below.
-// To re-enable, restore the PrettyTerminal overlay and the toggle icons in
-// TerminalCard and TerminalDrawerContent.
 export type RenderMode = "terminal" | "pretty";
 
 interface Props {
@@ -36,8 +33,7 @@ export function TerminalPanel({ sessionId, active = true, suspendResize, renderM
     ? darken(theme.palette.background.paper, 0.25)
     : theme.palette.background.paper;
 
-  // Pretty mode is disabled -- always render as terminal regardless of prop.
-  const isPretty = false;
+  const isPretty = renderMode === "pretty";
 
   return (
     <Box
@@ -76,7 +72,17 @@ export function TerminalPanel({ sessionId, active = true, suspendResize, renderM
           },
         }}
       />
-      {/* Pretty mode disabled -- see note at top of file */}
+      {/* Pretty mode overlay -- covers xterm when active */}
+      {isPretty && (
+        <Box sx={{ position: "absolute", inset: 0, zIndex: 5, display: "flex", flexDirection: "column", bgcolor: termBg }}>
+          <PrettyTerminal
+            sessionId={sessionId}
+            bufferText={bufferText}
+            onSend={sendInput}
+          />
+        </Box>
+      )}
+      {/* Click-to-focus overlay for raw terminal when not focused */}
       {!focused && !isPretty && (
         <Box
           sx={{

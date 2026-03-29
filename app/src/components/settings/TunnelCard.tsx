@@ -17,6 +17,8 @@ import { useSearchParams } from "react-router-dom";
 import { useDashboardChannel } from "@/hooks/useDashboardChannel";
 import { useChannelEvent } from "@/hooks/useChannelEvent";
 import { EVENTS } from "@/lib/events";
+import { TunnelAllowlistSection } from "./TunnelAllowlistSection";
+import { TunnelSessionsSection } from "./TunnelSessionsSection";
 
 interface TunnelStatus {
   status: "stopped" | "starting" | "running" | "error";
@@ -196,6 +198,8 @@ export function TunnelCard({ tunnelName, hostAuth, tunnelEnabled, allowAnyUser, 
             onUpdate={onUpdate}
             onConfigurePin={() => setParams({ tab: "secrets", kind: "tunnel_pin" })}
           />
+          <TunnelAllowlistSection />
+          <TunnelSessionsSection />
         </CardContent>
       </Card>
     </>

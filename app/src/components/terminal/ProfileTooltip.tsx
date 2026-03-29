@@ -1,6 +1,8 @@
 import { useCallback, useState } from "react";
-import { Box, Chip, IconButton, Typography } from "@mui/material";
+import { Box, Chip, IconButton, Tooltip, Typography } from "@mui/material";
 import SyncIcon from "@mui/icons-material/Sync";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import CheckIcon from "@mui/icons-material/Check";
 import { keyframes } from "@mui/system";
 import { api } from "../../lib/api";
 
@@ -62,6 +64,16 @@ interface Props {
 
 export function ProfileTooltip({ profile, label, sessionId, lastAiUpdate, summary, onSync }: Props) {
   const [syncing, setSyncing] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyId = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!sessionId) return;
+    navigator.clipboard.writeText(sessionId).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }, [sessionId]);
 
   const handleSync = useCallback(async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -88,6 +100,20 @@ export function ProfileTooltip({ profile, label, sessionId, lastAiUpdate, summar
       <Typography variant="caption" sx={{ fontWeight: 600 }}>
         {label}
       </Typography>
+      {sessionId && (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 0.25 }}>
+          <Typography variant="caption" sx={{ color: "text.disabled", fontSize: "0.6rem", fontFamily: "monospace", flex: 1 }}>
+            {sessionId}
+          </Typography>
+          <Tooltip title={copied ? "Copied!" : "Copy ID"} placement="right">
+            <IconButton size="small" onClick={handleCopyId} sx={{ p: 0.25, color: "text.disabled" }}>
+              {copied
+                ? <CheckIcon sx={{ fontSize: 11, color: "success.main" }} />
+                : <ContentCopyIcon sx={{ fontSize: 11 }} />}
+            </IconButton>
+          </Tooltip>
+        </Box>
+      )}
 
       {profile?.doing && (
         <Box sx={{ mt: 0.5 }}>

@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useEffect, useCallback, Suspense, lazy } from "react";
+import { useState, useRef, useMemo, useEffect, useCallback, useContext, Suspense, lazy } from "react";
 import { Routes, Route, useSearchParams, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { ThemeProvider, CssBaseline, Box, CircularProgress, useMediaQuery, useTheme, Button } from "@mui/material";
 import { buildThemes, getInitialMode } from "./lib/theme";
@@ -25,18 +25,21 @@ import { COMPONENT_MAP } from "./views/registry";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { GuidedTour } from "./components/GuidedTour";
 import { RecentSessionsModal } from "./components/sessions/RecentSessionsModal";
-import { AuthProvider } from "./hooks/useAuth";
+import { AuthProvider, useAuth } from "./hooks/useAuth";
+import { useCloudSync } from "./hooks/useCloudSync";
 import { LoginGate } from "./components/settings/LoginGate";
 import { TunnelAuthProvider } from "./hooks/useTunnelAuth";
 import { TunnelPinModal } from "./components/tunnel/TunnelPinModal";
 import { TunnelAuthFab } from "./components/tunnel/TunnelAuthFab";
 import { TunnelAuthModal } from "./components/tunnel/TunnelAuthModal";
+import { AccessRequestModal } from "./components/tunnel/AccessRequestModal";
+import { useAccessRequests } from "./hooks/useAccessRequests";
 import { DevModeContext, useDevModeProvider } from "./hooks/useDevMode";
 import { AddViewPicker } from "./components/AddViewPicker";
 import { useActiveProject } from "./hooks/useActiveProject";
 import { useToastProvider, ToastProvider, useToast } from "./hooks/useToast";
 import { useEventBusProvider, EventBusProvider, useEventBus } from "./hooks/useEventBus";
-import { SettingsProvider } from "./contexts/SettingsContext";
+import { SettingsProvider, useSettingsContext } from "./contexts/SettingsContext";
 import { useEngineEvents } from "./hooks/useEngineEvents";
 import { useUserActivity } from "./hooks/useUserActivity";
 import { ProjectThemeBridge } from "./components/ProjectThemeBridge";
@@ -155,9 +158,11 @@ function AppLayout({ onResetOnboarding, onResetTour, showTour, onTourComplete, p
   const { actions: terminalActions, completeAction } = useTerminalActions();
   const { proposals, lastCreated: proposalLastCreated, dismissLastCreated: dismissProposalToast } = useProposals();
   const { connections: tunnelConnections, approve: approveTunnel, deny: denyTunnel } = useTunnelConnections();
+  const { requests: accessRequests, dismiss: dismissAccessRequest } = useAccessRequests();
   const [actionModalOpen, setActionModalOpen] = useState(false);
   const [proposalModalOpen, setProposalModalOpen] = useState(false); // kept for ProposalFabModal
   const [tunnelAuthModalOpen, setTunnelAuthModalOpen] = useState(false);
+  const [accessRequestModalOpen, setAccessRequestModalOpen] = useState(false);
 
   // Auto-open tunnel auth modal when a connection request arrives
   useEffect(() => {
@@ -165,6 +170,13 @@ function AppLayout({ onResetOnboarding, onResetTour, showTour, onTourComplete, p
       setTunnelAuthModalOpen(true);
     }
   }, [tunnelConnections.length]);
+
+  // Auto-open access request modal when someone requests access
+  useEffect(() => {
+    if (accessRequests.length > 0) {
+      setAccessRequestModalOpen(true);
+    }
+  }, [accessRequests.length]);
 
   // Auto-close terminal when navigating away in fullscreen mode;
   // expanded state stays persisted so reopening restores fullscreen
@@ -415,6 +427,12 @@ function AppLayout({ onResetOnboarding, onResetTour, showTour, onTourComplete, p
         onApprove={(id) => { approveTunnel(id); if (tunnelConnections.length <= 1) setTunnelAuthModalOpen(false); }}
         onDeny={(id) => { denyTunnel(id); if (tunnelConnections.length <= 1) setTunnelAuthModalOpen(false); }}
       />
+      <AccessRequestModal
+        requests={accessRequests}
+        open={accessRequestModalOpen}
+        onClose={() => setAccessRequestModalOpen(false)}
+        onDismiss={(email) => { dismissAccessRequest(email); if (accessRequests.length <= 1) setAccessRequestModalOpen(false); }}
+      />
       <TerminalActionModal
         action={terminalActions[0] ?? null}
         open={actionModalOpen}
@@ -451,6 +469,47 @@ function OnboardingShell({ onComplete, onBrandingChange }: { onComplete: (sessio
       <Onboarding onComplete={onComplete} onBrandingChange={onBrandingChange} />
     </Suspense>
   );
+}
+
+/** Handles auto-pull on login and debounced auto-push on branding/settings change. */
+function CloudSyncBridge() {
+  const { user } = useAuth();
+  const { pushToCloud, pullFromCloud } = useCloudSync();
+  const branding = useContext(BrandingContext);
+  const { version: settingsVersion } = useSettingsContext();
+  const prevUserRef = useRef<string | null>(null);
+  const mountedRef = useRef(false);
+  const pushRef = useRef(pushToCloud);
+
+  useEffect(() => { pushRef.current = pushToCloud; }, [pushToCloud]);
+
+  // Auto-pull on login
+  useEffect(() => {
+    if (user && prevUserRef.current !== user.id) {
+      prevUserRef.current = user.id;
+      pullFromCloud();
+    }
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Debounced auto-push when branding changes (skip initial mount)
+  useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
+    if (!user) return;
+    const t = setTimeout(() => { pushRef.current(); }, 2000);
+    return () => clearTimeout(t);
+  }, [branding, user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Debounced auto-push when settings change (skip version 0 = initial load)
+  useEffect(() => {
+    if (!user || settingsVersion === 0) return;
+    const t = setTimeout(() => { pushRef.current(); }, 5000);
+    return () => clearTimeout(t);
+  }, [settingsVersion, user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return null;
 }
 
 export function App() {
@@ -544,6 +603,7 @@ export function App() {
             <ToastProviderBridge>
             <TunnelAuthProvider>
             <AuthProvider>
+            <CloudSyncBridge />
             <LoginGate>
             <ActiveProjectProvider>
               <ProjectThemeBridge />

@@ -1,20 +1,84 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { Box, IconButton, InputBase, CircularProgress, Typography } from "@mui/material";
+import { Box, Divider, IconButton, InputBase, CircularProgress, Typography } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
 import CloseIcon from "@mui/icons-material/Close";
 import { alpha, useTheme } from "@mui/material/styles";
 import { MarkdownContent } from "../MarkdownContent";
 import { ImageLightbox } from "../chat/ImageLightbox";
 import { useSessionMessages, type SessionMessage } from "../../hooks/useSessionMessages";
+import { useHookLog, type HookEntry } from "../../hooks/useHookLog";
 import { useDashboardChannel } from "../../hooks/useDashboardChannel";
 import { useChannelEvent } from "../../hooks/useChannelEvent";
 import { EVENTS } from "../../lib/events";
 import { parseBufferToMessages } from "./parseBuffer";
 import { TypingIndicator } from "./TypingIndicator";
-import { api } from "../../lib/api";
+import { HookToolCallBubble } from "./HookToolCallBubble";
 
 // Persist drafts across mode toggles (module-level, not in React state)
 const drafts = new Map<string, string>();
+
+/** Unified message type used by the merged render loop. */
+interface UnifiedMessage {
+  type: "prompt" | "tool" | "assistant" | "stop" | "notification";
+  text?: string;
+  toolName?: string;
+  toolInput?: string;
+  toolResult?: string;
+  ts?: string;
+  images?: string[];
+}
+
+/** Convert hook entries to UnifiedMessage items. */
+function toHookMessages(entries: HookEntry[]): UnifiedMessage[] {
+  return entries.map((e) => {
+    switch (e.event_type) {
+      case "prompt":
+        return { type: "prompt" as const, text: e.content ?? "", ts: e.created_at };
+      case "tool":
+        return {
+          type: "tool" as const,
+          toolName: e.tool_name ?? "unknown",
+          toolInput: e.metadata,
+          toolResult: e.content,
+          ts: e.created_at,
+        };
+      case "stop":
+        return { type: "stop" as const, ts: e.created_at };
+      case "notification":
+        return { type: "notification" as const, text: e.content ?? "", ts: e.created_at };
+      default:
+        // subagent_start, lifecycle, etc. -- skip for now
+        return null;
+    }
+  }).filter(Boolean) as UnifiedMessage[];
+}
+
+/** Merge hook messages with JSONL assistant messages. */
+function mergeHookAndAssistant(
+  hookMsgs: UnifiedMessage[],
+  assistantMsgs: SessionMessage[],
+): UnifiedMessage[] {
+  const unified: UnifiedMessage[] = [];
+  let aIdx = 0;
+
+  for (const entry of hookMsgs) {
+    unified.push(entry);
+    if (entry.type === "stop" && aIdx < assistantMsgs.length) {
+      const am = assistantMsgs[aIdx];
+      unified.push({ type: "assistant", text: am.text, ts: am.ts, images: am.images });
+      aIdx++;
+    }
+  }
+
+  // Append any remaining assistant messages at end
+  while (aIdx < assistantMsgs.length) {
+    const am = assistantMsgs[aIdx];
+    unified.push({ type: "assistant", text: am.text, ts: am.ts, images: am.images });
+    aIdx++;
+  }
+
+  return unified;
+}
 
 interface PastedImage {
   dataUrl: string;
@@ -41,7 +105,6 @@ export function PrettyTerminal({ sessionId, bufferText, onSend }: Props) {
   const [localMessages, setLocalMessages] = useState<SessionMessage[]>([]);
   const [fetchKey, setFetchKey] = useState(0);
   const [sessionState, setSessionState] = useState<string>("running");
-  const [prettierSummaries, setPrettierSummaries] = useState<Map<number, string>>(new Map());
   const [showTyping, setShowTyping] = useState(false);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -62,6 +125,9 @@ export function PrettyTerminal({ sessionId, bufferText, onSend }: Props) {
   // Try API first (reads Claude JSONL)
   const { messages: apiMessages, loading } = useSessionMessages(sessionId, fetchKey);
 
+  // Hook log entries (prompt, tool, stop, etc.)
+  const { entries: hookEntries, loading: hookLoading } = useHookLog(sessionId, fetchKey);
+
   // Fallback: parse raw terminal buffer
   const parsed = useMemo(() => parseBufferToMessages(bufferText), [bufferText]);
 
@@ -73,13 +139,18 @@ export function PrettyTerminal({ sessionId, bufferText, onSend }: Props) {
     return apiMessages;
   }, [apiMessages, parsed.messages]);
 
-  // Merge: source messages first, then any local messages sent after
-  // (local messages fill the gap until API re-fetch picks them up)
-  const messages = useMemo(() => {
+  // Build unified messages from hook log + JSONL assistant messages
+  const hookUnified = useMemo(() => {
+    if (hookEntries.length === 0) return null;
+    const hookMsgs = toHookMessages(hookEntries);
+    const assistantMsgs = apiMessages.filter((m) => m.role === "assistant");
+    return mergeHookAndAssistant(hookMsgs, assistantMsgs);
+  }, [hookEntries, apiMessages]);
+
+  // Fallback: merge source messages with local messages (existing path)
+  const fallbackMessages = useMemo(() => {
     if (localMessages.length === 0) return sourceMessages;
-    // Once API returns more messages than we had, clear local — API caught up
     const combined = [...sourceMessages];
-    // Append local messages that aren't yet in the source
     for (const lm of localMessages) {
       const alreadyInSource = sourceMessages.some(
         (sm) => sm.role === "user" && sm.text === lm.text,
@@ -88,6 +159,9 @@ export function PrettyTerminal({ sessionId, bufferText, onSend }: Props) {
     }
     return combined;
   }, [sourceMessages, localMessages]);
+
+  // Decide which path to use: hook-based or fallback
+  const useHookPath = hookEntries.length > 0 || hookLoading;
 
   // Clear local messages once API catches up
   useEffect(() => {
@@ -110,9 +184,9 @@ export function PrettyTerminal({ sessionId, bufferText, onSend }: Props) {
   const { channel } = useDashboardChannel();
   const outputEvent = useChannelEvent<{ id: string }>(channel, EVENTS.session.output);
   const stateEvent = useChannelEvent<{ id: string; state: string }>(channel, EVENTS.session.state);
-  const prettierEvent = useChannelEvent<{ id: string; summaries: Array<{ turn: number; summary: string }> }>(
-    channel, EVENTS.session.prettier,
-  );
+  const agentToolEvent = useChannelEvent<{ session_id?: string }>(channel, EVENTS.agent.tool);
+  const agentPromptEvent = useChannelEvent<{ session_id?: string }>(channel, EVENTS.agent.prompt);
+  const agentLifecycleEvent = useChannelEvent<{ session_id?: string }>(channel, EVENTS.agent.lifecycle);
 
   // Track session state for typing indicator
   useEffect(() => {
@@ -121,14 +195,25 @@ export function PrettyTerminal({ sessionId, bufferText, onSend }: Props) {
     }
   }, [stateEvent, sessionId]);
 
-  // Show typing dots on output, hide after 5s of silence
+  // Show typing dots on PTY output or agent tool/prompt activity
   useEffect(() => {
-    if (outputEvent && outputEvent.id === sessionId) {
+    const outputMatch = outputEvent && outputEvent.id === sessionId;
+    const toolMatch = agentToolEvent && agentToolEvent.session_id === sessionId;
+    const promptMatch = agentPromptEvent && agentPromptEvent.session_id === sessionId;
+    if (outputMatch || toolMatch || promptMatch) {
       setShowTyping(true);
       if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
       typingTimerRef.current = setTimeout(() => setShowTyping(false), 5000);
     }
-  }, [outputEvent, sessionId]);
+  }, [outputEvent, agentToolEvent, agentPromptEvent, sessionId]);
+
+  // Hide typing on stop/lifecycle (agent finished a turn)
+  useEffect(() => {
+    if (agentLifecycleEvent && agentLifecycleEvent.session_id === sessionId) {
+      setShowTyping(false);
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    }
+  }, [agentLifecycleEvent, sessionId]);
 
   // Hide typing when session stops running
   useEffect(() => {
@@ -143,27 +228,21 @@ export function PrettyTerminal({ sessionId, bufferText, onSend }: Props) {
     if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
   }, []);
 
-  // Fetch existing summaries on mount
+  // Debounced re-fetch on agent channel events (tool, prompt, lifecycle)
+  const agentDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    api.getTerminalPrettier(sessionId).then((res) => {
-      if (res.summaries?.length) {
-        setPrettierSummaries(new Map(res.summaries.map((s) => [s.turn, s.summary])));
-      }
-    }).catch(() => {});
-  }, [sessionId]);
+    const ev = agentToolEvent ?? agentPromptEvent ?? agentLifecycleEvent;
+    if (!ev) return;
+    const sid = ev.session_id;
+    if (sid !== sessionId) return;
+    if (agentDebounceRef.current) clearTimeout(agentDebounceRef.current);
+    agentDebounceRef.current = setTimeout(() => setFetchKey((k) => k + 1), 300);
+  }, [agentToolEvent, agentPromptEvent, agentLifecycleEvent, sessionId]);
 
-  // Live prettier updates from channel
-  useEffect(() => {
-    if (prettierEvent && prettierEvent.id === sessionId && prettierEvent.summaries) {
-      setPrettierSummaries((prev) => {
-        const next = new Map(prev);
-        for (const s of prettierEvent.summaries) {
-          next.set(s.turn, s.summary);
-        }
-        return next;
-      });
-    }
-  }, [prettierEvent, sessionId]);
+  // Cleanup agent debounce timer on unmount
+  useEffect(() => () => {
+    if (agentDebounceRef.current) clearTimeout(agentDebounceRef.current);
+  }, []);
 
   useEffect(() => {
     if ((outputEvent && outputEvent.id === sessionId) || (stateEvent && stateEvent.id === sessionId)) {
@@ -189,7 +268,7 @@ export function PrettyTerminal({ sessionId, bufferText, onSend }: Props) {
     if (el && stickRef.current) {
       el.scrollTop = el.scrollHeight;
     }
-  }, [messages]);
+  }, [hookUnified, fallbackMessages]);
 
   const handleScroll = () => {
     const el = scrollRef.current;
@@ -317,34 +396,81 @@ export function PrettyTerminal({ sessionId, bufferText, onSend }: Props) {
         onScroll={handleScroll}
         sx={{ flex: 1, overflow: "auto", px: 2, py: 1.5, ...scrollbarSx }}
       >
-        {loading && messages.length === 0 ? (
+        {(loading || hookLoading) && !hookUnified && fallbackMessages.length === 0 ? (
           <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
             <CircularProgress size={20} />
           </Box>
-        ) : messages.length === 0 ? (
+        ) : useHookPath && hookUnified && hookUnified.length > 0 ? (
+          hookUnified.map((msg, i) => {
+            if (msg.type === "prompt") {
+              return (
+                <MessageBubble
+                  key={i}
+                  message={{ role: "user", text: msg.text ?? "", images: msg.images }}
+                  userBg={userBg}
+                  assistantBg={assistantBg}
+                  isDark={isDark}
+                />
+              );
+            }
+            if (msg.type === "tool") {
+              return (
+                <HookToolCallBubble
+                  key={i}
+                  toolName={msg.toolName ?? "unknown"}
+                  input={msg.toolInput}
+                  result={msg.toolResult}
+                  createdAt={msg.ts}
+                />
+              );
+            }
+            if (msg.type === "assistant") {
+              return (
+                <MessageBubble
+                  key={i}
+                  message={{ role: "assistant", text: msg.text ?? "" }}
+                  userBg={userBg}
+                  assistantBg={assistantBg}
+                  isDark={isDark}
+                />
+              );
+            }
+            if (msg.type === "stop") {
+              return (
+                <Divider
+                  key={i}
+                  sx={{ my: 1, borderColor: "divider", opacity: 0.4 }}
+                />
+              );
+            }
+            if (msg.type === "notification") {
+              return (
+                <MessageBubble
+                  key={i}
+                  message={{ role: "assistant", text: msg.text ?? "" }}
+                  userBg={userBg}
+                  assistantBg={assistantBg}
+                  isDark={isDark}
+                  isSummary
+                />
+              );
+            }
+            return null;
+          })
+        ) : fallbackMessages.length === 0 ? (
           <Typography variant="body2" color="text.disabled" sx={{ textAlign: "center", py: 3 }}>
             Waiting for messages...
           </Typography>
         ) : (
-          messages.map((msg, i) => {
-            // For the last assistant message, use AI summary if available
-            const isLastAssistant = msg.role === "assistant" &&
-              i === messages.length - 1 || (
-                msg.role === "assistant" &&
-                messages.slice(i + 1).every((m) => m.role === "user")
-              );
-            const summary = isLastAssistant ? prettierSummaries.get(i) : undefined;
-            return (
-              <MessageBubble
-                key={i}
-                message={summary ? { ...msg, text: summary } : msg}
-                userBg={userBg}
-                assistantBg={assistantBg}
-                isDark={isDark}
-                isSummary={!!summary}
-              />
-            );
-          })
+          fallbackMessages.map((msg, i) => (
+            <MessageBubble
+              key={i}
+              message={msg}
+              userBg={userBg}
+              assistantBg={assistantBg}
+              isDark={isDark}
+            />
+          ))
         )}
         <TypingIndicator visible={showTyping} />
       </Box>

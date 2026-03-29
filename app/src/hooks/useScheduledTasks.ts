@@ -6,7 +6,7 @@ export interface ScheduledTask {
   id: string;
   title: string;
   description: string | null;
-  action_type: "reminder" | "spawn" | "notify";
+  action_type: "reminder" | "spawn" | "notify" | "script";
   payload: Record<string, unknown>;
   schedule: string | null;
   run_at: string | null;
@@ -22,17 +22,19 @@ export interface ScheduledTask {
 
 export interface CreateTaskInput {
   title: string;
-  action_type: "reminder" | "spawn" | "notify";
+  action_type: "reminder" | "spawn" | "notify" | "script";
   run_at?: string;
   schedule?: string;
   message?: string;
   prompt?: string;
+  script?: string;
   description?: string;
 }
 
 export interface UpdateTaskInput {
   title?: string;
   prompt?: string;
+  script?: string;
   description?: string;
   run_at?: string;
   schedule?: string;
@@ -66,16 +68,17 @@ export function useScheduledTasks() {
   useEffect(() => {
     if (!channel) return;
 
-    const refs = [
-      channel.on("scheduled_task:created", () => fetchTasks()),
-      channel.on("scheduled_task:updated", () => fetchTasks()),
-      channel.on("scheduled_task:deleted", () => fetchTasks()),
-      channel.on("scheduled_task:executed", () => fetchTasks()),
-      channel.on("scheduled_task:failed", () => fetchTasks()),
-    ];
+    const events = [
+      "scheduled_task:created",
+      "scheduled_task:updated",
+      "scheduled_task:deleted",
+      "scheduled_task:executed",
+      "scheduled_task:failed",
+    ] as const;
+    const refs = events.map((event) => channel.on(event, () => fetchTasks()));
 
     return () => {
-      refs.forEach((ref) => channel.off("scheduled_task:created", ref));
+      events.forEach((event, i) => channel.off(event, refs[i]));
     };
   }, [channel, fetchTasks]);
 

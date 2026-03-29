@@ -108,6 +108,7 @@ export const EVENTS = {
     status: "tunnel:status",
     connectionCreated: "tunnel:connection_created",
     connectionResolved: "tunnel:connection_resolved",
+    accessRequested: "tunnel:access_requested",
   },
   profiler: {
     status: "profiler:status",
@@ -141,6 +142,13 @@ export const EVENTS = {
     droneDied: "swarm:drone_died",
     droneExited: "swarm:drone_exited",
     waggleDance: "swarm:waggle_dance",
+  },
+  openclaw: {
+    started: "openclaw:started",
+    stopped: "openclaw:stopped",
+    health: "openclaw:health",
+    messageInbound: "openclaw:message:inbound",
+    messageOutbound: "openclaw:message:outbound",
   },
   views: "views:changed",
   autoresearch: {

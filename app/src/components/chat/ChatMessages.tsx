@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback, type KeyboardEvent } from "re
 import {
   Box,
   Button,
+  Chip,
   CircularProgress,
   IconButton,
   Paper,
@@ -33,6 +34,9 @@ import { BrowserEmbed, BrowsingIndicator } from "./BrowserEmbed";
 import { DesktopEmbed } from "./DesktopEmbed";
 import { getForm } from "../../lib/forms";
 import type { DispatchPayload } from "../../lib/api";
+import { extractBrowserSession, extractDesktopSession } from "../../lib/extractSessions";
+import DesktopWindowsIcon from "@mui/icons-material/DesktopWindows";
+import PublicIcon from "@mui/icons-material/Public";
 
 interface Props {
   messages: ChatMessage[];
@@ -41,6 +45,7 @@ interface Props {
   onEdit?: (index: number, newText: string) => void;
   onFormSubmit?: (result: { success: boolean; message: string; data?: Record<string, unknown> }) => void;
   chatChannel?: Channel | null;
+  suppressLiveEmbeds?: boolean;
 }
 
 function formatTime(iso: string): string {
@@ -313,59 +318,6 @@ function extractFilePreviews(toolCalls?: ToolCall[]): FilePreviewData[] {
   return items;
 }
 
-interface BrowserSessionData {
-  sessionId: string;
-  url: string;
-}
-
-function extractBrowserSession(toolCalls?: ToolCall[]): BrowserSessionData | null {
-  if (!toolCalls) return null;
-
-  // Find the last completed browse_url call
-  let last: BrowserSessionData | null = null;
-  for (const tc of toolCalls) {
-    if (tc.name !== "browse_url") continue;
-    if (tc.status !== "complete" || tc.isError) continue;
-    const result = tc.result as Record<string, unknown> | undefined;
-    if (!result?.session_id) continue;
-    last = {
-      sessionId: result.session_id as string,
-      url: result.url as string,
-    };
-  }
-  return last;
-}
-
-interface WindowTarget {
-  title?: string;
-  app?: string;
-  pid?: number;
-  bundleId?: string;
-}
-
-interface DesktopSessionData {
-  sessionId: string;
-  windowTitle: string;
-  windowTarget?: WindowTarget;
-}
-
-function extractDesktopSession(toolCalls?: ToolCall[]): DesktopSessionData | null {
-  if (!toolCalls) return null;
-
-  let last: DesktopSessionData | null = null;
-  for (const tc of toolCalls) {
-    if (tc.name !== "open_window") continue;
-    if (tc.status !== "complete" || tc.isError) continue;
-    const result = tc.result as Record<string, unknown> | undefined;
-    if (!result?.session_id) continue;
-    last = {
-      sessionId: result.session_id as string,
-      windowTitle: (result.window_title as string) || "Desktop Window",
-      windowTarget: (result.window_target as WindowTarget) || undefined,
-    };
-  }
-  return last;
-}
 
 function isBrowsing(toolCalls?: ToolCall[]): boolean {
   if (!toolCalls) return false;
@@ -503,26 +455,37 @@ function ActivityStrip({ message }: { message: ChatMessage }) {
   );
 }
 
+function truncateUrl(url: string): string {
+  const stripped = url.replace(/^https?:\/\//, "");
+  return stripped.length > 40 ? stripped.slice(0, 40) + "..." : stripped;
+}
+
 function AssistantBubble({
   message,
   fontSize = 14,
   onDispatch,
   onFormSubmit,
   chatChannel,
+  suppressDesktopEmbed = false,
+  suppressLiveEmbeds = false,
 }: {
   message: ChatMessage;
   fontSize?: number;
   onDispatch?: (summary: string, payload: DispatchPayload | null, quick: boolean) => void;
   onFormSubmit?: (result: { success: boolean; message: string; data?: Record<string, unknown> }) => void;
   chatChannel?: Channel | null;
+  suppressDesktopEmbed?: boolean;
+  suppressLiveEmbeds?: boolean;
 }) {
   const media = extractMedia(message.toolCalls);
   const fileEmbeds = extractFileEmbeds(message.toolCalls);
   const filePreviews = extractFilePreviews(message.toolCalls);
   const formData = extractFormData(message.toolCalls);
   const formDef = formData ? getForm(formData.formType) : null;
-  const browserSession = extractBrowserSession(message.toolCalls);
-  const desktopSession = extractDesktopSession(message.toolCalls);
+  const rawBrowserSession = extractBrowserSession(message.toolCalls);
+  const rawDesktopSession = extractDesktopSession(message.toolCalls);
+  const browserSession = suppressLiveEmbeds ? null : rawBrowserSession;
+  const desktopSession = (suppressDesktopEmbed || suppressLiveEmbeds) ? null : rawDesktopSession;
   const browsing = isBrowsing(message.toolCalls);
 
   const hasContent = !!message.content;
@@ -578,11 +541,29 @@ function AssistantBubble({
           <MediaGeneratingIndicator toolCalls={message.toolCalls} />
           <GeneratedMedia items={media} />
           {browsing && <BrowsingIndicator />}
+          {suppressLiveEmbeds && rawBrowserSession && (
+            <Chip
+              icon={<PublicIcon sx={{ fontSize: 14 }} />}
+              label={truncateUrl(rawBrowserSession.url) || "Browser session"}
+              size="small"
+              variant="outlined"
+              sx={{ my: 0.5 }}
+            />
+          )}
           {browserSession && (
             <BrowserEmbed
               sessionId={browserSession.sessionId}
               channel={chatChannel ?? null}
               initialUrl={browserSession.url}
+            />
+          )}
+          {suppressLiveEmbeds && rawDesktopSession && (
+            <Chip
+              icon={<DesktopWindowsIcon sx={{ fontSize: 14 }} />}
+              label={rawDesktopSession.windowTitle || "Desktop session"}
+              size="small"
+              variant="outlined"
+              sx={{ my: 0.5 }}
             />
           )}
           {desktopSession && (
@@ -689,12 +670,28 @@ function StreamingCursor() {
   );
 }
 
-export function ChatMessages({ messages, fontSize = 14, onDispatch, onEdit, onFormSubmit, chatChannel }: Props) {
+export function ChatMessages({ messages, fontSize = 14, onDispatch, onEdit, onFormSubmit, chatChannel, suppressLiveEmbeds = false }: Props) {
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length, messages[messages.length - 1]?.content]);
+
+  // For each unique window title, only the last message index controlling it shows the embed.
+  const latestDesktopEmbedAtIndex = new Set<number>();
+  {
+    const seenWindowTitles = new Set<string>();
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i];
+      if (msg.role !== "assistant") continue;
+      const session = extractDesktopSession(msg.toolCalls);
+      if (!session) continue;
+      if (!seenWindowTitles.has(session.windowTitle)) {
+        seenWindowTitles.add(session.windowTitle);
+        latestDesktopEmbedAtIndex.add(i);
+      }
+    }
+  }
 
   if (messages.length === 0) {
     return (
@@ -723,6 +720,9 @@ export function ChatMessages({ messages, fontSize = 14, onDispatch, onEdit, onFo
         gap: 1.5,
         py: 2,
         px: 1,
+        maxWidth: 800,
+        width: "100%",
+        alignSelf: "center",
       }}
     >
       {messages.map((msg, i) => {
@@ -734,7 +734,7 @@ export function ChatMessages({ messages, fontSize = 14, onDispatch, onEdit, onFo
         }
         // Hide empty assistant bubbles, but keep the last one visible for streaming cursor
         if (!msg.content && !msg.toolCalls?.length && !msg.dispatch?.suggested && i < messages.length - 1) return null;
-        return <AssistantBubble key={msg.id} message={msg} fontSize={fontSize} onDispatch={onDispatch} onFormSubmit={onFormSubmit} chatChannel={chatChannel} />;
+        return <AssistantBubble key={msg.id} message={msg} fontSize={fontSize} onDispatch={onDispatch} onFormSubmit={onFormSubmit} chatChannel={chatChannel} suppressDesktopEmbed={!latestDesktopEmbedAtIndex.has(i)} suppressLiveEmbeds={suppressLiveEmbeds} />;
       })}
       <div ref={endRef} />
     </Box>

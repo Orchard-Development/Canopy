@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState, type DragEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { usePersistedState } from "../hooks/usePersistedState";
-import { Alert, Box, Chip, IconButton, Stack, Tooltip, Typography } from "@mui/material";
+import { Alert, Badge, Box, Chip, IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import HistoryIcon from "@mui/icons-material/History";
+import DashboardIcon from "@mui/icons-material/Dashboard";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import SyncIcon from "@mui/icons-material/Sync";
 import { PageLayout } from "../components/PageLayout";
@@ -11,9 +12,9 @@ import { ChatMessages } from "../components/chat/ChatMessages";
 import { ChatInput } from "../components/chat/ChatInput";
 import { ModelPicker } from "../components/chat/ModelPicker";
 import { ConversationHistory } from "../components/chat/ConversationHistory";
+import { LiveActivityPanel } from "../components/chat/LiveActivityPanel";
 import { CostChip } from "../components/chat/CostChip";
 import { DispatchPreview } from "../components/dispatch/DispatchPreview";
-import { AgentActivityCard } from "../components/chat/AgentActivityCard";
 import { useChat } from "../hooks/useChat";
 import { useActiveProject } from "../hooks/useActiveProject";
 import { useDispatch } from "../hooks/useDispatch";
@@ -24,6 +25,7 @@ import type { AiModelOption, DispatchPayload, ProjectRecord } from "../lib/api";
 import type { DispatchSettingsState } from "../components/dispatch/DispatchSettings";
 import { EVENTS } from "../lib/events";
 import type { Attachment } from "../types/chat";
+import { extractDesktopSession, extractBrowserSession } from "../lib/extractSessions";
 
 const BASE_FONT_SIZE = 14;
 const AGENT_TOOLS = new Set(["dispatch_to_agent", "create_proposal", "build_proposal"]);
@@ -48,17 +50,61 @@ export default function Chat() {
   const { project, activate } = useActiveProject();
   const chat = useChat(project?.id);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const dispatch = useDispatch();
   const { channel } = useDashboardChannel();
   const agentStream = useAgentStream(channel);
   const [model, setModel] = usePersistedState<string>("chat.model", "");
-  const [historyOpen, setHistoryOpen] = useState(false);
+  const [panelMode, setPanelMode] = useState<null | "history" | "live">(null);
   const [dragOver, setDragOver] = useState(false);
   const modelsRef = useRef<AiModelOption[]>([]);
   const subscribedAgentsRef = useRef<Set<string>>(new Set());
   const dismissedAgentsRef = useRef<Set<string>>(loadDismissedAgents());
   const fileAttach = useFileAttach();
   const dragCounterRef = useRef(0);
+  const userClosedRef = useRef(false);
+
+  const latestDesktop = useMemo(() => {
+    for (let i = chat.messages.length - 1; i >= 0; i--) {
+      const session = extractDesktopSession(chat.messages[i].toolCalls);
+      if (session) return session;
+    }
+    return null;
+  }, [chat.messages]);
+
+  const latestBrowser = useMemo(() => {
+    for (let i = chat.messages.length - 1; i >= 0; i--) {
+      const session = extractBrowserSession(chat.messages[i].toolCalls);
+      if (session) return session;
+    }
+    return null;
+  }, [chat.messages]);
+
+  const hasActiveSessions = useMemo(() => {
+    for (const session of agentStream.sessions.values()) {
+      if (session.state === "running" || session.state === "waiting") return true;
+    }
+    return false;
+  }, [agentStream.sessions]);
+
+  const hasActivityBadge = hasActiveSessions || !!latestDesktop || !!latestBrowser;
+
+  // Auto-open live panel when agent sessions become active
+  useEffect(() => {
+    if (hasActiveSessions && !userClosedRef.current && panelMode !== "live") {
+      setPanelMode("live");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasActiveSessions]);
+
+  // Load a specific conversation when ?conv=<id> is in the URL
+  useEffect(() => {
+    const convId = searchParams.get("conv");
+    if (!convId) return;
+    setSearchParams({}, { replace: true });
+    chat.loadConversation(convId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Auto-subscribe to agent sessions when any tool result includes a session_id
   useEffect(() => {
@@ -189,6 +235,7 @@ export default function Chat() {
   useEffect(() => {
     agentStream.clearAll();
     subscribedAgentsRef.current.clear();
+    userClosedRef.current = false;
   }, [chat.conversationId, agentStream.clearAll]);
 
   // Reset chat when the active project changes (user switches projects).
@@ -289,11 +336,22 @@ export default function Chat() {
     <PageLayout fill sx={{ pt: 0 }}>
       <Stack direction="row" sx={{ flex: 1, minHeight: 0 }}>
         <ConversationHistory
-          open={historyOpen}
-          onClose={() => setHistoryOpen(false)}
+          open={panelMode === "history"}
+          onClose={() => setPanelMode(null)}
           activeId={chat.conversationId}
           onSelect={(id) => chat.loadConversation(id)}
           onNew={chat.reset}
+        />
+        <LiveActivityPanel
+          open={panelMode === "live"}
+          onClose={() => { setPanelMode(null); userClosedRef.current = true; }}
+          agentSessions={agentStream.sessions}
+          desktopSession={latestDesktop}
+          browserSession={latestBrowser}
+          chatChannel={chat.chatChannel}
+          onSendInput={(id, text) => agentStream.sendInput(id, text)}
+          onCancel={handleCancelAgent}
+          onOpenTerminal={handleOpenTerminal}
         />
 
         <Stack
@@ -302,9 +360,6 @@ export default function Chat() {
             minWidth: 0,
             minHeight: 0,
             py: 1,
-            maxWidth: 800,
-            mx: "auto",
-            width: "100%",
             position: "relative",
           }}
           onDragEnter={handleDragEnter}
@@ -370,9 +425,39 @@ export default function Chat() {
                 <Tooltip title="History">
                   <IconButton
                     size="small"
-                    onClick={() => setHistoryOpen((v) => !v)}
+                    onClick={() => setPanelMode((m) => m === "history" ? null : "history")}
                   >
                     <HistoryIcon />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Live Activity">
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      if (panelMode === "live") {
+                        setPanelMode(null);
+                      } else {
+                        setPanelMode("live");
+                        userClosedRef.current = false;
+                      }
+                    }}
+                  >
+                    <Badge
+                      variant="dot"
+                      color="success"
+                      invisible={!hasActivityBadge}
+                      sx={{
+                        "& .MuiBadge-dot": hasActivityBadge ? {
+                          animation: "pulse 2s ease-in-out infinite",
+                          "@keyframes pulse": {
+                            "0%, 100%": { opacity: 1 },
+                            "50%": { opacity: 0.4 },
+                          },
+                        } : {},
+                      }}
+                    >
+                      <DashboardIcon />
+                    </Badge>
                   </IconButton>
                 </Tooltip>
                 <Tooltip title="New chat">
@@ -412,17 +497,8 @@ export default function Chat() {
                 onEdit={handleEdit}
                 onFormSubmit={handleFormSubmit}
                 chatChannel={chat.chatChannel}
+                suppressLiveEmbeds={panelMode === "live"}
               />
-              {/* Live agent activity cards */}
-              {Array.from(agentStream.sessions.values()).map((session) => (
-                <AgentActivityCard
-                  key={session.id}
-                  session={session}
-                  onSendInput={(text) => agentStream.sendInput(session.id, text)}
-                  onOpenTerminal={handleOpenTerminal}
-                  onCancel={handleCancelAgent}
-                />
-              ))}
               {error && (
                 <Alert
                   severity="error"

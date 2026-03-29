@@ -9,11 +9,13 @@ import CallSplitIcon from "@mui/icons-material/CallSplit";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
+import TerminalIcon from "@mui/icons-material/Terminal";
 import { api } from "../../lib/api";
 import { requestTerminalOpen } from "../../hooks/useDispatch";
 import { SessionStateDot } from "./SessionStateDot";
 import { ProfileTooltip, type SessionProfile } from "./ProfileTooltip";
-import { TerminalPanel } from "./TerminalPanel";
+import { TerminalPanel, type RenderMode } from "./TerminalPanel";
 import type { TerminalTab } from "./TerminalDrawerContent";
 
 interface Props {
@@ -39,6 +41,7 @@ export const TerminalCard = forwardRef(function TerminalCard(
   forwardedRef: React.ForwardedRef<HTMLElement>,
 ) {
   const [refreshKey, setRefreshKey] = useState(0);
+  const [renderMode, setRenderMode] = useState<RenderMode>("terminal");
   const cardRef = useRef<HTMLDivElement | null>(null);
   const mergedRef = useCallback((el: HTMLDivElement | null) => {
     cardRef.current = el;
@@ -179,6 +182,22 @@ export const TerminalCard = forwardRef(function TerminalCard(
                 sx={{ p: 0.5, opacity: forking ? 0.4 : 1 }}
               >
                 <CallSplitIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          );
+        })()}
+        {(() => {
+          const cmd = tab.command.toLowerCase();
+          const isAgent = cmd.includes("claude") || cmd.includes("codex");
+          if (!isAgent) return null;
+          return (
+            <Tooltip title={renderMode === "pretty" ? "Switch to terminal" : "Switch to chat view"}>
+              <IconButton
+                size="small"
+                onClick={() => setRenderMode((m) => m === "pretty" ? "terminal" : "pretty")}
+                sx={{ p: 0.5, color: renderMode === "pretty" ? "primary.main" : "action.active" }}
+              >
+                {renderMode === "pretty" ? <TerminalIcon fontSize="small" /> : <ChatBubbleOutlineIcon fontSize="small" />}
               </IconButton>
             </Tooltip>
           );
@@ -333,7 +352,7 @@ export const TerminalCard = forwardRef(function TerminalCard(
         </Box>
       )}
       <CardContent sx={{ flex: 1, p: 0, "&:last-child": { pb: 0 }, overflow: "hidden" }}>
-        <TerminalPanel key={`${tab.id}-${refreshKey}-${externalRefreshKey || 0}`} sessionId={tab.id} active onExit={onExit} />
+        <TerminalPanel key={`${tab.id}-${refreshKey}-${externalRefreshKey || 0}`} sessionId={tab.id} active renderMode={renderMode} onExit={onExit} />
       </CardContent>
       {/* Left edge drag-to-reorder handle */}
       <Box

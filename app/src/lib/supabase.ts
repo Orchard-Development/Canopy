@@ -8,6 +8,8 @@ const url = import.meta.env.VITE_SUPABASE_URL || DEFAULT_URL;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || DEFAULT_ANON_KEY;
 
 export const supabaseConfigured = Boolean(url && anonKey);
+export const supabaseUrl = url;
+export const supabaseAnonKey = anonKey;
 
 export const supabase: SupabaseClient = supabaseConfigured
   ? createClient(url, anonKey, {

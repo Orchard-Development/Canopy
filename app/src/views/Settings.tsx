@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Alert, Box, Button, Card, CardContent, Chip,
   Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle,
@@ -58,14 +58,24 @@ function useSettings() {
   const [testResult, setTestResult] = useState<string | null>(null);
   const [visible, setVisible] = useState<Record<string, boolean>>({});
   const [models, setModels] = useState<ModelOption[]>([]);
+  const initialized = useRef(false);
 
   useEffect(() => {
-    fetch("/api/settings").then((r) => r.json()).then(setSettings).catch(() => {});
+    fetch("/api/settings").then((r) => r.json()).then((data) => {
+      setSettings(data);
+      initialized.current = true;
+    }).catch(() => {});
     fetch("/api/ai/models")
       .then((r) => r.json())
       .then((data) => setModels(data.models ?? []))
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!initialized.current) return;
+    const timer = setTimeout(save, 800);
+    return () => clearTimeout(timer);
+  }, [settings]);
 
   async function save() {
     try {
@@ -501,13 +511,6 @@ function SettingsContent() {
       {tab === "engine" && <EngineView />}
       {tab === "account" && <AccountTab s={s} />}
 
-      {tab !== "database" && (
-        <Box sx={{ maxWidth: 720, mx: "auto", mt: 3 }}>
-          <Button variant="contained" fullWidth onClick={s.save} disableElevation>
-            Save Settings
-          </Button>
-        </Box>
-      )}
     </>
   );
 }
