@@ -20,15 +20,16 @@ function resolveSocketUrl(): string {
   const loc = window.location;
   const protocol = loc.protocol === "https:" ? "wss:" : "ws:";
 
-  // Tunnel access: connect via the tunnel origin (not localhost)
-  if (loc.hostname !== "localhost" && loc.hostname !== "127.0.0.1") {
-    return `${protocol}//${loc.host}/socket`;
-  }
-
-  // Proxied access (/connect/<machineId>/...): route socket through the proxy
+  // Proxied access (/connect/<machineId>/...): route socket through the proxy.
+  // Must be checked before the hostname check because the proxy runs on a non-localhost host.
   const proxyMatch = loc.pathname.match(/^\/connect\/([^/]+)\//);
   if (proxyMatch) {
     return `${protocol}//${loc.host}/connect/${proxyMatch[1]}/socket`;
+  }
+
+  // Tunnel access: connect via the tunnel origin (not localhost)
+  if (loc.hostname !== "localhost" && loc.hostname !== "127.0.0.1") {
+    return `${protocol}//${loc.host}/socket`;
   }
 
   // Local dev: Vite runs on a different port, connect directly to engine
