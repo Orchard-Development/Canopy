@@ -2,19 +2,31 @@ import { Box, Typography, Stack } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import AddRounded from "@mui/icons-material/AddRounded";
 import type { ColumnId, Ticket } from "../../hooks/useKanban";
 import { TicketCard } from "./TicketCard";
+
+// -- Column accent colors ----------------------------------------------------
+
+const COLUMN_COLORS: Record<string, string> = {
+  open: "#6b7280",       // neutral gray
+  in_progress: "#3b82f6", // blue
+  review: "#f59e0b",      // amber
+  closed: "#22c55e",      // green
+};
 
 interface KanbanColumnProps {
   status: ColumnId;
   label: string;
   tickets: Ticket[];
   onCardClick?: (ticket: Ticket) => void;
+  onCreate?: () => void;
   isOver?: boolean;
 }
 
-export function KanbanColumn({ status, label, tickets, onCardClick, isOver }: KanbanColumnProps) {
+export function KanbanColumn({ status, label, tickets, onCardClick, onCreate, isOver }: KanbanColumnProps) {
   const { setNodeRef } = useDroppable({ id: `column-${status}` });
+  const accentColor = COLUMN_COLORS[status] ?? "#6b7280";
 
   return (
     <Box
@@ -38,6 +50,9 @@ export function KanbanColumn({ status, label, tickets, onCardClick, isOver }: Ka
         transition: "background-color 0.2s ease, border-color 0.2s ease",
       })}
     >
+      {/* Colored accent bar */}
+      <Box sx={{ height: 3, bgcolor: accentColor, flexShrink: 0 }} />
+
       {/* Column header */}
       <Stack
         direction="row"
@@ -45,11 +60,30 @@ export function KanbanColumn({ status, label, tickets, onCardClick, isOver }: Ka
         spacing={1}
         sx={{ px: 2, py: 1.5, flexShrink: 0 }}
       >
-        <Typography variant="subtitle1" fontWeight={600} color="text.primary">
+        <Box
+          sx={{
+            width: 8,
+            height: 8,
+            borderRadius: "50%",
+            bgcolor: accentColor,
+            flexShrink: 0,
+          }}
+        />
+        <Typography variant="subtitle2" fontWeight={600} color="text.primary" sx={{ letterSpacing: 0.3 }}>
           {label}
         </Typography>
-        <Typography variant="caption" color="text.secondary">
-          ({tickets.length})
+        <Typography
+          variant="caption"
+          sx={{
+            bgcolor: "action.hover",
+            px: 0.75,
+            py: 0.1,
+            borderRadius: 1,
+            fontWeight: 600,
+            fontSize: "0.7rem",
+          }}
+        >
+          {tickets.length}
         </Typography>
       </Stack>
 
@@ -70,17 +104,38 @@ export function KanbanColumn({ status, label, tickets, onCardClick, isOver }: Ka
           }}
         >
           {tickets.length === 0 ? (
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{
-                textAlign: "center",
+            <Box
+              onClick={onCreate}
+              sx={(theme) => ({
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
                 py: 4,
-                userSelect: "none",
-              }}
+                mx: 0.5,
+                border: `1.5px dashed ${alpha(theme.palette.text.secondary, 0.2)}`,
+                borderRadius: 1.5,
+                cursor: onCreate ? "pointer" : "default",
+                transition: "border-color 0.2s, background-color 0.2s",
+                "&:hover": onCreate
+                  ? {
+                      borderColor: alpha(theme.palette.primary.main, 0.4),
+                      bgcolor: alpha(theme.palette.primary.main, 0.04),
+                    }
+                  : {},
+              })}
             >
-              No tickets
-            </Typography>
+              <AddRounded
+                sx={{ fontSize: 28, color: "text.disabled", mb: 0.5 }}
+              />
+              <Typography
+                variant="body2"
+                color="text.disabled"
+                sx={{ userSelect: "none", fontSize: "0.8rem" }}
+              >
+                No tickets
+              </Typography>
+            </Box>
           ) : (
             tickets.map((ticket) => (
               <TicketCard key={ticket.id} ticket={ticket} onClick={onCardClick} />

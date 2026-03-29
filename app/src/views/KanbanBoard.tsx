@@ -323,7 +323,7 @@ export default function KanbanBoard() {
       <Box sx={{ p: 2, display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
         <Typography variant="h5" sx={{ mb: 0.5 }}>Board</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Manage and track tickets across your project
+          Drag tickets between columns to update status
         </Typography>
         <Box
           sx={{
@@ -348,7 +348,7 @@ export default function KanbanBoard() {
     <Box sx={{ p: 2, display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
       <Typography variant="h5" sx={{ mb: 0.5 }}>Board</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Manage and track tickets across your project
+        Drag tickets between columns to update status
       </Typography>
 
       {/* Filter bar with create button */}
@@ -387,6 +387,7 @@ export default function KanbanBoard() {
                   tickets={filteredTicketsByColumn[col]}
                   isOver={overColumnId === col}
                   onCardClick={handleCardClick}
+                  onCreate={openCreateDialog}
                 />
               ))}
         </Box>
