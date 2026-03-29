@@ -1,4 +1,4 @@
-import { createContext, useCallback, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useDashboardChannel } from "@/hooks/useDashboardChannel";
 import { api, type FeedEvent, type IntelItem, type ResolvedMcpServer, type ApprovalRecord } from "@/lib/api";
 
@@ -38,6 +38,7 @@ interface Props {
 export function ProjectDataProvider({ projectId, children }: Props) {
   const [data, setData] = useState(DEFAULT);
   const { channel } = useDashboardChannel();
+  const activeRef = useRef(true);
 
   const fetchAll = useCallback(async () => {
     setData((prev) => ({ ...prev, loading: true }));
@@ -54,6 +55,9 @@ export function ProjectDataProvider({ projectId, children }: Props) {
           api.listApprovals(projectId).catch(() => [] as ApprovalRecord[]),
         ]);
 
+      // Guard against StrictMode unmount: don't setState after cleanup
+      if (!activeRef.current) return;
+
       setData({
         sessions: sessions.filter((s) => s.projectId === projectId),
         feed,
@@ -67,13 +71,16 @@ export function ProjectDataProvider({ projectId, children }: Props) {
         refresh: fetchAll,
       });
     } catch {
+      if (!activeRef.current) return;
       setData((prev) => ({ ...prev, loading: false, refresh: fetchAll }));
     }
   }, [projectId]);
 
   // Initial fetch
   useEffect(() => {
+    activeRef.current = true;
     fetchAll();
+    return () => { activeRef.current = false; };
   }, [fetchAll]);
 
   // Refetch on relevant channel events.
