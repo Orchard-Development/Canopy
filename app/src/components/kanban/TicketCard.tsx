@@ -1,4 +1,6 @@
 import { Card, CardActionArea, Stack, Typography, Box, Chip } from "@mui/material";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import type { Ticket } from "../../hooks/useKanban";
 import { TypeIcon } from "./TypeIcon";
 import { PriorityBadge } from "./PriorityBadge";
@@ -7,26 +9,59 @@ import { LabelChip } from "./LabelChip";
 interface TicketCardProps {
   ticket: Ticket;
   onClick?: (ticket: Ticket) => void;
+  /** When true, render as a static overlay clone (no sortable wiring). */
+  isOverlay?: boolean;
 }
 
 const MAX_VISIBLE_LABELS = 3;
 
-export function TicketCard({ ticket, onClick }: TicketCardProps) {
+export function TicketCard({ ticket, onClick, isOverlay }: TicketCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: ticket.id,
+    data: { ticket },
+    disabled: isOverlay,
+  });
+
   const visibleLabels = ticket.labels.slice(0, MAX_VISIBLE_LABELS);
   const overflowCount = ticket.labels.length - MAX_VISIBLE_LABELS;
 
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0 : 1,
+    pointerEvents: isDragging ? "none" : undefined,
+  };
+
   return (
     <Card
+      ref={isOverlay ? undefined : setNodeRef}
       variant="outlined"
+      {...(isOverlay ? {} : { ...attributes, ...listeners })}
+      style={isOverlay ? undefined : style}
       sx={(theme) => ({
         bgcolor: "background.paper",
         borderColor: "divider",
-        cursor: "grab",
+        cursor: isOverlay ? "grabbing" : "grab",
         transition: "box-shadow 0.15s ease, transform 0.15s ease",
-        "&:hover": {
-          boxShadow: theme.shadows[3],
-          transform: "translateY(-1px)",
-        },
+        ...(isOverlay
+          ? {
+              opacity: 0.85,
+              transform: "scale(1.02)",
+              boxShadow: theme.shadows[8],
+            }
+          : {
+              "&:hover": {
+                boxShadow: theme.shadows[3],
+                transform: "translateY(-1px)",
+              },
+            }),
       })}
     >
       <CardActionArea
