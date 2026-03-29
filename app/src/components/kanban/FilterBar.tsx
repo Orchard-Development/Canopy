@@ -18,12 +18,13 @@ import { LabelChip } from "./LabelChip";
 export interface FilterState {
   types: string[];
   priorities: string[];
+  statuses: string[];
   labels: string[];
   search: string;
 }
 
 export function getDefaultFilters(): FilterState {
-  return { types: [], priorities: [], labels: [], search: "" };
+  return { types: [], priorities: [], statuses: [], labels: [], search: "" };
 }
 
 // -- Constants ---------------------------------------------------------------
@@ -40,6 +41,13 @@ const TICKET_PRIORITIES = [
   { value: "high", label: "High" },
   { value: "medium", label: "Medium" },
   { value: "low", label: "Low" },
+] as const;
+
+const TICKET_STATUSES = [
+  { value: "open", label: "Open" },
+  { value: "in_progress", label: "In Progress" },
+  { value: "review", label: "Review" },
+  { value: "closed", label: "Closed" },
 ] as const;
 
 // -- Props -------------------------------------------------------------------
@@ -92,9 +100,17 @@ export function FilterBar({
     onChange({ ...filters, priorities: next });
   };
 
+  const toggleStatus = (status: string) => {
+    const next = filters.statuses.includes(status)
+      ? filters.statuses.filter((s) => s !== status)
+      : [...filters.statuses, status];
+    onChange({ ...filters, statuses: next });
+  };
+
   const hasActiveFilters =
     filters.types.length > 0 ||
     filters.priorities.length > 0 ||
+    filters.statuses.length > 0 ||
     filters.labels.length > 0 ||
     filters.search !== "";
 
@@ -130,6 +146,22 @@ export function FilterBar({
             filters.priorities.includes(p.value) ? "primary" : "default"
           }
           onClick={() => togglePriority(p.value)}
+          size="small"
+        />
+      ))}
+
+      {/* Status filter chips */}
+      {TICKET_STATUSES.map((s) => (
+        <Chip
+          key={s.value}
+          label={s.label}
+          variant={
+            filters.statuses.includes(s.value) ? "filled" : "outlined"
+          }
+          color={
+            filters.statuses.includes(s.value) ? "secondary" : "default"
+          }
+          onClick={() => toggleStatus(s.value)}
           size="small"
         />
       ))}

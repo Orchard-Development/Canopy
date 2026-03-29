@@ -89,6 +89,7 @@ export default function KanbanBoard() {
       result[col] = ticketsByColumn[col].filter((ticket) => {
         if (filters.types.length > 0 && !filters.types.includes(ticket.type)) return false;
         if (filters.priorities.length > 0 && !filters.priorities.includes(ticket.priority)) return false;
+        if (filters.statuses.length > 0 && !filters.statuses.includes(ticket.status)) return false;
         if (filters.labels.length > 0 && !filters.labels.some((l) => ticket.labels.includes(l))) return false;
         if (filters.search) {
           const q = filters.search.toLowerCase();
@@ -106,6 +107,7 @@ export default function KanbanBoard() {
   const hasActiveFilters =
     filters.types.length > 0 ||
     filters.priorities.length > 0 ||
+    filters.statuses.length > 0 ||
     filters.labels.length > 0 ||
     filters.search !== "";
 

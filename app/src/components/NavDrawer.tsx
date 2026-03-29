@@ -46,6 +46,7 @@ import MapIcon from "@mui/icons-material/Map";
 import MusicNoteIcon from "@mui/icons-material/MusicNote";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import GrassIcon from "@mui/icons-material/Grass";
+import ViewKanbanIcon from "@mui/icons-material/ViewKanban";
 import AddIcon from "@mui/icons-material/Add";
 import { useViewRegistry } from "../hooks/useViewRegistry";
 import type { ViewEntry } from "../hooks/useViewRegistry";
@@ -86,6 +87,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   MusicNote: <MusicNoteIcon />,
   AccountTree: <AccountTreeIcon />,
   Grass: <GrassIcon />,
+  ViewKanban: <ViewKanbanIcon />,
 };
 
 function resolveIcon(name: string): React.ReactNode {
