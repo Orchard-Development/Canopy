@@ -92,7 +92,7 @@ export function ProjectDashboard({ project, projectId, onUpdate }: Props) {
         />
       </Box>
 
-      <ActivityFeed events={events} projectId={projectId} navigate={navigate} />
+      <ActivityFeed events={events.slice(0, 8)} projectId={projectId} navigate={navigate} />
     </Stack>
   );
 }
