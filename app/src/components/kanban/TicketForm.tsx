@@ -1,7 +1,16 @@
-import { TextField, Stack, MenuItem, Autocomplete, Chip } from "@mui/material";
+import {
+  TextField,
+  Stack,
+  MenuItem,
+  Autocomplete,
+  Chip,
+  FormControl,
+  InputLabel,
+  Select,
+  Box,
+} from "@mui/material";
 import { TipTapEditor } from "./TipTapEditor";
 import { TypeIcon } from "./TypeIcon";
-import { PriorityBadge } from "./PriorityBadge";
 
 // -- Types ------------------------------------------------------------------
 
@@ -32,6 +41,13 @@ interface TicketFormProps {
 const TYPES = ["bug", "feature", "improvement", "task"] as const;
 const PRIORITIES = ["critical", "high", "medium", "low"] as const;
 
+const PRIORITY_COLORS: Record<string, string> = {
+  critical: "#ef4444",
+  high: "#f97316",
+  medium: "#eab308",
+  low: "#3b82f6",
+};
+
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
@@ -44,10 +60,11 @@ export function TicketForm({ values, onChange, errors }: TicketFormProps) {
   };
 
   return (
-    <Stack direction="column" spacing={2}>
+    <Stack spacing={2} sx={{ mt: 1 }}>
       {/* Title */}
       <TextField
         label="Title"
+        size="small"
         fullWidth
         required
         value={values.title}
@@ -64,40 +81,54 @@ export function TicketForm({ values, onChange, errors }: TicketFormProps) {
       />
 
       {/* Type */}
-      <TextField
-        select
-        label="Type"
-        fullWidth
-        value={values.type}
-        onChange={(e) => update("type", e.target.value)}
-      >
-        {TYPES.map((t) => (
-          <MenuItem key={t} value={t} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <TypeIcon type={t} fontSize="small" />
-            {capitalize(t)}
-          </MenuItem>
-        ))}
-      </TextField>
+      <FormControl fullWidth size="small">
+        <InputLabel id="ticket-type-label">Type</InputLabel>
+        <Select
+          labelId="ticket-type-label"
+          label="Type"
+          value={values.type}
+          onChange={(e) => update("type", e.target.value)}
+        >
+          {TYPES.map((t) => (
+            <MenuItem key={t} value={t} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <TypeIcon type={t} fontSize="small" />
+              {capitalize(t)}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
 
       {/* Priority */}
-      <TextField
-        select
-        label="Priority"
-        fullWidth
-        value={values.priority}
-        onChange={(e) => update("priority", e.target.value)}
-      >
-        {PRIORITIES.map((p) => (
-          <MenuItem key={p} value={p} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <PriorityBadge priority={p} />
-          </MenuItem>
-        ))}
-      </TextField>
+      <FormControl fullWidth size="small">
+        <InputLabel id="ticket-priority-label">Priority</InputLabel>
+        <Select
+          labelId="ticket-priority-label"
+          label="Priority"
+          value={values.priority}
+          onChange={(e) => update("priority", e.target.value)}
+        >
+          {PRIORITIES.map((p) => (
+            <MenuItem key={p} value={p} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Box
+                sx={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: "50%",
+                  bgcolor: PRIORITY_COLORS[p],
+                  flexShrink: 0,
+                }}
+              />
+              {capitalize(p)}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
 
       {/* Labels (freeSolo autocomplete) */}
       <Autocomplete
         multiple
         freeSolo
+        size="small"
         options={[] as string[]}
         value={values.labels}
         onChange={(_event, newValue) => update("labels", newValue as string[])}
@@ -120,7 +151,7 @@ export function TicketForm({ values, onChange, errors }: TicketFormProps) {
           })
         }
         renderInput={(params) => (
-          <TextField {...params} label="Labels" placeholder="Add labels..." />
+          <TextField {...params} label="Labels" placeholder="Add labels..." fullWidth />
         )}
       />
     </Stack>

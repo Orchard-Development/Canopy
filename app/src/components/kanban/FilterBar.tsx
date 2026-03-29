@@ -232,7 +232,7 @@ export function FilterBar({
             variant="outlined"
             startIcon={<Add />}
             onClick={onCreate}
-            sx={{ whiteSpace: "nowrap", flexShrink: 0 }}
+            sx={{ whiteSpace: "nowrap", flexShrink: 0, textTransform: "none" }}
           >
             Create Ticket
           </Button>

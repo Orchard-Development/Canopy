@@ -32,7 +32,7 @@ export function DeleteConfirmDialog({
         </DialogContentText>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={loading}>
+        <Button onClick={onClose} disabled={loading} sx={{ textTransform: "none" }}>
           Cancel
         </Button>
         <Button
@@ -40,7 +40,8 @@ export function DeleteConfirmDialog({
           color="error"
           variant="contained"
           disabled={loading}
-          startIcon={loading ? <CircularProgress size={20} color="inherit" /> : undefined}
+          startIcon={loading ? <CircularProgress size={16} color="inherit" /> : undefined}
+          sx={{ textTransform: "none" }}
         >
           Delete Ticket
         </Button>

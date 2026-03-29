@@ -141,7 +141,7 @@ export function TicketDialog({ open, onClose, ticket, projectId, mode }: TicketD
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+      <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
         <DialogTitle>{isCreate ? "Create Ticket" : ticket?.title ?? "Edit Ticket"}</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 1 }}>
@@ -153,17 +153,18 @@ export function TicketDialog({ open, onClose, ticket, projectId, mode }: TicketD
             <Button
               color="error"
               onClick={() => setDeleteOpen(true)}
-              sx={{ mr: "auto" }}
+              sx={{ mr: "auto", textTransform: "none" }}
             >
               Delete Ticket
             </Button>
           )}
-          <Button onClick={onClose}>Cancel</Button>
+          <Button onClick={onClose} sx={{ textTransform: "none" }}>Cancel</Button>
           <Button
             variant="contained"
             onClick={handleSave}
             disabled={saving}
-            startIcon={saving ? <CircularProgress size={20} color="inherit" /> : undefined}
+            startIcon={saving ? <CircularProgress size={16} color="inherit" /> : undefined}
+            sx={{ textTransform: "none" }}
           >
             {isCreate ? "Create Ticket" : "Save Changes"}
           </Button>

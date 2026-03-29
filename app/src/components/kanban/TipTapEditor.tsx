@@ -61,6 +61,11 @@ export function TipTapEditor({ content, onChange, placeholder, readOnly }: TipTa
           sx={{
             mb: 0.5,
             flexWrap: "wrap",
+            bgcolor: "action.hover",
+            borderRadius: 1,
+            border: 1,
+            borderColor: "divider",
+            p: 0.5,
           }}
         >
           <IconButton
