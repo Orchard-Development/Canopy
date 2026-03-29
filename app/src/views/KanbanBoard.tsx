@@ -344,18 +344,24 @@ export default function KanbanBoard() {
     <PageLayout
       title="Board"
       fill
+      badge={
+        <Typography variant="body2" color="text.secondary" sx={{ ml: 0.5 }}>
+          Manage and track tickets across your project
+        </Typography>
+      }
       actions={
         <Button
           variant="contained"
           color="primary"
           startIcon={<Add />}
           onClick={openCreateDialog}
+          sx={{ whiteSpace: "nowrap" }}
         >
           Create Ticket
         </Button>
       }
     >
-      {/* Filter bar (Plan 04) */}
+      {/* Filter bar */}
       <FilterBar
         filters={filters}
         onChange={setFilters}

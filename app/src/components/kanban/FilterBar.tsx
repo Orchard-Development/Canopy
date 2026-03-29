@@ -1,6 +1,7 @@
 import { useState, useEffect, type RefObject } from "react";
 import {
   Stack,
+  Box,
   Chip,
   TextField,
   Autocomplete,
@@ -118,53 +119,66 @@ export function FilterBar({
     <Stack
       direction="row"
       alignItems="center"
-      spacing={1.5}
-      sx={{ flexWrap: "wrap", px: 3, py: 1, flexShrink: 0 }}
+      spacing={0.75}
+      sx={{ flexWrap: "wrap", px: 3, py: 1.5, flexShrink: 0, rowGap: 0.75 }}
     >
       {/* Type filter chips */}
-      {TICKET_TYPES.map((t) => (
-        <Chip
-          key={t.value}
-          icon={<TypeIcon type={t.value} fontSize="small" />}
-          label={t.label}
-          variant={filters.types.includes(t.value) ? "filled" : "outlined"}
-          color={filters.types.includes(t.value) ? "primary" : "default"}
-          onClick={() => toggleType(t.value)}
-          size="small"
-        />
-      ))}
+      <Stack direction="row" spacing={0.5} alignItems="center">
+        {TICKET_TYPES.map((t) => (
+          <Chip
+            key={t.value}
+            icon={<TypeIcon type={t.value} fontSize="small" />}
+            label={t.label}
+            variant={filters.types.includes(t.value) ? "filled" : "outlined"}
+            color={filters.types.includes(t.value) ? "primary" : "default"}
+            onClick={() => toggleType(t.value)}
+            size="small"
+            sx={{ px: 0.5 }}
+          />
+        ))}
+      </Stack>
+
+      <Box sx={{ width: "1px", height: 20, bgcolor: "divider", mx: 0.5 }} />
 
       {/* Priority filter chips */}
-      {TICKET_PRIORITIES.map((p) => (
-        <Chip
-          key={p.value}
-          label={p.label}
-          variant={
-            filters.priorities.includes(p.value) ? "filled" : "outlined"
-          }
-          color={
-            filters.priorities.includes(p.value) ? "primary" : "default"
-          }
-          onClick={() => togglePriority(p.value)}
-          size="small"
-        />
-      ))}
+      <Stack direction="row" spacing={0.5} alignItems="center">
+        {TICKET_PRIORITIES.map((p) => (
+          <Chip
+            key={p.value}
+            label={p.label}
+            variant={
+              filters.priorities.includes(p.value) ? "filled" : "outlined"
+            }
+            color={
+              filters.priorities.includes(p.value) ? "primary" : "default"
+            }
+            onClick={() => togglePriority(p.value)}
+            size="small"
+          />
+        ))}
+      </Stack>
+
+      <Box sx={{ width: "1px", height: 20, bgcolor: "divider", mx: 0.5 }} />
 
       {/* Status filter chips */}
-      {TICKET_STATUSES.map((s) => (
-        <Chip
-          key={s.value}
-          label={s.label}
-          variant={
-            filters.statuses.includes(s.value) ? "filled" : "outlined"
-          }
-          color={
-            filters.statuses.includes(s.value) ? "secondary" : "default"
-          }
-          onClick={() => toggleStatus(s.value)}
-          size="small"
-        />
-      ))}
+      <Stack direction="row" spacing={0.5} alignItems="center">
+        {TICKET_STATUSES.map((s) => (
+          <Chip
+            key={s.value}
+            label={s.label}
+            variant={
+              filters.statuses.includes(s.value) ? "filled" : "outlined"
+            }
+            color={
+              filters.statuses.includes(s.value) ? "secondary" : "default"
+            }
+            onClick={() => toggleStatus(s.value)}
+            size="small"
+          />
+        ))}
+      </Stack>
+
+      <Box sx={{ width: "1px", height: 20, bgcolor: "divider", mx: 0.5 }} />
 
       {/* Label filter autocomplete */}
       <Autocomplete
