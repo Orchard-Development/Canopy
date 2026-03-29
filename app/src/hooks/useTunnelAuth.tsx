@@ -36,7 +36,7 @@ export function TunnelAuthProvider({ children }: { children: ReactNode }) {
   const requestHostAuth = useCallback(() => {
     if (hostAuthStatus === "waiting") return;
     setHostAuthStatus("waiting");
-    originalFetch("/api/tunnel/request-auth", { method: "POST" })
+    originalFetch(proxyUrl("/api/tunnel/request-auth"), { method: "POST" })
       .then(async (res) => {
         const body = await res.json().catch(() => ({}));
         if (res.ok && body.status === "approved") {
@@ -87,7 +87,7 @@ function isLocalAccess(): boolean {
 async function detectTunnelPin(): Promise<boolean> {
   if (isLocalAccess()) return false;
   try {
-    const res = await originalFetch("/api/tunnel/probe", { method: "POST" });
+    const res = await originalFetch(proxyUrl("/api/tunnel/probe"), { method: "POST" });
     if (res.status === 403) {
       const body = await res.json().catch(() => null);
       return body?.error?.includes("tunnel") ?? false;
@@ -100,13 +100,26 @@ async function detectTunnelPin(): Promise<boolean> {
 
 // --- Global fetch interceptor ---
 
+// When served through the CF Pages proxy (/connect/<machineId>/...) every
+// relative /api/... request must be prefixed so it routes through the proxy.
+const _proxyPrefixMatch = window.location.pathname.match(/^\/connect\/([^/]+)\//);
+const PROXY_PREFIX = _proxyPrefixMatch ? `/connect/${_proxyPrefixMatch[1]}` : "";
+
+function proxyUrl(input: RequestInfo | URL): RequestInfo | URL {
+  if (!PROXY_PREFIX) return input;
+  if (typeof input === "string" && input.startsWith("/") && !input.startsWith(PROXY_PREFIX)) {
+    return `${PROXY_PREFIX}${input}`;
+  }
+  return input;
+}
+
 const originalFetch = window.fetch.bind(window);
 
 window.fetch = async function interceptedFetch(
   input: RequestInfo | URL,
   init?: RequestInit,
 ): Promise<Response> {
-  const res = await originalFetch(input, init);
+  const res = await originalFetch(proxyUrl(input), init);
 
   if (res.status === 403 && !isLocalAccess()) {
     const cloned = res.clone();

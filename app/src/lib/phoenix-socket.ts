@@ -25,6 +25,12 @@ function resolveSocketUrl(): string {
     return `${protocol}//${loc.host}/socket`;
   }
 
+  // Proxied access (/connect/<machineId>/...): route socket through the proxy
+  const proxyMatch = loc.pathname.match(/^\/connect\/([^/]+)\//);
+  if (proxyMatch) {
+    return `${protocol}//${loc.host}/connect/${proxyMatch[1]}/socket`;
+  }
+
   // Local dev: Vite runs on a different port, connect directly to engine
   const port = loc.port;
   const enginePort =

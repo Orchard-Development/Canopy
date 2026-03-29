@@ -1,4 +1,7 @@
-const BASE = "";
+// When served through the CF Pages proxy (/connect/<machineId>/...) all API
+// calls must go through the proxy too, otherwise they hit the Site origin.
+const _proxyMatch = window.location.pathname.match(/^\/connect\/([^/]+)\//);
+const BASE = _proxyMatch ? `/connect/${_proxyMatch[1]}` : "";
 
 /** Remote orchard context -- when set, API calls go to the remote Phoenix. */
 let _remoteBase: string | null = null;
