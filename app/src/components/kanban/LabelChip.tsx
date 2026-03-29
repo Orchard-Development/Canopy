@@ -2,7 +2,7 @@ import { Chip } from "@mui/material";
 
 interface LabelChipProps {
   label: string;
-  onDelete?: () => void;
+  onDelete?: (event?: any) => void;
 }
 
 export function LabelChip({ label, onDelete }: LabelChipProps) {
