@@ -8,7 +8,6 @@ import { useChannelEvent } from "./hooks/useChannelEvent";
 import { DashboardChannelProvider } from "@/contexts/DashboardChannelContext";
 import { useDashboardChannel } from "@/hooks/useDashboardChannel";
 import { EVENTS } from "./lib/events";
-import { DashboardChannelProvider, useDashboardChannel } from "./hooks/useDashboardChannel";
 import { ProjectProvider } from "./hooks/useProject";
 import { ActiveProjectProvider } from "./hooks/useActiveProject";
 import { AppHeader } from "./components/AppHeader";
