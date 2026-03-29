@@ -77,7 +77,6 @@ export function TerminalPanel({ sessionId, active = true, suspendResize, renderM
         <Box sx={{ position: "absolute", inset: 0, zIndex: 5, display: "flex", flexDirection: "column", bgcolor: termBg }}>
           <PrettyTerminal
             sessionId={sessionId}
-            bufferText={bufferText}
             onSend={sendInput}
           />
         </Box>

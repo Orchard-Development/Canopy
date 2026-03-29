@@ -347,6 +347,13 @@ export function useChat(projectId?: string | null) {
     [],
   );
 
+  const patchMessage = useCallback(
+    (id: string, patch: Partial<ChatMessage>) => {
+      setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, ...patch } : m)));
+    },
+    [],
+  );
+
   const clearError = useCallback(() => setError(null), []);
 
   const reset = useCallback(() => {
@@ -376,6 +383,7 @@ export function useChat(projectId?: string | null) {
     stop,
     loadConversation,
     addSystemMessage,
+    patchMessage,
     clearError,
     reset,
     restoring,

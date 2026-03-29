@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Box, Typography, CircularProgress, LinearProgress, Alert, IconButton, Tooltip } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import { PROXY_BASE } from "../lib/api";
 
 interface Props {
   sessionId: string;
@@ -36,7 +37,7 @@ export function RdpCanvas({ sessionId, onDisconnect }: Props) {
     function connect() {
       if (cancelled) return;
       const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const ws = new WebSocket(`${proto}//${window.location.host}/ws/rdp/${sessionId}`);
+      const ws = new WebSocket(`${proto}//${window.location.host}${PROXY_BASE}/ws/rdp/${sessionId}`);
       wsRef.current = ws;
 
       ws.onopen = () => {

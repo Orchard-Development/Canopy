@@ -6,7 +6,7 @@ import { WebLinksAddon } from "@xterm/addon-web-links";
 import "@xterm/xterm/css/xterm.css";
 import { terminalOptions, createTerminalTheme } from "../lib/xterm-theme";
 import { usePersistedState } from "./usePersistedState";
-import { getRemoteOrchard } from "../lib/api";
+import { getRemoteOrchard, PROXY_BASE } from "../lib/api";
 
 const BASE_FONT_SIZE = 14;
 const MIN_FONT_SIZE = 6;
@@ -216,7 +216,7 @@ export function useTerminal({
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const tokenMatch = document.cookie.match(/(?:^|;\s*)ctx_token=([^;]*)/);
       const tokenParam = tokenMatch ? `?token=${encodeURIComponent(decodeURIComponent(tokenMatch[1]))}` : "";
-      wsUrl = `${protocol}//${window.location.host}/ws/terminal/${sessionId}${tokenParam}`;
+      wsUrl = `${protocol}//${window.location.host}${PROXY_BASE}/ws/terminal/${sessionId}${tokenParam}`;
     }
     let reconnectAttempt = 0;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
