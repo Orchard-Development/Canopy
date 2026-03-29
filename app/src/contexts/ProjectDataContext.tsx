@@ -76,21 +76,24 @@ export function ProjectDataProvider({ projectId, children }: Props) {
     fetchAll();
   }, [fetchAll]);
 
-  // Refetch on relevant channel events
+  // Refetch on relevant channel events.
+  // Use actual engine event names from events.ts — only the events that
+  // materially change project dashboard data.
   useEffect(() => {
     if (!channel) return;
 
-    const events = [
-      "session:started", "session:exited", "session:state",
-      "feed:new", "mcp:changed", "intel:changed",
+    const refetchEvents = [
+      "session:started",  // new session appeared
+      "session:exited",   // session ended
+      "feed:event",       // new feed entry (EVENTS.feed)
     ];
 
-    const refs = events.map((evt) =>
+    const refs = refetchEvents.map((evt) =>
       channel.on(evt, () => fetchAll())
     );
 
     return () => {
-      events.forEach((evt, i) => channel.off(evt, refs[i]));
+      refetchEvents.forEach((evt, i) => channel.off(evt, refs[i]));
     };
   }, [channel, fetchAll]);
 
