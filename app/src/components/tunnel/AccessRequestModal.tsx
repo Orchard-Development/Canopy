@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Box,
   Button,
@@ -12,6 +13,7 @@ import {
 } from "@mui/material";
 import LockPersonIcon from "@mui/icons-material/LockPerson";
 import type { AccessRequest } from "@/hooks/useAccessRequests";
+import { api } from "@/lib/api";
 
 interface Props {
   requests: AccessRequest[];
@@ -27,6 +29,18 @@ function timeAgo(iso: string): string {
 }
 
 export function AccessRequestModal({ requests, open, onClose, onDismiss }: Props) {
+  const [accepting, setAccepting] = useState<string | null>(null);
+
+  async function handleAccept(email: string) {
+    setAccepting(email);
+    try {
+      await api.addTunnelEmail(email, "operator");
+      onDismiss(email);
+    } finally {
+      setAccepting(null);
+    }
+  }
+
   return (
     <Dialog
       open={open}
@@ -60,9 +74,19 @@ export function AccessRequestModal({ requests, open, onClose, onDismiss }: Props
                 <ListItem
                   disableGutters
                   secondaryAction={
-                    <Button size="small" onClick={() => onDismiss(req.email)}>
-                      Dismiss
-                    </Button>
+                    <Box sx={{ display: "flex", gap: 1 }}>
+                      <Button
+                        size="small"
+                        variant="contained"
+                        disabled={accepting === req.email}
+                        onClick={() => handleAccept(req.email)}
+                      >
+                        Accept
+                      </Button>
+                      <Button size="small" onClick={() => onDismiss(req.email)}>
+                        Dismiss
+                      </Button>
+                    </Box>
                   }
                 >
                   <ListItemText
@@ -76,7 +100,7 @@ export function AccessRequestModal({ requests, open, onClose, onDismiss }: Props
         )}
 
         <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 2, mb: 1 }}>
-          To grant access, update the auth policy in Settings or add the email to the allowlist.
+          Accepting adds the email to the allowlist with operator role.
         </Typography>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
