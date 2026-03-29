@@ -85,6 +85,7 @@ export function ProjectDataProvider({ projectId, children }: Props) {
     const refetchEvents = [
       "session:started",  // new session appeared
       "session:exited",   // session ended
+      "session:state",    // session state changed (running/waiting/idle)
       "feed:event",       // new feed entry (EVENTS.feed)
     ];
 
