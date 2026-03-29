@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase, supabaseConfigured, supabaseUrl, supabaseAnonKey } from "../lib/supabase";
+import { PROXY_BASE } from "../lib/api";
 
 interface AuthState {
   session: Session | null;
@@ -36,7 +37,7 @@ function saveTokensToEngine(s: Session): void {
   if (s.user?.email) profile["auth.email"] = s.user.email;
   if (s.user?.id) profile["auth.user_id"] = s.user.id;
 
-  fetch("/api/settings", {
+  fetch(`${PROXY_BASE}/api/settings`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(profile),
@@ -44,7 +45,7 @@ function saveTokensToEngine(s: Session): void {
 }
 
 function clearTokensFromEngine(): void {
-  fetch("/api/settings", {
+  fetch(`${PROXY_BASE}/api/settings`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -154,14 +155,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async function checkTunnelOwnership() {
       // 1. Check if the user already has a valid engine tunnel session (from PIN or email gate)
       try {
-        const info = await fetch("/tunnel/session-info").then((r) => r.json());
+        const info = await fetch(`${PROXY_BASE}/tunnel/session-info`).then((r) => r.json());
         if (info.valid) { setIsOwner(true); return; }
       } catch { /* continue */ }
 
       // 2. Check auth-policy: allow_any_user or owner UID match
       let policyAllows = false;
       try {
-        const policy = await fetch("/tunnel/auth-policy").then((r) => r.json());
+        const policy = await fetch(`${PROXY_BASE}/tunnel/auth-policy`).then((r) => r.json());
         const isOwnerByUid = policy.owner_uid && policy.owner_uid === session?.user?.id;
         policyAllows = policy.allow_any_user || isOwnerByUid;
       } catch { /* continue */ }
@@ -169,7 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // 3. If policy allows, exchange the Supabase token for an engine session
       if (policyAllows && session?.access_token) {
         try {
-          const res = await fetch("/tunnel/auth-supabase", {
+          const res = await fetch(`${PROXY_BASE}/tunnel/auth-supabase`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -187,7 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // 4. Fall back to settings (requires engine auth / PIN)
       try {
-        const r = await fetch("/api/settings");
+        const r = await fetch(`${PROXY_BASE}/api/settings`);
         if (!r.ok) { setIsOwner(false); return; }
         const settings = await r.json();
         const ownerUid = settings["auth.user_id"];

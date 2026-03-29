@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
+import { PROXY_BASE } from "../../lib/api";
 import { LockBackground } from "./LockBackground";
 import { wrap, card, inputStyle, btnPrimary, btnSecondary, errBox, successBox, dividerRow, linkBtn } from "./loginStyles";
 
@@ -26,7 +27,7 @@ function AccessDenied({ email }: { email: string }) {
   async function handleRequestAccess() {
     setRequestState("requesting");
     try {
-      const res = await fetch("/tunnel/request-access", {
+      const res = await fetch(`${PROXY_BASE}/tunnel/request-access`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
