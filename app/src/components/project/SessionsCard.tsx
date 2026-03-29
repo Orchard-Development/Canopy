@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Card,
@@ -11,10 +10,8 @@ import {
   ListItemText,
   Skeleton,
 } from "@mui/material";
-import { api } from "../../lib/api";
-import { useRefetchOnDashboardEvent } from "../../hooks/useRefetchOnDashboardEvent";
-import { EVENTS } from "../../lib/events";
 import { timeAgo } from "../../lib/time";
+import { useProjectData } from "../../hooks/useProjectData";
 
 const STATE_COLOR: Record<string, "success" | "warning" | "error" | "default" | "info"> = {
   running: "success",
@@ -22,33 +19,13 @@ const STATE_COLOR: Record<string, "success" | "warning" | "error" | "default" | 
   idle: "default",
 };
 
-interface TerminalInfo {
-  id: string;
-  command: string;
-  cwd: string;
-  startedAt: string;
-  exitCode?: number;
-  label?: string;
-  state?: string;
-  projectId?: string;
-}
-
 interface Props {
   projectId: string;
 }
 
-export function SessionsCard({ projectId }: Props) {
+export function SessionsCard({ projectId: _projectId }: Props) {
   const navigate = useNavigate();
-  const [sessions, setSessions] = useState<TerminalInfo[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { generation } = useRefetchOnDashboardEvent(EVENTS.session.state);
-
-  useEffect(() => {
-    api.listTerminals()
-      .then((all) => setSessions(all.filter((t) => t.projectId === projectId)))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [projectId, generation]);
+  const { sessions, loading } = useProjectData();
 
   const active = sessions.filter((s) => s.exitCode === undefined);
 

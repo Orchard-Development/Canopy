@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -23,10 +23,9 @@ import SpaIcon from "@mui/icons-material/Spa";
 import CircularProgress from "@mui/material/CircularProgress";
 import Button from "@mui/material/Button";
 import { api, type ProjectRecord, type FeedEvent } from "../../lib/api";
-import { useRefetchOnDashboardEvent } from "../../hooks/useRefetchOnDashboardEvent";
-import { EVENTS } from "../../lib/events";
 import { timeAgo } from "../../lib/time";
 import { ProjectLogo } from "./ProjectLogo";
+import { useProjectData } from "../../hooks/useProjectData";
 
 interface Props {
   project: ProjectRecord;
@@ -60,29 +59,11 @@ const ACTIVITY_COLOR: Record<string, "info" | "success" | "warning" | "default">
 
 export function ProjectDashboard({ project, projectId, onUpdate }: Props) {
   const navigate = useNavigate();
-  const [sessions, setSessions] = useState<TerminalInfo[]>([]);
-  const [events, setEvents] = useState<FeedEvent[]>([]);
-  const [seedCount, setSeedCount] = useState<number | null>(null);
-  const [intelCount, setIntelCount] = useState<number | null>(null);
-  const [serverCount, setServerCount] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { sessions, feed: events, mcpServers, seedStatus, rules, skills, memory, loading } = useProjectData();
 
-  const { generation: sessGen } = useRefetchOnDashboardEvent(EVENTS.session?.state);
-  const { generation: feedGen } = useRefetchOnDashboardEvent(EVENTS.feed);
-
-  useEffect(() => {
-    Promise.all([
-      api.listTerminals().then((all) => setSessions(all.filter((t) => t.projectId === projectId))),
-      api.listFeed(projectId, { limit: 8 }).then(setEvents),
-      api.projectMcpServers(projectId).then((s) => setServerCount(s.length)),
-      api.getSeedStatus(projectId).then((r) => setSeedCount(Object.keys(r.packs || {}).length)),
-      Promise.all([api.listRules(projectId), api.listSkills(projectId), api.listMemory(projectId)])
-        .then(([r, s, m]) => setIntelCount(r.length + s.length + m.length))
-        .catch(() => setIntelCount(null)),
-    ])
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [projectId, sessGen, feedGen]);
+  const seedCount = Object.keys((seedStatus as { packs?: Record<string, unknown> })?.packs || seedStatus || {}).length;
+  const intelCount = rules.length + skills.length + memory.length;
+  const serverCount = mcpServers.length;
 
   const config = project.config ?? {};
   const branding = config.branding as { logoUrl?: string; faviconUrl?: string; websiteUrl?: string } | undefined;

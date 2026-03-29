@@ -19,6 +19,7 @@ import GavelIcon from "@mui/icons-material/Gavel";
 import { useProject } from "../hooks/useProject";
 import { api } from "../lib/api";
 import { PageLayout } from "../components/PageLayout";
+import { ProjectDataProvider } from "../contexts/ProjectDataContext";
 import { ProjectDashboard } from "../components/project/ProjectDashboard";
 import { IntelligenceTab } from "../components/project/IntelligenceTab";
 import { SettingsTab } from "../components/project/SettingsTab";
@@ -111,17 +112,19 @@ export default function ProjectDetail({ embedded }: { embedded?: boolean }) {
   );
 
   const tabContent = (
-    <>
-      {resolvedTab === "dashboard" && (
-        <ProjectDashboard project={project} projectId={project.id} onUpdate={reload} />
-      )}
-      {resolvedTab === "intelligence" && (
-        <IntelligenceTab projectId={project.id} projectName={project.name} />
-      )}
-      {resolvedTab === "settings" && (
-        <SettingsTab project={project} projectId={project.id} onUpdate={reload} />
-      )}
-    </>
+    <ProjectDataProvider projectId={project.id}>
+      <>
+        {resolvedTab === "dashboard" && (
+          <ProjectDashboard project={project} projectId={project.id} onUpdate={reload} />
+        )}
+        {resolvedTab === "intelligence" && (
+          <IntelligenceTab projectId={project.id} projectName={project.name} />
+        )}
+        {resolvedTab === "settings" && (
+          <SettingsTab project={project} projectId={project.id} onUpdate={reload} />
+        )}
+      </>
+    </ProjectDataProvider>
   );
 
   if (embedded) {

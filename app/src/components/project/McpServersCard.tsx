@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -10,22 +9,14 @@ import {
   ListItemText,
   Skeleton,
 } from "@mui/material";
-import { api, type ResolvedMcpServer } from "../../lib/api";
+import { useProjectData } from "../../hooks/useProjectData";
 
 interface Props {
   projectId: string;
 }
 
-export function McpServersCard({ projectId }: Props) {
-  const [servers, setServers] = useState<ResolvedMcpServer[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    api.projectMcpServers(projectId)
-      .then(setServers)
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [projectId]);
+export function McpServersCard({ projectId: _projectId }: Props) {
+  const { mcpServers: servers, loading } = useProjectData();
 
   return (
     <Card variant="outlined" sx={{ height: "100%" }}>

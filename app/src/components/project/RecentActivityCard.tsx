@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Card,
@@ -13,10 +12,8 @@ import {
   Skeleton,
 } from "@mui/material";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
-import { api, type FeedEvent } from "../../lib/api";
-import { useRefetchOnDashboardEvent } from "../../hooks/useRefetchOnDashboardEvent";
-import { EVENTS } from "../../lib/events";
 import { timeAgo } from "../../lib/time";
+import { useProjectData } from "../../hooks/useProjectData";
 
 const TYPE_COLOR: Record<string, "info" | "success" | "warning" | "default"> = {
   session_analyzed: "info",
@@ -33,16 +30,7 @@ interface Props {
 
 export function RecentActivityCard({ projectId }: Props) {
   const navigate = useNavigate();
-  const [events, setEvents] = useState<FeedEvent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { generation } = useRefetchOnDashboardEvent(EVENTS.feed);
-
-  useEffect(() => {
-    api.listFeed(projectId, { limit: 10 })
-      .then(setEvents)
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [projectId, generation]);
+  const { feed: events, loading } = useProjectData();
 
   return (
     <Card variant="outlined">
