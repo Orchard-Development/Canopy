@@ -142,6 +142,8 @@ function useSettings() {
 }
 
 function ProvidersTab({ s }: { s: ReturnType<typeof useSettings> }) {
+  const { managedProviders } = useSettingsContext();
+  const { session } = useAuth();
   return (
     <Box sx={{ maxWidth: 720, mx: "auto" }}>
       <AiProviderCard
@@ -149,6 +151,8 @@ function ProvidersTab({ s }: { s: ReturnType<typeof useSettings> }) {
         visible={s.visible}
         testing={s.testing}
         models={s.models}
+        managedProviders={managedProviders}
+        isLoggedIn={!!session}
         onUpdate={s.update}
         onTestKey={s.testKey}
         onToggleVisible={s.toggleVisible}

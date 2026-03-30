@@ -3,7 +3,9 @@ import {
   Button,
   Card,
   CardContent,
+  Chip,
   CircularProgress,
+  Collapse,
   FormControl,
   IconButton,
   InputAdornment,
@@ -63,9 +65,25 @@ interface Props {
   visible: Record<string, boolean>;
   testing: string | null;
   models: ModelOption[];
+  managedProviders: Set<string>;
+  isLoggedIn: boolean;
   onUpdate: (key: string, value: string) => void;
   onTestKey: (provider: "anthropic" | "openai" | "xai" | "gemini" | "groq" | "openrouter") => void;
   onToggleVisible: (key: string) => void;
+}
+
+function ManagedBadge({ isLoggedIn }: { isLoggedIn: boolean }) {
+  if (!isLoggedIn) {
+    return (
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <Chip label="Not configured" size="small" color="default" />
+        <Typography variant="caption" color="text.secondary">
+          Sign in to use Orchard keys
+        </Typography>
+      </Box>
+    );
+  }
+  return <Chip label="Orchard Managed" size="small" color="success" />;
 }
 
 function ApiKeyRow(props: {
@@ -147,12 +165,16 @@ function ProviderSection(props: {
   modelSettingKey: string;
   modelLabel: string;
   showAuthToggle?: boolean;
+  isManaged: boolean;
+  isLoggedIn: boolean;
   onUpdate: (key: string, value: string) => void;
   onTestKey: () => void;
   onToggleVisible: () => void;
 }) {
   const useApiKey = props.authMode === "api_key";
   const showAuthToggle = props.showAuthToggle ?? true;
+  const hasByok = !!props.apiKeyValue;
+  const showManagedBadge = props.isManaged && !hasByok;
 
   return (
     <Box>
@@ -161,17 +183,47 @@ function ProviderSection(props: {
         {props.description}
       </Typography>
       <Stack spacing={1.5}>
-        <ApiKeyRow
-          label={props.apiKeyLabel}
-          visibilityKey={props.visibilityKey}
-          value={props.apiKeyValue}
-          placeholder={props.apiKeyPlaceholder}
-          testing={props.testing}
-          onChange={(value) => props.onUpdate(props.apiKeySettingKey, value)}
-          onTest={props.onTestKey}
-          onToggleVisible={props.onToggleVisible}
-          visible={props.visible}
-        />
+        {showManagedBadge && (
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <ManagedBadge isLoggedIn={props.isLoggedIn} />
+            {props.isLoggedIn && (
+              <Button
+                size="small"
+                variant="text"
+                onClick={() => props.onUpdate(props.apiKeySettingKey, " ")}
+                sx={{ fontSize: "0.75rem" }}
+              >
+                Use your own key
+              </Button>
+            )}
+          </Box>
+        )}
+        <Collapse in={hasByok || !props.isManaged}>
+          <Stack spacing={1.5}>
+            <ApiKeyRow
+              label={props.apiKeyLabel}
+              visibilityKey={props.visibilityKey}
+              value={props.apiKeyValue}
+              placeholder={props.apiKeyPlaceholder}
+              testing={props.testing}
+              onChange={(value) => props.onUpdate(props.apiKeySettingKey, value)}
+              onTest={props.onTestKey}
+              onToggleVisible={props.onToggleVisible}
+              visible={props.visible}
+            />
+            {hasByok && props.isManaged && (
+              <Button
+                size="small"
+                variant="text"
+                color="warning"
+                onClick={() => props.onUpdate(props.apiKeySettingKey, "")}
+                sx={{ alignSelf: "flex-start", fontSize: "0.75rem" }}
+              >
+                Remove key (revert to Orchard Managed)
+              </Button>
+            )}
+          </Stack>
+        </Collapse>
         {props.models.length > 0 && (
           <FormControl fullWidth size="small">
             <InputLabel id={`${props.visibilityKey}-model-label`}>
@@ -260,6 +312,8 @@ export function AiProviderCard({
   visible,
   testing,
   models,
+  managedProviders,
+  isLoggedIn,
   onUpdate,
   onTestKey,
   onToggleVisible,
@@ -274,14 +328,26 @@ export function AiProviderCard({
   const gatewayEnabled = settings.gateway_enabled === "true";
   const gatewayProvider = settings.gateway_provider || "xai";
 
-  // Only show gateway provider options for providers that have API keys configured
+  // Only show gateway provider options for providers that have API keys or managed keys
   const gatewayProviders = [
-    ...(settings.anthropic_api_key ? [{ id: "anthropic", label: "Anthropic (API Key)" }] : []),
-    ...(settings.openai_api_key ? [{ id: "openai", label: "OpenAI" }] : []),
-    ...(settings.xai_api_key ? [{ id: "xai", label: "xAI (Grok)" }] : []),
-    ...(settings.gemini_api_key ? [{ id: "gemini", label: "Google Gemini" }] : []),
-    ...(settings.groq_api_key ? [{ id: "groq", label: "Groq (Llama)" }] : []),
-    ...(settings.openrouter_api_key ? [{ id: "openrouter", label: "OpenRouter" }] : []),
+    ...(settings.anthropic_api_key || managedProviders.has("anthropic")
+      ? [{ id: "anthropic", label: "Anthropic (API Key)" }]
+      : []),
+    ...(settings.openai_api_key || managedProviders.has("openai")
+      ? [{ id: "openai", label: "OpenAI" }]
+      : []),
+    ...(settings.xai_api_key || managedProviders.has("xai")
+      ? [{ id: "xai", label: "xAI (Grok)" }]
+      : []),
+    ...(settings.gemini_api_key || managedProviders.has("gemini")
+      ? [{ id: "gemini", label: "Google Gemini" }]
+      : []),
+    ...(settings.groq_api_key || managedProviders.has("groq")
+      ? [{ id: "groq", label: "Groq (Llama)" }]
+      : []),
+    ...(settings.openrouter_api_key || managedProviders.has("openrouter")
+      ? [{ id: "openrouter", label: "OpenRouter" }]
+      : []),
     { id: "ollama", label: "Ollama (Local)" },
   ];
 
@@ -351,6 +417,8 @@ export function AiProviderCard({
             selectedModel={settings.default_anthropic_model || "claude-opus-4-6"}
             modelSettingKey="default_anthropic_model"
             modelLabel="Default Model"
+            isManaged={managedProviders.has("anthropic")}
+            isLoggedIn={isLoggedIn}
             onUpdate={onUpdate}
             onTestKey={() => onTestKey("anthropic")}
             onToggleVisible={() => onToggleVisible("anthropic")}
@@ -372,6 +440,8 @@ export function AiProviderCard({
             selectedModel={settings.default_openai_model || "gpt-5.4"}
             modelSettingKey="default_openai_model"
             modelLabel="Default Model"
+            isManaged={managedProviders.has("openai")}
+            isLoggedIn={isLoggedIn}
             onUpdate={onUpdate}
             onTestKey={() => onTestKey("openai")}
             onToggleVisible={() => onToggleVisible("openai")}
@@ -394,6 +464,8 @@ export function AiProviderCard({
             modelSettingKey="default_xai_model"
             modelLabel="Default Model"
             showAuthToggle={false}
+            isManaged={managedProviders.has("xai")}
+            isLoggedIn={isLoggedIn}
             onUpdate={onUpdate}
             onTestKey={() => onTestKey("xai")}
             onToggleVisible={() => onToggleVisible("xai")}
@@ -416,6 +488,8 @@ export function AiProviderCard({
             modelSettingKey="default_gemini_model"
             modelLabel="Default Model"
             showAuthToggle={false}
+            isManaged={managedProviders.has("gemini")}
+            isLoggedIn={isLoggedIn}
             onUpdate={onUpdate}
             onTestKey={() => onTestKey("gemini")}
             onToggleVisible={() => onToggleVisible("gemini")}
@@ -438,6 +512,8 @@ export function AiProviderCard({
             modelSettingKey="default_groq_model"
             modelLabel="Default Model"
             showAuthToggle={false}
+            isManaged={managedProviders.has("groq")}
+            isLoggedIn={isLoggedIn}
             onUpdate={onUpdate}
             onTestKey={() => onTestKey("groq")}
             onToggleVisible={() => onToggleVisible("groq")}
@@ -460,6 +536,8 @@ export function AiProviderCard({
             modelSettingKey="default_openrouter_model"
             modelLabel="Default Model"
             showAuthToggle={false}
+            isManaged={managedProviders.has("openrouter")}
+            isLoggedIn={isLoggedIn}
             onUpdate={onUpdate}
             onTestKey={() => onTestKey("openrouter")}
             onToggleVisible={() => onToggleVisible("openrouter")}

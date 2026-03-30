@@ -28,7 +28,7 @@ export const COMPONENT_MAP: Record<string, LazyExoticComponent<ComponentType>> =
   "bundled:Swarm": lazy(() => import("./Swarm")),
   "bundled:ScheduledTasks": lazy(() => import("./ScheduledTasks")),
   "bundled:DatabaseExplorer": lazy(() => import("./database-explorer/DatabaseExplorer")),
-  "bundled:OpenClaw": lazy(() => import("./OpenClaw")),
+  "bundled:MessagingGateway": lazy(() => import("./MessagingGateway")),
   "bundled:KanbanBoard": lazy(() => import("./KanbanBoard")),
   "bundled:Judgment": lazy(() => import("./Judgment")),
 };

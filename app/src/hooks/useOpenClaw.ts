@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { api } from "../lib/api";
 import type { OpenClawStatus, OpenClawChannel, OpenClawMessage } from "../lib/api";
 import { useDashboardChannel } from "./useDashboardChannel";
@@ -6,20 +6,15 @@ import { useChannelEventBuffer } from "./useChannelEvent";
 import { useRefetchOnDashboardEvent } from "./useRefetchOnDashboardEvent";
 import { EVENTS } from "../lib/events";
 
-export interface InstallResult {
-  ok: boolean;
-  output: string;
-  error?: string;
-}
-
 export function useOpenClaw() {
   const { channel } = useDashboardChannel();
   const [status, setStatus] = useState<OpenClawStatus | null>(null);
   const [channels, setChannels] = useState<OpenClawChannel[]>([]);
+  const [welcomeMessage, setWelcomeMessage] = useState<string>("");
+  const [historicalMessages, setHistoricalMessages] = useState<OpenClawMessage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [installing, setInstalling] = useState(false);
-  const [installResult, setInstallResult] = useState<InstallResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const seenIds = useRef(new Set<string>());
 
   const { generation: g1 } = useRefetchOnDashboardEvent(EVENTS.openclaw.started);
   const { generation: g2 } = useRefetchOnDashboardEvent(EVENTS.openclaw.stopped);
@@ -32,10 +27,35 @@ export function useOpenClaw() {
     channel, EVENTS.openclaw.messageOutbound, 100,
   );
 
-  const messages: OpenClawMessage[] = [
+  // Live messages from PubSub events (no dedup key, use index)
+  const liveMessages: OpenClawMessage[] = [
     ...inbound.map((m) => ({ ...m, direction: "inbound" as const, timestamp: Date.now() })),
     ...outbound.map((m) => ({ ...m, direction: "outbound" as const, timestamp: Date.now() })),
-  ].slice(-100);
+  ];
+
+  // Combine historical + live, deduplicated by id where available
+  const messages: OpenClawMessage[] = (() => {
+    const combined = [...historicalMessages];
+    for (const m of liveMessages) {
+      if (m.id && seenIds.current.has(m.id)) continue;
+      if (m.id) seenIds.current.add(m.id);
+      combined.push(m);
+    }
+    return combined.slice(-200).sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0));
+  })();
+
+  const fetchMessages = useCallback(() => {
+    api.openclawMessages({ limit: 200 })
+      .then((r) => {
+        const msgs = (r.messages ?? []).map((m) => ({
+          ...m,
+          timestamp: m.inserted_at ? new Date(m.inserted_at as unknown as string).getTime() : Date.now(),
+        }));
+        msgs.forEach((m) => { if (m.id) seenIds.current.add(m.id); });
+        setHistoricalMessages(msgs);
+      })
+      .catch(() => {});
+  }, []);
 
   const refresh = useCallback(() => {
     api.openclawStatus()
@@ -44,9 +64,14 @@ export function useOpenClaw() {
       .finally(() => setLoading(false));
 
     api.openclawChannels()
-      .then((r) => setChannels(r.channels ?? []))
+      .then((r) => {
+        setChannels(r.channels ?? []);
+        setWelcomeMessage(r.welcome_message ?? "");
+      })
       .catch(() => {});
-  }, []);
+
+    fetchMessages();
+  }, [fetchMessages]);
 
   useEffect(() => {
     refresh();
@@ -54,26 +79,11 @@ export function useOpenClaw() {
     return () => clearInterval(interval);
   }, [refresh, g1, g2, g3]);
 
-  const install = useCallback(() => {
-    setInstalling(true);
-    setInstallResult(null);
-    setError(null);
-    api.openclawInstall()
-      .then((res: Record<string, unknown>) => {
-        const ok = !!res.ok;
-        const output = String(res.output ?? "");
-        const err = res.error ? String(res.error) : undefined;
-        setInstallResult({ ok, output, error: err });
-        if (!ok && err) setError(err);
-        refresh();
-      })
-      .catch((e) => {
-        const msg = e?.message || "Install failed";
-        setInstallResult({ ok: false, output: "", error: msg });
-        setError(msg);
-      })
-      .finally(() => setInstalling(false));
-  }, [refresh]);
+  // Refresh message history when a new live message arrives
+  useEffect(() => {
+    if (liveMessages.length > 0) fetchMessages();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inbound.length, outbound.length]);
 
   const setEnabled = useCallback((enabled: boolean) => {
     api.openclawSetEnabled(enabled).then(refresh).catch((e) => setError(e.message));
@@ -104,8 +114,8 @@ export function useOpenClaw() {
   }, [refresh]);
 
   return {
-    status, channels, messages, loading, installing, installResult, error,
-    install, setEnabled, start, stop, restart,
+    status, channels, messages, loading, error, welcomeMessage,
+    setEnabled, start, stop, restart,
     updateChannel, addChannel, removeChannel, refresh,
   };
 }

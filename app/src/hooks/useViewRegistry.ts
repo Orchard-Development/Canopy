@@ -257,9 +257,9 @@ const DEFAULT_VIEWS: ViewEntry[] = [
   {
     id: "default-openclaw",
     path: "/openclaw",
-    label: "OpenClaw",
-    icon: "SmartToy",
-    component: COMPONENT_MAP["bundled:OpenClaw"],
+    label: "Messaging Gateway",
+    icon: "Send",
+    component: COMPONENT_MAP["bundled:MessagingGateway"],
     source: "default",
     sourceId: null,
     position: 73,

@@ -11,6 +11,9 @@ const EXCLUDED_KEYS = new Set([
   "terminal.gridSpans",
   "terminal.drawerWidth",
   "_branding", // reserved key; written to /api/branding separately, never to flat settings
+  // Auth tokens are machine-local; never sync to Supabase
+  "auth.access_token",
+  "auth.refresh_token",
 ]);
 
 interface CloudSync {

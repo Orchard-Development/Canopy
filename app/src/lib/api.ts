@@ -1397,6 +1397,9 @@ export const api = {
   meshConnectionInfo: () =>
     get<{ node: string; wg_pubkey: string | null; wg_port: number | null; public_ip: string | null }>("/api/mesh/connection-info"),
 
+  tunnelCreateShare: () =>
+    postJson<{ url: string; expires_at: string }>("/api/tunnel/share", {}),
+
   // Security scanning
   securityStartScan: (url: string) =>
     postJson<{ id: string; status: string }>("/api/security/scan", { url }),
@@ -1473,6 +1476,14 @@ export const api = {
   dbQuery: (sql: string) => postJson<DbQueryResponse>("/api/db/query", { sql }),
 
   // -- OpenClaw (messaging channels) --
+  openclawMessages: (params?: { limit?: number; channel?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.limit) qs.set("limit", String(params.limit));
+    if (params?.channel) qs.set("channel", params.channel);
+    const query = qs.toString();
+    return get<{ messages: OpenClawMessage[] }>(`/api/openclaw/messages${query ? `?${query}` : ""}`);
+  },
+
   openclawStatus: () =>
     get<OpenClawStatus>("/api/openclaw/status"),
 
@@ -1486,9 +1497,9 @@ export const api = {
     postJson<{ ok: boolean }>("/api/openclaw/restart", {}),
 
   openclawChannels: () =>
-    get<{ channels: OpenClawChannel[] }>("/api/openclaw/channels"),
+    get<{ channels: OpenClawChannel[]; welcome_message?: string }>("/api/openclaw/channels"),
 
-  openclawUpdateChannel: (name: string, updates: Record<string, unknown>) =>
+  openclawUpdateChannel: (name: string, updates: Record<string, unknown> & { welcome_message?: string }) =>
     putJson<{ ok: boolean }>(`/api/openclaw/channels/${name}`, updates),
 
   openclawSetEnabled: (enabled: boolean) =>
@@ -1499,9 +1510,6 @@ export const api = {
 
   openclawDeleteChannel: (name: string) =>
     del<{ ok: boolean }>(`/api/openclaw/channels/${name}`),
-
-  openclawInstall: () =>
-    postJson<{ ok: boolean; output: string; error?: string }>("/api/openclaw/install", {}),
 
   openclawChannelQR: (name: string) =>
     get<{ qr: string }>(`/api/openclaw/channels/${name}/qr`),
@@ -1551,12 +1559,14 @@ export interface OpenClawChannel {
 }
 
 export interface OpenClawMessage {
+  id?: string;
   channel: string;
   sender: string;
   text: string;
   session_id: string | null;
   direction: "inbound" | "outbound";
   timestamp: number;
+  inserted_at?: string;
 }
 
 // -- Database explorer types --

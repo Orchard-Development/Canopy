@@ -26,7 +26,6 @@ import { timeAgo } from "../lib/time";
 import { ProfileChip } from "../components/sessions/SessionChips";
 import { SessionViewerModal } from "../components/sessions/SessionViewerModal";
 import { CardGrid } from "../components/CardGrid";
-import { requestTerminalOpen } from "../hooks/useDispatch";
 
 interface SessionEnrichment {
   firstPrompt?: string;

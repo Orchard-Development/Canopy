@@ -49,6 +49,7 @@ import GrassIcon from "@mui/icons-material/Grass";
 import ViewKanbanIcon from "@mui/icons-material/ViewKanban";
 import AddIcon from "@mui/icons-material/Add";
 import SmartToyIcon from "@mui/icons-material/SmartToy";
+import SendIcon from "@mui/icons-material/Send";
 import ScheduleIcon from "@mui/icons-material/Schedule";
 import PsychologyIcon from "@mui/icons-material/Psychology";
 import { useViewRegistry } from "../hooks/useViewRegistry";
@@ -92,6 +93,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   Grass: <GrassIcon />,
   ViewKanban: <ViewKanbanIcon />,
   SmartToy: <SmartToyIcon />,
+  Send: <SendIcon />,
   Schedule: <ScheduleIcon />,
   Psychology: <PsychologyIcon />,
 };

@@ -1,14 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Card, CardContent, Typography, Stack, Button,
   IconButton, Tooltip, Box, CircularProgress,
-  Snackbar, Alert, Chip,
+  Snackbar, Alert, Chip, TextField,
 } from "@mui/material";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import HubIcon from "@mui/icons-material/Hub";
+import ShareIcon from "@mui/icons-material/Share";
 import { api, type TunnelStatus } from "../../lib/api";
 
 interface Props {
@@ -34,10 +35,54 @@ export function MeshCard({ nodeName, cookie, onCookieChange }: Props) {
   const [snackMessage, setSnackMessage] = useState("");
   const [tunnelStatus, setTunnelStatus] = useState<TunnelStatus | null>(null);
   const [wgKeyCopied, setWgKeyCopied] = useState(false);
+  const [sharingLink, setSharingLink] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [shareSecondsLeft, setShareSecondsLeft] = useState(0);
+  const [shareLinkCopied, setShareLinkCopied] = useState(false);
+  const shareTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     api.meshTunnel().then(setTunnelStatus).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (shareTimerRef.current) clearInterval(shareTimerRef.current);
+    };
+  }, []);
+
+  async function handleShareLink() {
+    setSharingLink(true);
+    try {
+      const { url, expires_at } = await api.tunnelCreateShare();
+      setShareUrl(url);
+      const expiresMs = new Date(expires_at).getTime();
+      const updateCountdown = () => {
+        const left = Math.max(0, Math.round((expiresMs - Date.now()) / 1000));
+        setShareSecondsLeft(left);
+        if (left === 0) {
+          if (shareTimerRef.current) clearInterval(shareTimerRef.current);
+          setShareUrl(null);
+        }
+      };
+      updateCountdown();
+      shareTimerRef.current = setInterval(updateCountdown, 1000);
+    } catch {
+      setSnackMessage("Failed to create share link. Is the tunnel running?");
+      setSnackOpen(true);
+    }
+    setSharingLink(false);
+  }
+
+  function handleCopyShareLink() {
+    if (!shareUrl) return;
+    navigator.clipboard.writeText(shareUrl);
+    setShareLinkCopied(true);
+    setTimeout(() => setShareLinkCopied(false), 2000);
+  }
+
+  const shareMinutes = Math.floor(shareSecondsLeft / 60);
+  const shareSeconds = shareSecondsLeft % 60;
 
   function handleCopy() {
     if (!cookie) return;
@@ -206,6 +251,58 @@ export function MeshCard({ nodeName, cookie, onCookieChange }: Props) {
                 )}
               </Box>
             )}
+
+
+            <Box>
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+                <Typography variant="body2" fontWeight={500}>
+                  Share Link
+                </Typography>
+                {shareUrl && shareSecondsLeft > 0 && (
+                  <Typography variant="caption" color="warning.main">
+                    Expires in {shareMinutes}:{String(shareSeconds).padStart(2, "0")}
+                  </Typography>
+                )}
+              </Stack>
+
+              {shareUrl && shareSecondsLeft > 0 ? (
+                <Stack spacing={1}>
+                  <Alert severity="warning" sx={{ py: 0.5 }}>
+                    This link grants full operator access. Single-use. Share privately.
+                  </Alert>
+                  <Stack direction="row" alignItems="center" spacing={0.5}>
+                    <TextField
+                      value={shareUrl}
+                      size="small"
+                      fullWidth
+                      InputProps={{ readOnly: true, sx: { fontFamily: "monospace", fontSize: 12 } }}
+                    />
+                    <Tooltip title={shareLinkCopied ? "Copied" : "Copy"}>
+                      <IconButton size="small" onClick={handleCopyShareLink}>
+                        <ContentCopyIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Stack>
+                </Stack>
+              ) : shareSecondsLeft === 0 && !shareUrl ? (
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={sharingLink ? <CircularProgress size={14} /> : <ShareIcon fontSize="small" />}
+                  onClick={handleShareLink}
+                  disabled={sharingLink}
+                >
+                  {sharingLink ? "Generating..." : "Generate Share Link"}
+                </Button>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  Link expired.{" "}
+                  <Button size="small" onClick={handleShareLink} disabled={sharingLink}>
+                    Generate new
+                  </Button>
+                </Typography>
+              )}
+            </Box>
           </Stack>
         </CardContent>
       </Card>
