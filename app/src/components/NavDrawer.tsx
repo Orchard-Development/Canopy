@@ -48,6 +48,9 @@ import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import GrassIcon from "@mui/icons-material/Grass";
 import ViewKanbanIcon from "@mui/icons-material/ViewKanban";
 import AddIcon from "@mui/icons-material/Add";
+import SmartToyIcon from "@mui/icons-material/SmartToy";
+import ScheduleIcon from "@mui/icons-material/Schedule";
+import PsychologyIcon from "@mui/icons-material/Psychology";
 import { useViewRegistry } from "../hooks/useViewRegistry";
 import type { ViewEntry } from "../hooks/useViewRegistry";
 import { useActiveProject } from "../hooks/useActiveProject";
@@ -88,6 +91,9 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   AccountTree: <AccountTreeIcon />,
   Grass: <GrassIcon />,
   ViewKanban: <ViewKanbanIcon />,
+  SmartToy: <SmartToyIcon />,
+  Schedule: <ScheduleIcon />,
+  Psychology: <PsychologyIcon />,
 };
 
 function resolveIcon(name: string): React.ReactNode {
@@ -187,6 +193,7 @@ export function NavDrawer({
       sx={{
         width: isMobile ? 0 : WIDTH,
         flexShrink: 0,
+        ...(isMobile && { zIndex: (t: any) => t.zIndex.drawer + 2 }),
         "& .MuiDrawer-paper": {
           width: WIDTH,
           boxSizing: "border-box",

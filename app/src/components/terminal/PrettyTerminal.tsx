@@ -3,12 +3,13 @@ import { Box, Divider, IconButton, InputBase, CircularProgress, Typography } fro
 import SendIcon from "@mui/icons-material/Send";
 import { alpha, useTheme } from "@mui/material/styles";
 import { useHookLog } from "../../hooks/useHookLog";
-import { useTypingState } from "../../hooks/useTypingState";
+import { useDashboardChannel } from "../../hooks/useDashboardChannel";
+import { useStreamingText } from "../../hooks/useStreamingText";
 import { useImageComposer, ImagePreviewStrip } from "./ImageComposer";
 import { ChatMessage } from "./ChatMessage";
 import { ThinkingBubble } from "./ThinkingBubble";
-import { HookToolCallBubble } from "./HookToolCallBubble";
-import { TypingIndicator } from "./TypingIndicator";
+import { ToolCallGroup, groupToolEntries } from "./ToolCallGroup";
+import { StreamingAssistantBubble } from "./StreamingAssistantBubble";
 
 // Persist drafts across mode toggles (module-level, not in React state)
 const drafts = new Map<string, string>();
@@ -27,9 +28,29 @@ export function PrettyTerminal({ sessionId, onSend }: Props) {
   const [input, setInput] = useState(() => drafts.get(sessionId) ?? "");
   const [fetchKey, setFetchKey] = useState(0);
 
+  const { channel } = useDashboardChannel();
   const { entries, loading } = useHookLog(sessionId, fetchKey);
-  const showTyping = useTypingState(sessionId);
+  const { text: streamText, state: streamState, streamingStartedAt, reset: resetStream } = useStreamingText(sessionId, channel);
   const { images, handlePaste, handleDrop, removeImage, clearImages } = useImageComposer();
+
+  // Subscribe to per-session PTY output (enables agent:output streaming)
+  // No unsubscribe on unmount -- server does not reference-count; cleanup happens on channel disconnect.
+  useEffect(() => {
+    if (!channel || !sessionId) return;
+    channel.push("subscribe:session", { session_id: sessionId });
+  }, [channel, sessionId]);
+
+  // When committed assistant_text entries for the current turn arrive,
+  // reset the streaming buffer so the bubble is replaced cleanly.
+  useEffect(() => {
+    if (streamState !== "stop" || !streamingStartedAt) return;
+    const hasCommitted = entries.some(
+      (e) => e.event_type === "assistant_text" && new Date(e.created_at).getTime() >= streamingStartedAt,
+    );
+    if (hasCommitted) {
+      requestAnimationFrame(() => resetStream());
+    }
+  }, [entries, streamState, streamingStartedAt, resetStream]);
 
   // Persist draft on change
   useEffect(() => {
@@ -43,13 +64,14 @@ export function PrettyTerminal({ sessionId, onSend }: Props) {
     clearImages();
   }, [sessionId, clearImages]);
 
-  // Auto-scroll to bottom on new entries
+  // Auto-scroll to bottom on new entries or streaming text (pause during stop transition)
   useEffect(() => {
+    if (streamState === "stop") return;
     const el = scrollRef.current;
     if (el && stickRef.current) {
       el.scrollTop = el.scrollHeight;
     }
-  }, [entries]);
+  }, [entries, streamText, streamState]);
 
   const handleScroll = () => {
     const el = scrollRef.current;
@@ -84,6 +106,17 @@ export function PrettyTerminal({ sessionId, onSend }: Props) {
     },
   };
 
+  // Suppress committed assistant_text entries for the current in-flight turn
+  // so they don't overlap the streaming bubble.
+  const bubbleActive = streamState !== "idle";
+  const visibleEntries = bubbleActive && streamingStartedAt
+    ? entries.filter(
+        (e) =>
+          e.event_type !== "assistant_text" ||
+          new Date(e.created_at).getTime() < streamingStartedAt,
+      )
+    : entries;
+
   return (
     <Box sx={{ display: "flex", flexDirection: "column", width: "100%", height: "100%" }}>
       {/* Messages area */}
@@ -101,7 +134,11 @@ export function PrettyTerminal({ sessionId, onSend }: Props) {
             Waiting for messages...
           </Typography>
         ) : (
-          entries.map((entry, i) => {
+          groupToolEntries(visibleEntries).map((item, i) => {
+            if (item.kind === "tool_group") {
+              return <ToolCallGroup key={i} entries={item.entries} />;
+            }
+            const entry = item.entry;
             switch (entry.event_type) {
               case "prompt":
                 return <ChatMessage key={i} role="user" text={entry.content} />;
@@ -109,16 +146,6 @@ export function PrettyTerminal({ sessionId, onSend }: Props) {
                 return <ChatMessage key={i} role="assistant" text={entry.content} />;
               case "thinking":
                 return <ThinkingBubble key={i} content={entry.content ?? ""} createdAt={entry.created_at} />;
-              case "tool":
-                return (
-                  <HookToolCallBubble
-                    key={i}
-                    toolName={entry.tool_name ?? "unknown"}
-                    input={entry.metadata}
-                    result={entry.content}
-                    createdAt={entry.created_at}
-                  />
-                );
               case "notification":
                 return <ChatMessage key={i} role="assistant" text={entry.content} variant="notification" />;
               case "stop":
@@ -128,7 +155,7 @@ export function PrettyTerminal({ sessionId, onSend }: Props) {
             }
           })
         )}
-        <TypingIndicator visible={showTyping} />
+        <StreamingAssistantBubble text={streamText} state={streamState} />
       </Box>
 
       {/* Image previews */}

@@ -86,7 +86,7 @@ export function useDispatch() {
     await classify(input, agent, conversation);
   }, [classify]);
 
-  const dispatch = useCallback(async (input: string, p: DispatchPayload) => {
+  const dispatch = useCallback(async (input: string, p: DispatchPayload, openTerminal = true) => {
     setError(null);
     try {
       const args = [...p.args, p.prompt];
@@ -103,8 +103,10 @@ export function useDispatch() {
       setHistory((prev) => [record, ...prev]);
       setPayload(null);
 
-      const label = p.command === "codex" ? "Codex" : "Claude Code";
-      requestTerminalOpen(result.id, label);
+      if (openTerminal) {
+        const label = p.command === "codex" ? "Codex" : "Claude Code";
+        requestTerminalOpen(result.id, label);
+      }
 
       // Fire background analysis (no await)
       api.analyze(input, p).catch(() => {});

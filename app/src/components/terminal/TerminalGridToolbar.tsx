@@ -1,15 +1,15 @@
 import { useState } from "react";
 import { Box, Button, Menu, MenuItem, Stack, ToggleButton, ToggleButtonGroup, Typography, useTheme } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
-import SmartToyIcon from "@mui/icons-material/SmartToy";
-import CodeIcon from "@mui/icons-material/Code";
 import TerminalIcon from "@mui/icons-material/Terminal";
 import ViewModuleIcon from "@mui/icons-material/ViewModule";
 import { OrchardIcon } from "./OrchardIcon";
+import { ClaudeIcon } from "./ClaudeIcon";
+import { OpenAIIcon } from "./OpenAIIcon";
 
 const PRESETS = [
-  { label: "Claude Code", command: "claude", args: ["--dangerously-skip-permissions"], icon: <SmartToyIcon /> },
-  { label: "Codex", command: "codex", args: ["--full-auto"], icon: <CodeIcon /> },
+  { label: "Claude Code", command: "claude", args: ["--dangerously-skip-permissions"], icon: <ClaudeIcon /> },
+  { label: "Codex", command: "codex", args: ["--full-auto"], icon: <OpenAIIcon /> },
   { label: "Orchard", command: "opencode", args: [] as string[], icon: <OrchardIcon /> },
   { label: "Shell", command: "", args: [] as string[], icon: <TerminalIcon /> },
 ];

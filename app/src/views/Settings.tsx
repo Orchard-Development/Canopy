@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Alert, Box, Button, Card, CardContent, Chip,
   Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle,
@@ -22,7 +22,6 @@ import { AudioCard } from "../components/settings/AudioCard";
 import { SecretsCard } from "../components/settings/SecretsCard";
 import { useAudioCapture } from "../hooks/useAudioCapture";
 import { PageLayout } from "../components/PageLayout";
-import { api } from "../lib/api";
 import { LoginForm } from "../components/settings/LoginGate";
 import { useAuth } from "../hooks/useAuth";
 import { useDevMode } from "../hooks/useDevMode";
@@ -34,6 +33,11 @@ import { ViewsCard } from "../components/project/ViewsCard";
 import { SeedPacksCard } from "../components/settings/SeedPacksCard";
 import { AutomationCard } from "../components/settings/AutomationCard";
 import { ModelDefaultsCard } from "../components/settings/ModelDefaultsCard";
+import { SkillCandidateCard } from "../components/settings/SkillCandidateCard";
+import { SkillImprovementCard } from "../components/settings/SkillImprovementCard";
+import { api, type SkillCandidate, type SkillImprovement } from "../lib/api";
+import { useDashboardChannel } from "../hooks/useDashboardChannel";
+import { EVENTS } from "../lib/events";
 import { NotificationsCard } from "../components/settings/NotificationsCard";
 import { DesktopPermissionsCard } from "../components/settings/DesktopPermissionsCard";
 import { UsageStatsCard } from "../components/settings/UsageStatsCard";
@@ -445,6 +449,40 @@ function AccountTab({ s }: { s: ReturnType<typeof useSettings> }) {
   return <LoginForm />;
 }
 
+function AutomationTab({ s }: { s: ReturnType<typeof useSettings> }) {
+  const [candidates, setCandidates] = useState<SkillCandidate[]>([]);
+  const [improvements, setImprovements] = useState<SkillImprovement[]>([]);
+  const { channel } = useDashboardChannel();
+
+  const refresh = useCallback(() => {
+    api.synthesisCandidates().then(setCandidates).catch(() => {});
+    api.skillImprovements().then(setImprovements).catch(() => {});
+  }, []);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  useEffect(() => {
+    if (!channel) return;
+    const ref1 = channel.on(EVENTS.skill.candidate, () => refresh());
+    const ref2 = channel.on(EVENTS.skill.improvement, () => refresh());
+    return () => {
+      channel.off(EVENTS.skill.candidate, ref1);
+      channel.off(EVENTS.skill.improvement, ref2);
+    };
+  }, [channel, refresh]);
+
+  return (
+    <Box sx={{ maxWidth: 720, mx: "auto" }}>
+      <Stack spacing={3}>
+        <SkillCandidateCard candidates={candidates} onAction={refresh} />
+        <SkillImprovementCard improvements={improvements} onAction={refresh} />
+        <AutomationCard />
+        <ModelDefaultsCard settings={s.settings} models={s.models} onUpdate={s.update} />
+      </Stack>
+    </Box>
+  );
+}
+
 function SettingsContent() {
   const [params, setParams] = useSearchParams();
   const { devMode } = useDevMode();
@@ -496,14 +534,7 @@ function SettingsContent() {
       {tab === "appearance" && <Box data-tour="tour-settings-appearance"><AppearanceTab /></Box>}
       {tab === "views" && <Box data-tour="tour-settings-views"><ViewsTab /></Box>}
       {tab === "seedpacks" && <Box sx={{ maxWidth: 720, mx: "auto" }}><SeedPacksCard /></Box>}
-      {tab === "automation" && (
-        <Box sx={{ maxWidth: 720, mx: "auto" }}>
-          <Stack spacing={3}>
-            <AutomationCard />
-            <ModelDefaultsCard settings={s.settings} models={s.models} onUpdate={s.update} />
-          </Stack>
-        </Box>
-      )}
+      {tab === "automation" && <AutomationTab s={s} />}
       {tab === "stats" && <Box sx={{ maxWidth: 720, mx: "auto" }}><UsageStatsCard /></Box>}
       {tab === "notifications" && <Box sx={{ maxWidth: 720, mx: "auto" }}><NotificationsCard /></Box>}
       {tab === "general" && <GeneralTab s={s} devMode={devMode} />}

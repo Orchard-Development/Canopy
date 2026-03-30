@@ -11,6 +11,7 @@ interface Props {
   minWidth?: number;
   maxWidthRatio?: number;
   expanded?: boolean;
+  mobileFullscreen?: boolean;
   glow?: boolean;
   onDraggingChange?: (dragging: boolean) => void;
   children: ReactNode;
@@ -28,6 +29,7 @@ export function ResizableDrawer({
   minWidth = 320,
   maxWidthRatio = 0.65,
   expanded = false,
+  mobileFullscreen = false,
   glow = false,
   onDraggingChange,
   children,
@@ -35,7 +37,8 @@ export function ResizableDrawer({
   const onDraggingChangeRef = useRef(onDraggingChange);
   onDraggingChangeRef.current = onDraggingChange;
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const isMobileScreen = useMediaQuery("(max-width: 800px)");
+  const isMobile = isMobileScreen && mobileFullscreen;
   const [drawerWidth, setDrawerWidth] = useState(defaultWidth);
   const drawerWidthRef = useRef(defaultWidth);
   const [dragging, setDragging] = useState(false);

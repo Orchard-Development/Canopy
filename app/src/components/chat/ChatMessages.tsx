@@ -25,6 +25,7 @@ import type { ChatMessage, Attachment } from "../../types/chat";
 import type { ToolCall } from "../../types/tools";
 import { MarkdownContent } from "../MarkdownContent";
 import { DispatchBanner } from "./DispatchBanner";
+import { InlineSessionCard } from "./InlineSessionCard";
 import { ToolCallsSummary } from "./ToolCallCard";
 import { ChatFormCard } from "./ChatFormCard";
 import { FileEmbed } from "./FileEmbed";
@@ -41,7 +42,7 @@ import PublicIcon from "@mui/icons-material/Public";
 interface Props {
   messages: ChatMessage[];
   fontSize?: number;
-  onDispatch?: (summary: string, payload: DispatchPayload | null, quick: boolean) => void;
+  onDispatch?: (summary: string, payload: DispatchPayload | null, quick: boolean, messageId?: string) => void;
   onEdit?: (index: number, newText: string) => void;
   onFormSubmit?: (result: { success: boolean; message: string; data?: Record<string, unknown> }) => void;
   chatChannel?: Channel | null;
@@ -167,6 +168,7 @@ function UserBubble({
                 color: "primary.contrastText",
                 borderRadius: 2,
                 whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
                 fontSize,
                 lineHeight: 1.6,
               }}
@@ -471,7 +473,7 @@ function AssistantBubble({
 }: {
   message: ChatMessage;
   fontSize?: number;
-  onDispatch?: (summary: string, payload: DispatchPayload | null, quick: boolean) => void;
+  onDispatch?: (summary: string, payload: DispatchPayload | null, quick: boolean, messageId?: string) => void;
   onFormSubmit?: (result: { success: boolean; message: string; data?: Record<string, unknown> }) => void;
   chatChannel?: Channel | null;
   suppressDesktopEmbed?: boolean;
@@ -498,16 +500,17 @@ function AssistantBubble({
     return (
       <Box sx={{ width: "100%" }}>
         <ActivityStrip message={message} />
-        {message.dispatch?.suggested && onDispatch && (
+        {message.dispatch?.suggested && onDispatch && !message.agentSessionId && (
           <DispatchBanner
             summary={message.dispatch.summary}
             ready={!!message.dispatchPayload}
             quick={!!message.dispatch.quick}
             onDispatch={(s) =>
-              onDispatch(s, message.dispatchPayload ?? null, !!message.dispatch?.quick)
+              onDispatch(s, message.dispatchPayload ?? null, !!message.dispatch?.quick, message.id)
             }
           />
         )}
+        {message.agentSessionId && <InlineSessionCard sessionId={message.agentSessionId} />}
       </Box>
     );
   }
@@ -597,16 +600,17 @@ function AssistantBubble({
         >
           {formatTime(message.timestamp)}
         </Typography>
-        {message.dispatch?.suggested && onDispatch && (
+        {message.dispatch?.suggested && onDispatch && !message.agentSessionId && (
           <DispatchBanner
             summary={message.dispatch.summary}
             ready={!!message.dispatchPayload}
             quick={!!message.dispatch.quick}
             onDispatch={(s) =>
-              onDispatch(s, message.dispatchPayload ?? null, !!message.dispatch?.quick)
+              onDispatch(s, message.dispatchPayload ?? null, !!message.dispatch?.quick, message.id)
             }
           />
         )}
+        {message.agentSessionId && <InlineSessionCard sessionId={message.agentSessionId} />}
       </Box>
     </Stack>
   );
@@ -714,7 +718,8 @@ export function ChatMessages({ messages, fontSize = 14, onDispatch, onEdit, onFo
     <Box
       sx={{
         flex: 1,
-        overflow: "auto",
+        overflowY: "auto",
+        overflowX: "hidden",
         display: "flex",
         flexDirection: "column",
         gap: 1.5,
@@ -733,7 +738,7 @@ export function ChatMessages({ messages, fontSize = 14, onDispatch, onEdit, onFo
           return <UserBubble key={msg.id} message={msg} index={i} fontSize={fontSize} onEdit={onEdit} />;
         }
         // Hide empty assistant bubbles, but keep the last one visible for streaming cursor
-        if (!msg.content && !msg.toolCalls?.length && !msg.dispatch?.suggested && i < messages.length - 1) return null;
+        if (!msg.content && !msg.toolCalls?.length && !msg.dispatch?.suggested && !msg.agentSessionId && i < messages.length - 1) return null;
         return <AssistantBubble key={msg.id} message={msg} fontSize={fontSize} onDispatch={onDispatch} onFormSubmit={onFormSubmit} chatChannel={chatChannel} suppressDesktopEmbed={!latestDesktopEmbedAtIndex.has(i)} suppressLiveEmbeds={suppressLiveEmbeds} />;
       })}
       <div ref={endRef} />

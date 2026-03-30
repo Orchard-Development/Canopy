@@ -283,16 +283,19 @@ export default function Chat() {
     messageId?: string,
   ) => {
     if (quick && preBuiltPayload) {
-      const record = await dispatch.dispatch(summary, applyAgentFromModel(preBuiltPayload));
+      // When dispatching from a chat message, suppress terminal drawer — InlineSessionCard handles it
+      const record = await dispatch.dispatch(summary, applyAgentFromModel(preBuiltPayload), !messageId);
       if (record?.terminalSessionId) {
         agentStream.subscribe(record.terminalSessionId);
         if (messageId) {
           chat.patchMessage(messageId, { agentSessionId: record.terminalSessionId });
         }
       }
-      chat.addSystemMessage(
-        `Dispatched to an agent -- you can follow progress below or on the Terminal page.`,
-      );
+      if (!messageId) {
+        chat.addSystemMessage(
+          `Dispatched to an agent -- you can follow progress below or on the Terminal page.`,
+        );
+      }
       return;
     }
 

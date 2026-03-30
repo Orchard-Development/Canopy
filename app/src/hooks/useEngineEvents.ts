@@ -262,6 +262,28 @@ export function useEngineEvents(channel: Channel | null): void {
     const label = snakeToWords(p.event || "event");
     return { message: capitalize(label), severity: "info" };
   });
+
+  useChannelSub(channel, EVENTS.skill.candidate, (payload: Record<string, unknown>) => {
+    const name = (payload.name as string) || "skill";
+    emit({
+      category: "skill",
+      event: "candidate",
+      message: `New skill candidate: ${name}`,
+      severity: "info",
+      data: payload,
+    });
+  });
+
+  useChannelSub(channel, EVENTS.skill.improvement, (payload: Record<string, unknown>) => {
+    const name = (payload.skill_name as string) || "skill";
+    emit({
+      category: "skill",
+      event: "improvement",
+      message: `Skill improvement suggested: ${name}`,
+      severity: "info",
+      data: payload,
+    });
+  });
 }
 
 // -- Helpers ------------------------------------------------------------------

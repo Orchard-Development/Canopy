@@ -149,8 +149,14 @@ export const EVENTS = {
     health: "openclaw:health",
     messageInbound: "openclaw:message:inbound",
     messageOutbound: "openclaw:message:outbound",
+    loginOutput: "openclaw:login:output",
+    loginDone: "openclaw:login:done",
   },
   views: "views:changed",
+  skill: {
+    candidate: "skill:candidate",
+    improvement: "skill:improvement",
+  },
   autoresearch: {
     experimentStarted: "autoresearch:experiment_started",
     modified: "autoresearch:modified",

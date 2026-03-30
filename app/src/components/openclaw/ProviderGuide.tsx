@@ -1,8 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card, CardContent, CardActionArea, Typography, Stack, TextField,
-  Button, Stepper, Step, StepLabel, StepContent, Link, Chip, Box,
+  Button, Stepper, Step, StepLabel, StepContent, Chip, Box,
+  CircularProgress, Alert,
 } from "@mui/material";
+import { api } from "../../lib/api";
+import { useDashboardChannel } from "../../hooks/useDashboardChannel";
+import { EVENTS } from "../../lib/events";
 import TelegramIcon from "@mui/icons-material/Telegram";
 import ChatIcon from "@mui/icons-material/Chat";
 import ForumIcon from "@mui/icons-material/Forum";
@@ -156,13 +160,61 @@ interface SetupWizardProps {
   provider: ProviderInfo;
   onComplete: (name: string, creds: Record<string, unknown>) => void;
   onCancel: () => void;
+  onPrepare?: () => void;
 }
 
-export function ProviderSetupWizard({ provider, onComplete, onCancel }: SetupWizardProps) {
+export function ProviderSetupWizard({ provider, onComplete, onCancel, onPrepare }: SetupWizardProps) {
   const [activeStep, setActiveStep] = useState(0);
   const [token, setToken] = useState("");
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [loginDone, setLoginDone] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [loginStatus, setLoginStatus] = useState<string | null>(null);
+  const [qrTimedOut, setQrTimedOut] = useState(false);
+  const { channel } = useDashboardChannel();
   const isLastStep = activeStep === provider.steps.length - 1;
   const isWhatsApp = provider.name === "whatsapp";
+  const isQrStep = isWhatsApp && activeStep === 1;
+
+  const startLogin = () => {
+    setQrDataUrl(null);
+    setLoginDone(false);
+    setLoginError(null);
+    setLoginStatus(null);
+    setQrTimedOut(false);
+    api.openclawChannelLogin("whatsapp").catch(() => {});
+  };
+
+  useEffect(() => {
+    if (!isQrStep || !channel) return;
+
+    startLogin();
+
+    const handleOutput = (payload: { type: string; data?: string }) => {
+      if (payload.type === "qr" && payload.data) {
+        setQrDataUrl(payload.data);
+        setLoginStatus(null);
+      } else if (payload.type === "status" && payload.data) {
+        setLoginStatus(payload.data);
+      }
+    };
+    const handleDone = (payload: { ok: boolean; error?: string }) => {
+      setLoginDone(true);
+      if (!payload.ok) setLoginError(payload.error || "Login failed");
+    };
+
+    channel.on(EVENTS.openclaw.loginOutput, handleOutput);
+    channel.on(EVENTS.openclaw.loginDone, handleDone);
+
+    const timeout = setTimeout(() => setQrTimedOut(true), 70_000);
+
+    return () => {
+      channel.off(EVENTS.openclaw.loginOutput, handleOutput);
+      channel.off(EVENTS.openclaw.loginDone, handleDone);
+      clearTimeout(timeout);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isQrStep, channel]);
 
   const handleFinish = () => {
     const creds: Record<string, unknown> = isWhatsApp ? {} : { bot_token: token.trim() };
@@ -187,6 +239,36 @@ export function ProviderSetupWizard({ provider, onComplete, onCancel }: SetupWiz
                   {step.detail}
                 </Typography>
 
+                {isQrStep && i === 1 && (
+                  <Box sx={{ mb: 2 }}>
+                    {loginError && <Alert severity="error" sx={{ mb: 1 }}>{loginError}</Alert>}
+                    {loginDone && !loginError && <Alert severity="success" sx={{ mb: 1 }}>Linked! Click Next to continue.</Alert>}
+                    {!qrDataUrl && !loginDone && !loginError && !qrTimedOut && (
+                      <Stack direction="row" alignItems="center" spacing={1}>
+                        <CircularProgress size={16} />
+                        <Typography variant="caption" color="text.secondary">
+                          {loginStatus ?? "Waiting for QR code..."}
+                        </Typography>
+                      </Stack>
+                    )}
+                    {!qrDataUrl && !loginDone && !loginError && qrTimedOut && (
+                      <Stack spacing={1}>
+                        <Typography variant="caption" color="warning.main">
+                          QR code not received. The openclaw binary may not support this command.
+                        </Typography>
+                        <Button size="small" variant="outlined" onClick={startLogin} sx={{ alignSelf: "flex-start" }}>
+                          Retry
+                        </Button>
+                      </Stack>
+                    )}
+                    {qrDataUrl && (
+                      <Box sx={{ display: "inline-block", p: 1, bgcolor: "#fff", borderRadius: 1 }}>
+                        <img src={qrDataUrl} alt="WhatsApp QR code" style={{ display: "block", width: 240, height: 240 }} />
+                      </Box>
+                    )}
+                  </Box>
+                )}
+
                 {isLastStep && !isWhatsApp && (
                   <TextField
                     size="small"
@@ -205,7 +287,14 @@ export function ProviderSetupWizard({ provider, onComplete, onCancel }: SetupWiz
                     <Button size="small" onClick={() => setActiveStep(i - 1)}>Back</Button>
                   )}
                   {!isLastStep && (
-                    <Button size="small" variant="contained" onClick={() => setActiveStep(i + 1)}>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      onClick={() => {
+                        if (isWhatsApp && i === 0) onPrepare?.();
+                        setActiveStep(i + 1);
+                      }}
+                    >
                       Next
                     </Button>
                   )}

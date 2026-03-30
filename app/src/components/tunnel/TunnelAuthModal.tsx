@@ -31,7 +31,8 @@ function timeAgo(iso: string): string {
   return `${minutes}m ago`;
 }
 
-function parseUserAgent(ua: string): string {
+function parseUserAgent(ua: string | undefined): string {
+  if (!ua) return "Unknown";
   if (ua.includes("Chrome")) return "Chrome";
   if (ua.includes("Firefox")) return "Firefox";
   if (ua.includes("Safari")) return "Safari";

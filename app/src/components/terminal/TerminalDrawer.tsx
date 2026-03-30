@@ -1,8 +1,7 @@
 import { useState, useCallback, useRef, useImperativeHandle, forwardRef, useEffect, useMemo } from "react";
+import { useMediaQuery } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import TerminalIcon from "@mui/icons-material/Terminal";
-import SmartToyIcon from "@mui/icons-material/SmartToy";
-import CodeIcon from "@mui/icons-material/Code";
 import { api, onRemoteOrchardChange } from "../../lib/api";
 import { useActiveProject } from "../../hooks/useActiveProject";
 import { useDefaultCwd } from "../../lib/use-default-cwd";
@@ -14,13 +13,15 @@ import { ResizableDrawer } from "../ResizableDrawer";
 import { useChannelEvent } from "../../hooks/useChannelEvent";
 import { useDashboardChannel } from "../../hooks/useDashboardChannel";
 import { OrchardIcon } from "./OrchardIcon";
+import { ClaudeIcon } from "./ClaudeIcon";
+import { OpenAIIcon } from "./OpenAIIcon";
 import { OrchardModelPicker } from "./OrchardModelPicker";
 
 const ORCHARD_PRESET = "Orchard";
 
 const PRESETS = [
-  { label: "Claude Code", command: "claude", args: ["--dangerously-skip-permissions"], icon: <SmartToyIcon /> },
-  { label: "Codex", command: "codex", args: ["--full-auto"], icon: <CodeIcon /> },
+  { label: "Claude Code", command: "claude", args: ["--dangerously-skip-permissions"], icon: <ClaudeIcon /> },
+  { label: "Codex", command: "codex", args: ["--full-auto"], icon: <OpenAIIcon /> },
   { label: ORCHARD_PRESET, command: "opencode", args: [] as string[], icon: <OrchardIcon /> },
   { label: "Shell", command: "", args: [] as string[], icon: <TerminalIcon /> },
 ];
@@ -73,6 +74,18 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
   const [gridSpans, setGridSpansRaw] = useState<Record<string, GridSpan>>({});
   const [freeformGrid, setFreeformGridRaw] = useState(false);
   const [expanded, setExpandedRaw] = useState(false);
+  const [mobileFullscreen, setMobileFullscreen] = useState(false);
+  const isMobileScreen = useMediaQuery("(max-width: 800px)");
+  const isVerySmall = useMediaQuery("(max-width: 750px)");
+
+  useEffect(() => {
+    if (!isMobileScreen) setMobileFullscreen(false);
+  }, [isMobileScreen]);
+
+  useEffect(() => {
+    if (isVerySmall) setMobileFullscreen(true);
+  }, [isVerySmall]);
+
   const defaultCwd = useDefaultCwd();
   const { project: activeProject } = useActiveProject();
   const activeProjectId = activeProject?.id;
@@ -569,6 +582,7 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
       minWidth={360}
       maxWidthRatio={0.85}
       expanded={expanded}
+      mobileFullscreen={mobileFullscreen}
       glow={glowing}
       onDraggingChange={setDragging}
     >
@@ -605,6 +619,9 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
         setProjectFilterEnabled={setProjectFilterEnabled}
         hasActiveProject={!!activeProjectId}
         scrollToSessionId={scrollToSessionId}
+        isMobileScreen={isMobileScreen}
+        mobileFullscreen={mobileFullscreen}
+        onEnterMobileFullscreen={() => setMobileFullscreen(true)}
       />
       <OrchardModelPicker
         open={modelPickerOpen}

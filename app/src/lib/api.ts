@@ -1502,6 +1502,33 @@ export const api = {
 
   openclawInstall: () =>
     postJson<{ ok: boolean; output: string; error?: string }>("/api/openclaw/install", {}),
+
+  openclawChannelQR: (name: string) =>
+    get<{ qr: string }>(`/api/openclaw/channels/${name}/qr`),
+
+  openclawChannelLogin: (name: string) =>
+    postJson<{ ok: boolean }>(`/api/openclaw/channels/${name}/login`, {}),
+
+  skillImprovements: () =>
+    get<SkillImprovement[]>("/api/agents/skill-improvements"),
+
+  applySkillImprovement: (id: string) =>
+    postJson<{ ok: boolean }>("/api/agents/skill-improvements/apply", { id }),
+
+  dismissSkillImprovement: (id: string) =>
+    postJson<{ ok: boolean }>("/api/agents/skill-improvements/dismiss", { id }),
+
+  synthesisCandidates: () =>
+    get<SkillCandidate[]>("/api/agents/synthesis-candidates"),
+
+  draftSynthesisCandidate: (id: string) =>
+    postJson<{ ok: boolean; session_id: string }>(`/api/agents/synthesis-candidates/${id}/draft`, {}),
+
+  approveSynthesisCandidate: (id: string) =>
+    postJson<{ ok: boolean }>(`/api/agents/synthesis-candidates/${id}/approve`, {}),
+
+  rejectSynthesisCandidate: (id: string) =>
+    postJson<{ ok: boolean }>(`/api/agents/synthesis-candidates/${id}/reject`, {}),
 };
 
 // -- OpenClaw types --
@@ -2020,6 +2047,26 @@ export interface JudgmentEntry {
   signals: string[];
   active_tools: string[];
   session_context: { turn_number: number };
+}
+
+export interface SkillCandidate {
+  id: string;
+  session_id: string;
+  name: string;
+  description: string | null;
+  triggers: string[];
+  report_path: string;
+  status: "pending" | "drafting" | "approved" | "rejected";
+  inserted_at: string;
+}
+
+export interface SkillImprovement {
+  id: string;
+  skill_name: string;
+  drift_summary: string | null;
+  replacement_sections: Record<string, string>;
+  status: "pending" | "applied" | "dismissed";
+  inserted_at: string;
 }
 
 export interface JudgmentScoredEvent {

@@ -270,6 +270,9 @@ interface Props {
   onRefresh?: () => void;
   /** When set, scroll to this session ID (e.g. from toast Focus button). */
   scrollToSessionId?: string | null;
+  isMobileScreen?: boolean;
+  mobileFullscreen?: boolean;
+  onEnterMobileFullscreen?: () => void;
 }
 
 export function TerminalDrawerContent({
@@ -305,6 +308,9 @@ export function TerminalDrawerContent({
   setProjectFilterEnabled,
   hasActiveProject,
   scrollToSessionId,
+  isMobileScreen,
+  mobileFullscreen,
+  onEnterMobileFullscreen,
 }: Props) {
   const [summaryMode, setSummaryMode] = useState(false);
   const [refreshKeys, setRefreshKeys] = useState<Record<string, number>>({});
@@ -452,11 +458,20 @@ export function TerminalDrawerContent({
             minHeight: 36,
           }}
         >
-          <Tooltip title={expanded ? "Collapse" : "Expand"}>
-            <IconButton data-tour="tour-terminal-expand" size="small" onClick={() => setExpanded(!expanded)} sx={{ ml: 0.5 }}>
-              {expanded ? <CloseFullscreenIcon fontSize="small" /> : <OpenInFullIcon fontSize="small" />}
-            </IconButton>
-          </Tooltip>
+          {!isMobileScreen && (
+            <Tooltip title={expanded ? "Collapse" : "Expand"}>
+              <IconButton data-tour="tour-terminal-expand" size="small" onClick={() => setExpanded(!expanded)} sx={{ ml: 0.5 }}>
+                {expanded ? <CloseFullscreenIcon fontSize="small" /> : <OpenInFullIcon fontSize="small" />}
+              </IconButton>
+            </Tooltip>
+          )}
+          {isMobileScreen && !mobileFullscreen && (
+            <Tooltip title="Full screen">
+              <IconButton size="small" onClick={onEnterMobileFullscreen} sx={{ ml: 0.5 }}>
+                <OpenInFullIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
           {gridMode && !summaryMode && (
             <Box sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
               <Tooltip title="Fill gaps">

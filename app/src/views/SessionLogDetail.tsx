@@ -272,8 +272,7 @@ function DetailContent({
     setResuming(true);
     try {
       const result = await api.resumeSession(session.id, fork);
-      const label = session.label || labelForCommand(session.command);
-      requestTerminalOpen(result.id, label);
+      requestTerminalOpen(result.id, labelForCommand(result.command));
     } catch (err) {
       console.error("Failed to resume session:", err);
     }

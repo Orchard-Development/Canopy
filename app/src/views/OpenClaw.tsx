@@ -31,7 +31,8 @@ export default function OpenClaw() {
   }
 
   const handleProviderComplete = (name: string, creds: Record<string, unknown>) => {
-    oc.addChannel(name);
+    const isWhatsApp = name === "whatsapp";
+    if (!isWhatsApp) oc.addChannel(name);
     if (Object.keys(creds).length > 0) {
       oc.updateChannel(name, creds);
     }
@@ -90,6 +91,10 @@ export default function OpenClaw() {
           provider={settingUp}
           onComplete={handleProviderComplete}
           onCancel={() => setSettingUp(null)}
+          onPrepare={() => {
+            oc.addChannel(settingUp.name);
+            if (!oc.status?.enabled) oc.setEnabled(true);
+          }}
         />
       </Box>
     );

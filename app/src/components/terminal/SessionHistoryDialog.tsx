@@ -66,8 +66,7 @@ export function SessionHistoryDialog({ open, onClose, projectCwd }: Props) {
     setResuming(true);
     try {
       const result = await api.resumeSession(selected, fork);
-      const label = selectedSession ? labelForCommand(selectedSession.command) : "Claude Code";
-      requestTerminalOpen(result.id, label);
+      requestTerminalOpen(result.id, labelForCommand(result.command));
       onClose();
     } catch (err) {
       console.error("Failed to resume session:", err);
