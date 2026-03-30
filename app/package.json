@@ -27,7 +27,7 @@
     "@tiptap/starter-kit": "^3.21.0",
     "cytoscape": "^3.33.1",
     "d3-force-3d": "^3.0.6",
-    "mermaid": "^11.13.0",
+    "mermaid": "^11.4.1",
     "monaco-editor": "^0.55.1",
     "phoenix": "^1.8.5",
     "postprocessing": "^6.39.0",
