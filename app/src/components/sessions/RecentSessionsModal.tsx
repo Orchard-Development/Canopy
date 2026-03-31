@@ -187,7 +187,8 @@ export function RecentSessionsModal({ onNavigate }: { onNavigate: (path: string)
     enrichingRef.current = true;
 
     // Fetch enrichments in parallel, updating state as each resolves
-    sessions.forEach((s) => {
+    // Skip sessions without messages to avoid 404 floods
+    sessions.filter((s) => s.hasMessages !== false).forEach((s) => {
       fetchEnrichment(s.id).then((data) => {
         setEnrichments((prev) => ({ ...prev, [s.id]: data }));
       }).catch(() => {});

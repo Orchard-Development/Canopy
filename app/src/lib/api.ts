@@ -1843,6 +1843,7 @@ export interface SessionLogMeta {
   analysis?: SessionLogAnalysis | null;
   agentType?: string;
   agentSessionId?: string;
+  hasMessages?: boolean;
   resumable?: boolean;
   resumedFrom?: string | null;
   resumeCount?: number;

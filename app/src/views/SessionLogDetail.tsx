@@ -265,7 +265,7 @@ function DetailContent({
   const [viewMode, setViewMode] = useState<"pretty" | "raw">("pretty");
   const containerRef = useRef<HTMLDivElement>(null);
   const { messages, loading: messagesLoading } = useSessionMessages(
-    viewMode === "pretty" ? session.id : null,
+    viewMode === "pretty" && session.hasMessages !== false ? session.id : null,
   );
 
   const handleResume = useCallback(async (fork: boolean) => {
@@ -435,10 +435,39 @@ export default function SessionLogDetail({ sessionId: propId }: { sessionId?: st
   useEffect(() => {
     if (!id) return;
     const passed = (location.state as { session?: SessionLogMeta } | null)?.session;
+    const fetchRichAnalysis = () => {
+      fetch(`/api/session-logs/${id}/analysis`)
+        .then((r) => r.ok ? r.json() : null)
+        .then((data) => {
+          if (!data) return;
+          const a = data.analysis ?? data;
+          setRichAnalysis({
+            status: analysis?.status ?? a.outcome ?? "unknown",
+            detail: analysis?.detail ?? a.summary ?? "",
+            ts: data.analyzedAt ?? new Date().toISOString(),
+            summary: a.summary,
+            outcome: a.outcome,
+            filesChanged: a.files_changed,
+            toolsUsed: a.tools_used,
+            keyDecisions: a.key_decisions,
+          });
+          // Also set basic analysis if not already set
+          if (!analysis) {
+            setAnalysis({
+              status: a.outcome ?? "analyzed",
+              detail: a.summary ?? "",
+              ts: data.analyzedAt ?? new Date().toISOString(),
+            });
+          }
+        })
+        .catch(() => {});
+    };
+
     if (passed?.id === id) {
       setSession(passed);
       setAnalysis(passed.analysis ?? null);
       setLoading(false);
+      if (passed.hasMessages !== false) fetchRichAnalysis();
     } else {
       setSession(null);
       setAnalysis(null);
@@ -448,34 +477,9 @@ export default function SessionLogDetail({ sessionId: propId }: { sessionId?: st
         const match = list.find((s) => s.id === id) ?? null;
         setSession(match);
         if (match?.analysis) setAnalysis(match.analysis);
+        if (match?.hasMessages !== false) fetchRichAnalysis();
       }).catch(() => {}).finally(() => setLoading(false));
     }
-    // Fetch rich analysis from cached file
-    fetch(`/api/session-logs/${id}/analysis`)
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => {
-        if (!data) return;
-        const a = data.analysis ?? data;
-        setRichAnalysis({
-          status: analysis?.status ?? a.outcome ?? "unknown",
-          detail: analysis?.detail ?? a.summary ?? "",
-          ts: data.analyzedAt ?? new Date().toISOString(),
-          summary: a.summary,
-          outcome: a.outcome,
-          filesChanged: a.files_changed,
-          toolsUsed: a.tools_used,
-          keyDecisions: a.key_decisions,
-        });
-        // Also set basic analysis if not already set
-        if (!analysis) {
-          setAnalysis({
-            status: a.outcome ?? "analyzed",
-            detail: a.summary ?? "",
-            ts: data.analyzedAt ?? new Date().toISOString(),
-          });
-        }
-      })
-      .catch(() => {});
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAnalyze = useCallback(async () => {
