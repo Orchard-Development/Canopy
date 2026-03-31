@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { api, type ProjectRecord } from "../lib/api";
+import { fetchSettings } from "../lib/settingsCache";
 
 interface ActiveProjectValue {
   project: ProjectRecord | null;
@@ -41,8 +42,7 @@ export function ActiveProjectProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/settings")
-      .then((r) => r.json())
+    fetchSettings()
       .then(async (settings: Record<string, string>) => {
         const id = settings.active_project || settings.default_terminal_project;
         if (cancelled || !id) { setLoading(false); return; }

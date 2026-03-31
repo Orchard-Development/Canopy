@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { fetchSettings } from "../lib/settingsCache";
 
 interface NavEntry {
   path: string;
@@ -35,8 +36,7 @@ export async function fetchNavState(): Promise<{
   history: NavEntry[];
 }> {
   try {
-    const res = await fetch("/api/settings");
-    const data = await res.json();
+    const data = await fetchSettings();
     const current = data["nav.current"] ? JSON.parse(data["nav.current"]) : null;
     const history = data["nav.history"] ? JSON.parse(data["nav.history"]) : [];
     return { current, history };

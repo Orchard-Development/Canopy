@@ -1,31 +1,13 @@
 import { useState, useCallback, useEffect, useRef } from "react";
+import { fetchSettings, invalidateSettingsCache } from "../lib/settingsCache";
+
+// Re-export so existing consumers (e.g. useChat) keep working.
+export { fetchSettings, invalidateSettingsCache };
 
 type Serializable = string | number | boolean | null | Record<string, unknown> | unknown[];
 
-// In-memory cache so multiple hooks reading the same key on mount don't
-// each fire a GET. Populated on first fetch, updated on every write.
-let settingsCache: Record<string, string> | null = null;
-let fetchPromise: Promise<Record<string, string>> | null = null;
-
-export function fetchSettings(): Promise<Record<string, string>> {
-  if (settingsCache) return Promise.resolve(settingsCache);
-  if (fetchPromise) return fetchPromise;
-  fetchPromise = fetch("/api/settings")
-    .then((r) => r.json())
-    .then((data) => {
-      settingsCache = data;
-      fetchPromise = null;
-      return data;
-    })
-    .catch(() => {
-      fetchPromise = null;
-      return {};
-    });
-  return fetchPromise;
-}
-
 export function persistSetting(key: string, raw: string): void {
-  if (settingsCache) settingsCache[key] = raw;
+  invalidateSettingsCache();
   fetch("/api/settings", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -87,10 +69,3 @@ export function usePersistedState<T extends Serializable>(
   return [value, setValue];
 }
 
-/**
- * Invalidate the in-memory settings cache.
- * Call this after bulk writes or if you suspect staleness.
- */
-export function invalidateSettingsCache(): void {
-  settingsCache = null;
-}

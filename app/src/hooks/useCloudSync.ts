@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "./useAuth";
+import { fetchSettings } from "../lib/settingsCache";
 
 const EXCLUDED_KEYS = new Set([
   "nav.current",
@@ -45,12 +46,10 @@ export function useCloudSync(): CloudSync {
     setPushing(true);
     setError(null);
     try {
-      const [settingsRes, brandingRes] = await Promise.all([
-        fetch("/api/settings"),
+      const [settings, brandingRes] = await Promise.all([
+        fetchSettings(),
         fetch("/api/branding"),
       ]);
-      if (!settingsRes.ok) throw new Error("Failed to fetch local settings");
-      const settings = await settingsRes.json();
       const syncable = filterSyncable(settings);
 
       if (brandingRes.ok) {

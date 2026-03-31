@@ -41,6 +41,7 @@ import { useActiveProject } from "./hooks/useActiveProject";
 import { useToastProvider, ToastProvider, useToast } from "./hooks/useToast";
 import { useEventBusProvider, EventBusProvider, useEventBus } from "./hooks/useEventBus";
 import { SettingsProvider, useSettingsContext } from "./contexts/SettingsContext";
+import { fetchSettings } from "./lib/settingsCache";
 import { useEngineEvents } from "./hooks/useEngineEvents";
 import { useNotificationHydration } from "./hooks/useNotificationHydration";
 import { useUserActivity } from "./hooks/useUserActivity";
@@ -103,7 +104,7 @@ function RestoreRoute() {
       // to avoid blocking on the context load race during cold start.
       Object.keys(settingsRef.current).length > 0
         ? Promise.resolve(settingsRef.current)
-        : fetch("/api/settings").then((r) => r.json()).catch(() => ({})),
+        : fetchSettings().catch(() => ({})),
     ]).then(([{ current }, resolvedSettings]) => {
       const hasActiveProject = !!(resolvedSettings as Record<string, string>).active_project;
       const fallback = hasActiveProject ? "/workspace" : "/ai";
@@ -539,8 +540,7 @@ export function App() {
         }
       }
     })();
-    fetch("/api/settings")
-      .then((r) => r.json())
+    fetchSettings()
       .then((data) => {
         const saved = data["ui.colorMode"];
         if (saved === "light" || saved === "dark") setMode(saved);

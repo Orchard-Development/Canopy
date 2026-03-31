@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { fetchSettings } from "../lib/settingsCache";
 
 interface UserIdentity {
   displayName: string;
@@ -16,8 +17,7 @@ export function useIdentity(): UserIdentity | null {
   useEffect(() => {
     let cancelled = false;
 
-    fetch("/api/settings")
-      .then((r) => r.json())
+    fetchSettings()
       .then((data) => {
         if (cancelled) return;
         const name = data.display_name;

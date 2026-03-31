@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { fetchSettings } from "../../lib/settingsCache";
 import {
   Box,
   Typography,
@@ -27,8 +28,7 @@ export function RemoteAccessStep({ onComplete, onBack, onSkip }: StepProps) {
   const [alreadyEnabled, setAlreadyEnabled] = useState(false);
 
   useEffect(() => {
-    fetch("/api/settings")
-      .then((r) => r.json())
+    fetchSettings()
       .then((s: Record<string, string>) => {
         if (s.remote_access_enabled === "true" || s.tunnel_enabled === "true") {
           setAlreadyEnabled(true);

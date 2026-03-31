@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase, supabaseConfigured, supabaseUrl, supabaseAnonKey } from "../lib/supabase";
 import { PROXY_BASE } from "../lib/api";
+import { fetchSettings } from "../lib/settingsCache";
 
 interface AuthState {
   session: Session | null;
@@ -76,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // No local session -- check if the engine has tokens (Electron picking up browser auth)
       try {
-        const settings = await fetch("/api/settings").then((r) => r.json());
+        const settings = await fetchSettings();
         const access = settings["auth.access_token"];
         const refresh = settings["auth.refresh_token"];
         if (access && refresh) {
@@ -120,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const poll = setInterval(async () => {
       if (session) return;
       try {
-        const settings = await fetch("/api/settings").then((r) => r.json());
+        const settings = await fetchSettings();
         const access = settings["auth.access_token"];
         const refresh = settings["auth.refresh_token"];
         if (!access || !refresh) return;

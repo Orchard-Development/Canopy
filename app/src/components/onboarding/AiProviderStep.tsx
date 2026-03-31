@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { fetchSettings } from "../../lib/settingsCache";
 import {
   Box,
   Typography,
@@ -38,9 +39,8 @@ export function AiProviderStep({ onComplete, onBack }: StepProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/settings")
-      .then((r) => r.json())
-      .then((s: SettingsSnapshot) => setConnected(detectConnected(s)))
+    fetchSettings()
+      .then((s) => setConnected(detectConnected(s as SettingsSnapshot)))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);

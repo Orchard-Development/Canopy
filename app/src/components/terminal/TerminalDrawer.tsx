@@ -16,6 +16,7 @@ import { OrchardIcon } from "./OrchardIcon";
 import { ClaudeIcon } from "./ClaudeIcon";
 import { OpenAIIcon } from "./OpenAIIcon";
 import { OrchardModelPicker } from "./OrchardModelPicker";
+import { fetchSettings } from "../../lib/settingsCache";
 
 const ORCHARD_PRESET = "Orchard";
 
@@ -158,8 +159,7 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
       return;
     }
     pendingFocusSync.current = false;
-    fetch("/api/settings")
-      .then((r) => r.json())
+    fetchSettings()
       .then((data) => {
         // Double-check: a dispatch may have fired while the fetch was in-flight
         if (skipFocusSyncRef.current) {
@@ -289,7 +289,7 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
 
     Promise.all([
       api.listTerminals(),
-      fetch("/api/settings").then((r) => r.json()).catch(() => ({})),
+      fetchSettings().catch(() => ({})),
     ]).then(([sessions, settings]) => {
       if (cancelled) return;
       applySettings(settings);

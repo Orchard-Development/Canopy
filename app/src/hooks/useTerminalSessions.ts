@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { api, getRemoteOrchard, onRemoteOrchardChange } from "../lib/api";
+import { fetchSettings } from "../lib/settingsCache";
 import { useActiveProject } from "./useActiveProject";
 import { useChannelEvent } from "./useChannelEvent";
 import { useDashboardChannel } from "./useDashboardChannel";
@@ -49,7 +50,7 @@ export function useTerminalSessions() {
 
     Promise.all([
       api.listTerminals(),
-      isRemote ? Promise.resolve({}) : fetch("/api/settings").then((r) => r.json()).catch(() => ({})),
+      isRemote ? Promise.resolve({} as Record<string, string>) : fetchSettings().catch(() => ({} as Record<string, string>)),
     ]).then(async ([sessions, settings]) => {
       if (cancelled) return;
       const restored: TerminalTab[] = sessions

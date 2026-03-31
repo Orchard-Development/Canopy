@@ -11,6 +11,7 @@ import BuildCircleIcon from "@mui/icons-material/BuildCircle";
 import { CheckpointPicker } from "./CheckpointPicker";
 import { api } from "../lib/api";
 import { requestTerminalOpen } from "../hooks/useDispatch";
+import { fetchSettings } from "../lib/settingsCache";
 
 interface Props {
   children: ReactNode;
@@ -135,7 +136,7 @@ export class ErrorBoundary extends Component<Props, State> {
     try {
       let projectId: string | undefined;
       try {
-        const settings = await fetch("/api/settings").then((r) => r.json());
+        const settings = await fetchSettings();
         projectId = settings?.active_project;
       } catch { /* proceed without project context */ }
       const result = await api.spawnTerminal("claude", [prompt], undefined, projectId);

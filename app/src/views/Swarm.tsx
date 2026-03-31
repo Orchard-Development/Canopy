@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { fetchSettings } from "../lib/settingsCache";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
@@ -59,11 +60,10 @@ export default function Swarm() {
   const [swarmEnabled, setSwarmEnabled] = useState<boolean | null>(null);
 
   useEffect(() => {
-    fetch("/api/settings")
-      .then((r) => r.json())
+    fetchSettings()
       .then((data) => {
         const val = data["swarm.enabled"];
-        setSwarmEnabled(val === "true" || val === true);
+        setSwarmEnabled(val === "true");
       })
       .catch(() => setSwarmEnabled(false));
   }, []);

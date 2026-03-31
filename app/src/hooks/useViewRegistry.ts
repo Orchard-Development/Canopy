@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo, useCallback, useSyncExternalStore, lazy } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useSyncExternalStore, lazy, useRef } from "react";
+import { fetchSettings } from "../lib/settingsCache";
 import type { ComponentType, LazyExoticComponent } from "react";
 import { useActiveProject } from "./useActiveProject";
 import { useRefetchOnDashboardEvent } from "./useRefetchOnDashboardEvent";
@@ -353,30 +354,34 @@ function updateVisibility(id: string, visible: boolean): void {
   listeners.forEach((cb) => cb());
 }
 
-// Sync from engine settings on first load (handles cache clears)
-fetch("/api/settings")
-  .then((r) => r.json())
-  .then((data) => {
-    let changed = false;
-    const savedHidden = data[HIDDEN_VIEWS_KEY];
-    if (savedHidden) {
-      try {
-        hiddenStore = new Set<string>(JSON.parse(savedHidden));
-        localStorage.setItem(HIDDEN_VIEWS_KEY, savedHidden);
-        changed = true;
-      } catch { /* ignore */ }
-    }
-    const savedShown = data[SHOWN_VIEWS_KEY];
-    if (savedShown) {
-      try {
-        shownStore = new Set<string>(JSON.parse(savedShown));
-        localStorage.setItem(SHOWN_VIEWS_KEY, savedShown);
-        changed = true;
-      } catch { /* ignore */ }
-    }
-    if (changed) listeners.forEach((cb) => cb());
-  })
-  .catch(() => {});
+// Lazy hydration from engine settings (deferred until first hook mount)
+let hydrated = false;
+function hydrateFromEngine(): void {
+  if (hydrated) return;
+  hydrated = true;
+  fetchSettings()
+    .then((data) => {
+      let changed = false;
+      const savedHidden = data[HIDDEN_VIEWS_KEY];
+      if (savedHidden) {
+        try {
+          hiddenStore = new Set<string>(JSON.parse(savedHidden));
+          localStorage.setItem(HIDDEN_VIEWS_KEY, savedHidden);
+          changed = true;
+        } catch { /* ignore */ }
+      }
+      const savedShown = data[SHOWN_VIEWS_KEY];
+      if (savedShown) {
+        try {
+          shownStore = new Set<string>(JSON.parse(savedShown));
+          localStorage.setItem(SHOWN_VIEWS_KEY, savedShown);
+          changed = true;
+        } catch { /* ignore */ }
+      }
+      if (changed) listeners.forEach((cb) => cb());
+    })
+    .catch(() => {});
+}
 
 export function useViewRegistry(): {
   views: ViewEntry[];
@@ -386,6 +391,12 @@ export function useViewRegistry(): {
   loading: boolean;
   error: string | null;
 } {
+  const hydrateRef = useRef(false);
+  if (!hydrateRef.current) {
+    hydrateRef.current = true;
+    hydrateFromEngine();
+  }
+
   const { project } = useActiveProject();
   const orchardId = project?.id ?? null;
   const { generation } = useRefetchOnDashboardEvent(EVENTS.views);
