@@ -110,3 +110,26 @@ export function groupEventsByTime(events: EngineEvent[]): EventCluster[] {
 
   return clusters;
 }
+
+const TOOL_LABELS: Record<string, string> = {
+  Bash: "run a command",
+  Read: "read a file",
+  Write: "create a file",
+  Edit: "edit a file",
+  Grep: "search files",
+  Glob: "find files",
+  WebFetch: "fetch a webpage",
+  WebSearch: "search the web",
+  AskUserQuestion: "your input",
+  NotebookEdit: "edit a notebook",
+};
+
+export function humanizeTool(toolName: string): string {
+  return TOOL_LABELS[toolName] || toolName.toLowerCase();
+}
+
+export function humanizeDuration(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)} min`;
+  return `${Math.round(seconds / 3600)}h`;
+}

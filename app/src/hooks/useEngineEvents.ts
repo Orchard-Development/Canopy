@@ -1,5 +1,6 @@
 import type { Channel } from "phoenix";
 import { useEventBus, type EventSeverity, type EventActionMeta } from "./useEventBus";
+import { humanizeTool, humanizeDuration } from "../components/notificationBellHelpers";
 import { EVENTS } from "../lib/events";
 import { useChannelSub, useAgentEvent, stripPrefix, snakeToWords, type AgentPayload } from "./engineEventHelpers";
 
@@ -34,7 +35,7 @@ export function useEngineEvents(channel: Channel | null): void {
       emit({
         category: "session",
         event: "exited",
-        message: `Session "${payload.label || "unknown"}" exited with code ${exitCode}`,
+        message: `Agent session ended unexpectedly${payload.label && payload.label !== "unknown" ? `: ${payload.label}` : ""}`,
         severity: "error",
         data: payload,
       });
@@ -68,7 +69,7 @@ export function useEngineEvents(channel: Channel | null): void {
       emit({
         category: "autopull",
         event: "error",
-        message: `Auto-pull failed: ${data.project || ""}`,
+        message: `Failed to pull latest changes${data.project ? `: ${data.project}` : ""}`,
         severity: "error",
         data,
       });
@@ -79,10 +80,18 @@ export function useEngineEvents(channel: Channel | null): void {
     const data = (payload.data || payload) as Record<string, unknown>;
     const status = data.status as string;
     if (status === "build_failed" || status === "rebase_failed" || status === "push_failed") {
+      const pushMessages: Record<string, string> = {
+        build_failed: "Build failed before push",
+        rebase_failed: "Merge conflict blocked push",
+        push_failed: "Push to remote failed",
+      };
+      const msg = pushMessages[status] || `Auto-push ${status.replace("_", " ")}`;
+      const project = data.project ? `: ${data.project}` : "";
+      const reason = data.reason ? ` -- ${(data.reason as string).slice(0, 100)}` : "";
       emit({
         category: "autopush",
         event: "error",
-        message: `Auto-push ${status.replace("_", " ")}: ${data.project || ""}${data.reason ? ` - ${(data.reason as string).slice(0, 100)}` : ""}`,
+        message: `${msg}${project}${reason}`,
         severity: "error",
         data,
       });
@@ -129,7 +138,7 @@ export function useEngineEvents(channel: Channel | null): void {
     emit({
       category: "session",
       event: "session:needs_attention",
-      message: `'${label}' needs attention -- ${reason} (idle ${idleSec}s)`,
+      message: `Agent waiting for input${idleSec ? ` (idle ${humanizeDuration(idleSec)})` : ""}`,
       severity: "warning",
       data: payload,
       actionMeta: { type: "focus-session", sessionId: id, label },
@@ -173,7 +182,7 @@ export function useEngineEvents(channel: Channel | null): void {
     const action = stripPrefix(p.event);
     if (action === "post_tool_use_failure") {
       const tool = p.tool_name || (p.data?.tool_name as string) || "unknown";
-      emit({ category: "tool", event: "post_tool_use_failure", message: `${tool} failed`, severity: "error", data: p.data });
+      emit({ category: "tool", event: "post_tool_use_failure", message: `Failed to ${humanizeTool(tool)}`, severity: "error", data: p.data });
     }
     // pre_tool_use and post_tool_use (success) are suppressed — not user-actionable
   });
@@ -182,9 +191,9 @@ export function useEngineEvents(channel: Channel | null): void {
     const action = stripPrefix(p.event);
     const desc = (p.data?.description as string) || (p.data?.subagent_type as string) || "";
     if (action === "subagent_start") {
-      return { message: `Subagent spawned${desc ? `: ${desc}` : ""}`, severity: "info" };
+      return { message: `Sub-task started${desc ? `: ${desc}` : ""}`, severity: "info" };
     }
-    return { message: `Subagent finished${desc ? `: ${desc}` : ""}`, severity: "info" };
+    return { message: `Sub-task finished${desc ? `: ${desc}` : ""}`, severity: "info" };
   });
 
   // Context compaction suppressed — internal optimization, not user-actionable.
@@ -194,7 +203,11 @@ export function useEngineEvents(channel: Channel | null): void {
 
   useAgentEvent(channel, emit, EVENTS.agent.permission, "permission", (p) => {
     const tool = p.tool_name || (p.data?.tool_name as string) || "unknown";
-    return { message: `Permission requested: ${tool}`, severity: "warning" };
+    const label = humanizeTool(tool);
+    const msg = tool === "AskUserQuestion"
+      ? "Agent needs your input"
+      : `Agent needs permission to ${label}`;
+    return { message: msg, severity: "warning" };
   });
 
   // Generic agent notifications suppressed — low signal, often internal plumbing.
@@ -202,7 +215,7 @@ export function useEngineEvents(channel: Channel | null): void {
   useAgentEvent(channel, emit, EVENTS.agent.task, "task", (p) => {
     const desc = (p.data?.task_description as string) || (p.data?.task_name as string) || "";
     const truncated = desc.length > 80 ? `${desc.slice(0, 80)}...` : desc;
-    return { message: truncated ? `Task done: ${truncated}` : "Task completed", severity: "success" };
+    return { message: truncated ? `Task completed: ${truncated}` : "Task completed", severity: "success" };
   });
 
   // Skill candidates/improvements suppressed from bell — available in Intelligence tab.
