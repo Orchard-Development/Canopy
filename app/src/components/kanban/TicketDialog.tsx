@@ -35,6 +35,7 @@ function ticketToFormValues(ticket: Ticket): TicketFormValues {
     priority: ticket.priority,
     labels: ticket.labels ?? [],
     epic_id: ticket.epic_id ?? null,
+    color: "#7c3aed",
   };
 }
 
@@ -74,46 +75,58 @@ export function TicketDialog({ open, onClose, ticket, projectId, mode, epics }: 
 
   const handleSave = async () => {
     if (!validate()) return;
-
     setSaving(true);
     try {
-      if (mode === "create") {
-        const res = await fetch(`/api/projects/${projectId}/tickets`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title: values.title.trim(),
-            description: values.description || null,
-            type: values.type,
-            priority: values.priority,
-            labels: JSON.stringify(values.labels),
-            epic_id: values.epic_id,
-          }),
-        });
-        if (!res.ok) {
-          throw new Error(`Failed: ${res.status}`);
+      const isEpic = values.type === "epic";
+      let res: Response;
+
+      if (isEpic) {
+        const payload = {
+          title: values.title.trim(),
+          description: values.description,
+          color: values.color,
+          labels: JSON.stringify(values.labels),
+        };
+        if (mode === "create") {
+          res = await fetch(`/api/projects/${projectId}/epics`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+        } else {
+          res = await fetch(`/api/epics/${ticket!.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
         }
-        toast.success("Ticket created");
-        onClose();
-      } else if (mode === "edit" && ticket) {
-        const res = await fetch(`/api/tickets/${ticket.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title: values.title.trim(),
-            description: values.description || null,
-            type: values.type,
-            priority: values.priority,
-            labels: JSON.stringify(values.labels),
-            epic_id: values.epic_id,
-          }),
-        });
-        if (!res.ok) {
-          throw new Error(`Failed: ${res.status}`);
+      } else {
+        const payload = {
+          title: values.title.trim(),
+          description: values.description,
+          type: values.type,
+          priority: values.priority,
+          labels: JSON.stringify(values.labels),
+          epic_id: values.epic_id,
+        };
+        if (mode === "create") {
+          res = await fetch(`/api/projects/${projectId}/tickets`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+        } else {
+          res = await fetch(`/api/tickets/${ticket!.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
         }
-        toast.success("Ticket updated");
-        onClose();
       }
+      if (!res.ok) throw new Error("Request failed");
+      const label = isEpic ? "Epic" : "Ticket";
+      toast.success(mode === "create" ? `${label} created` : `${label} updated`);
+      onClose();
     } catch {
       toast.error("Could not save changes. Please try again.");
     } finally {
@@ -141,19 +154,21 @@ export function TicketDialog({ open, onClose, ticket, projectId, mode, epics }: 
     }
   };
 
-  const isCreate = mode === "create";
-
   return (
     <>
       <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-        <DialogTitle>{isCreate ? "Create Ticket" : ticket?.title ?? "Edit Ticket"}</DialogTitle>
+        <DialogTitle>
+          {mode === "create"
+            ? values.type === "epic" ? "Create Epic" : "Create Ticket"
+            : values.type === "epic" ? "Edit Epic" : "Edit Ticket"}
+        </DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 1 }}>
             <TicketForm values={values} onChange={setValues} errors={errors} epics={epics} />
           </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          {!isCreate && (
+          {mode === "edit" && values.type !== "epic" && (
             <Button
               color="error"
               onClick={() => setDeleteOpen(true)}
@@ -170,12 +185,14 @@ export function TicketDialog({ open, onClose, ticket, projectId, mode, epics }: 
             startIcon={saving ? <CircularProgress size={16} color="inherit" /> : undefined}
             sx={{ textTransform: "none" }}
           >
-            {isCreate ? "Create Ticket" : "Save Changes"}
+            {mode === "create"
+              ? values.type === "epic" ? "Create Epic" : "Create Ticket"
+              : "Save Changes"}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {!isCreate && ticket && (
+      {mode === "edit" && ticket && (
         <DeleteConfirmDialog
           open={deleteOpen}
           onClose={() => setDeleteOpen(false)}
