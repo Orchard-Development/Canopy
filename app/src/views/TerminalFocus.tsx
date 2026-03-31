@@ -5,14 +5,17 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { TerminalPanel } from "../components/terminal/TerminalPanel";
 import { SessionStateDot } from "../components/terminal/SessionStateDot";
 import { useTerminalSessions } from "../hooks/useTerminalSessions";
+import { useSettingsContext } from "../contexts/SettingsContext";
 
 export default function TerminalFocus() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { tabs, handleExit } = useTerminalSessions();
+  const { setSetting } = useSettingsContext();
 
   useEffect(() => {
     if (!id) return;
+    setSetting("terminal.lastFocusedId", id);
     fetch("/api/settings", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },

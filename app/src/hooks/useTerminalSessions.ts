@@ -92,64 +92,6 @@ export function useTerminalSessions() {
     return () => { cancelled = true; };
   }, [remoteKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Poll for label/state updates + discover new remote sessions
-  useEffect(() => {
-    const isRemoteNow = !!getRemoteOrchard().httpUrl;
-
-    const interval = setInterval(() => {
-      // When viewing remote, re-fetch the full session list to discover new sessions
-      if (isRemoteNow) {
-        api.listTerminals().then((sessions) => {
-          const fresh: TerminalTab[] = sessions
-            .filter((s) => s.exitCode == null)
-            .map((s) => ({
-              id: s.id,
-              label: s.label ?? labelForCommand(s.command),
-              command: s.command,
-              nickname: randomWord(),
-              exitCode: s.exitCode,
-              state: s.state as TerminalTab["state"],
-              projectId: s.projectId,
-              summary: s.summary,
-              cwd: (s as Record<string, unknown>).cwd as string | undefined,
-              agentType: (s as Record<string, unknown>).agentType as string | undefined,
-            }));
-          setAllTabs((prev) => {
-            const existingIds = new Set(prev.map((t) => t.id));
-            const novel = fresh.filter((t) => !existingIds.has(t.id));
-            // Also remove tabs for sessions that no longer exist
-            const freshIds = new Set(fresh.map((t) => t.id));
-            const stillAlive = prev.filter((t) => freshIds.has(t.id));
-            return novel.length > 0 || stillAlive.length < prev.length
-              ? [...stillAlive, ...novel]
-              : prev;
-          });
-        }).catch(() => {});
-        return;
-      }
-
-      // Local: poll individual sessions for updates
-      for (const tab of allTabs) {
-        if (tab.exitCode !== undefined && tab.label && tab.summary) continue;
-        api.getTerminal(tab.id).then((info) => {
-          const updates: Partial<TerminalTab> = {};
-          if (info.label && info.label !== tab.label) updates.label = info.label;
-          if (info.state && info.state !== tab.state) updates.state = info.state as TerminalTab["state"];
-          if (info.summary && info.summary !== tab.summary) updates.summary = info.summary;
-          if (info.forkedFrom && !tab.forkedFrom) updates.forkedFrom = info.forkedFrom;
-          if (info.exitCode !== undefined && tab.exitCode == null) updates.exitCode = info.exitCode;
-          if (updates.label || updates.summary) updates.lastAiUpdate = Date.now();
-          if (Object.keys(updates).length > 0) {
-            setAllTabs((prev) =>
-              prev.map((t) => (t.id === tab.id ? { ...t, ...updates } : t)),
-            );
-          }
-        }).catch(() => {});
-      }
-    }, 10_000);
-    return () => clearInterval(interval);
-  }, [allTabs]);
-
   // Poll for remote mesh sessions (runs independently of local session restore)
   useEffect(() => {
     let cancelled = false;
@@ -182,6 +124,8 @@ export function useTerminalSessions() {
 
   // Phoenix channel real-time updates (flat events, filter by payload.id)
   const { channel: dashChannel } = useDashboardChannel();
+  const startedEvent = useChannelEvent<{ id: string; info?: { command?: string; label?: string; projectId?: string; cwd?: string; agentType?: string; source?: string; forkedFrom?: string; poker?: boolean; startedAt?: string } }>(dashChannel, "session:started");
+  const exitedEvent = useChannelEvent<{ id: string; exit_code: number }>(dashChannel, "session:exited");
   const stateEvent = useChannelEvent<{ id: string; state: string }>(dashChannel, "session:state");
   const labelEvent = useChannelEvent<{ id: string; label: string }>(dashChannel, "session:label");
   const summaryEvent = useChannelEvent<{ id: string; summary: string }>(dashChannel, "session:summary");
@@ -190,6 +134,36 @@ export function useTerminalSessions() {
   const profiledEvent = useChannelEvent<{ profiles: Record<string, SessionProfile> }>(dashChannel, "session:profiled");
 
   const activeIds = useMemo(() => new Set(allTabs.filter((t) => t.exitCode == null).map((t) => t.id)), [allTabs]);
+
+  useEffect(() => {
+    if (!startedEvent) return;
+    setAllTabs((prev) => {
+      if (prev.some((t) => t.id === startedEvent.id)) return prev;
+      const info = startedEvent.info ?? {};
+      const cmd = info.command ?? "";
+      const tab: TerminalTab = {
+        id: startedEvent.id,
+        label: info.label ?? labelForCommand(cmd),
+        command: cmd,
+        nickname: randomWord(),
+        projectId: info.projectId,
+        cwd: info.cwd,
+        agentType: info.agentType,
+        source: info.source,
+        forkedFrom: info.forkedFrom,
+        poker: info.poker || undefined,
+        startedAt: info.startedAt,
+      };
+      return [...prev, tab];
+    });
+  }, [startedEvent]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!exitedEvent) return;
+    setAllTabs((prev) =>
+      prev.map((t) => (t.id === exitedEvent.id ? { ...t, exitCode: exitedEvent.exit_code } : t)),
+    );
+  }, [exitedEvent]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!stateEvent || !activeIds.has(stateEvent.id)) return;
