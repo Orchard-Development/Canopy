@@ -106,13 +106,12 @@ export function useToast(): ToastApi {
 }
 
 export const DEFAULT_TOAST_CATEGORIES = new Set([
-  "engine", "session", "prompt", "subagent", "proposal", "autocommit", "autopush",
+  "engine", "session", "prompt", "subagent", "proposal", "autocommit", "autopush", "task",
 ]);
 
 const ALL_CATEGORIES = [
   "engine", "session", "prompt", "subagent", "proposal", "autocommit", "autopush",
-  "tool", "context", "permission", "config", "worktree", "elicitation", "notification",
-  "agent", "project", "analysis", "autopull", "task",
+  "tool", "context", "permission", "notification", "project", "analysis", "autopull", "task",
 ];
 
 function buildToastSet(settings: Record<string, string>): Set<string> {

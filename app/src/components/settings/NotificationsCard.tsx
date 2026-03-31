@@ -2,7 +2,7 @@ import { Card, CardContent, Typography, FormGroup, FormControlLabel, Switch, But
 import { useSettingsContext } from "../../contexts/SettingsContext";
 
 const DEFAULT_ENABLED = new Set([
-  "engine", "session", "prompt", "subagent", "proposal", "autocommit", "autopush",
+  "engine", "session", "prompt", "subagent", "proposal", "autocommit", "autopush", "task",
 ]);
 
 const CATEGORY_GROUPS = [
@@ -11,10 +11,8 @@ const CATEGORY_GROUPS = [
     categories: [
       { key: "session", label: "Session start/stop" },
       { key: "subagent", label: "Subagent dispatched" },
-      { key: "agent", label: "Agent events" },
       { key: "prompt", label: "Prompt submitted" },
       { key: "permission", label: "Permission requests" },
-      { key: "elicitation", label: "Elicitations" },
       { key: "notification", label: "Notifications" },
     ],
   },
@@ -24,18 +22,16 @@ const CATEGORY_GROUPS = [
       { key: "autocommit", label: "Auto-commit results" },
       { key: "autopush", label: "Auto-push results" },
       { key: "autopull", label: "Auto-pull results" },
-      { key: "worktree", label: "Worktree changes" },
     ],
   },
   {
     label: "Workspace",
     categories: [
-      { key: "engine", label: "Engine events" },
+      { key: "engine", label: "System events" },
       { key: "task", label: "Task completed" },
       { key: "proposal", label: "Proposal created" },
       { key: "project", label: "Project events" },
       { key: "analysis", label: "Analysis events" },
-      { key: "config", label: "Config changes" },
     ],
   },
   {

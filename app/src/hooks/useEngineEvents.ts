@@ -1,7 +1,7 @@
-import { useEffect, useRef } from "react";
 import type { Channel } from "phoenix";
 import { useEventBus, type EventSeverity, type EventActionMeta } from "./useEventBus";
 import { EVENTS } from "../lib/events";
+import { useChannelSub, useAgentEvent, stripPrefix, snakeToWords, type AgentPayload } from "./engineEventHelpers";
 
 /**
  * Subscribes to engine Phoenix Channel events and emits them into the EventBus.
@@ -175,29 +175,17 @@ export function useEngineEvents(channel: Channel | null): void {
     return { message: `Session ${snakeToWords(action)}`, severity: "info" };
   });
 
-  // Toast when an agent session ends -- no auto-focus
-  useChannelSub(channel, EVENTS.agent.lifecycle, (payload: Record<string, unknown>) => {
-    const action = stripPrefix(payload.event as string | undefined);
-    if (action !== "session_end" && action !== "stop") return;
-    const sessionId = payload.session_id as string | undefined;
-    if (!sessionId) return;
-    const label = (payload.agent_type as string) || "Agent";
-    emit({
-      category: "agent",
-      event: "session_end",
-      message: `${label} session ended`,
-      severity: "info",
-      data: payload,
-      actionMeta: { type: "focus-session", sessionId, label },
-    });
-  });
-
-  useAgentEvent(channel, emit, EVENTS.agent.tool, "tool", (p) => {
-    const tool = p.tool_name || (p.data?.tool_name as string) || "unknown";
+  useChannelSub(channel, EVENTS.agent.tool, (payload: Record<string, unknown>) => {
+    const p = payload as AgentPayload;
     const action = stripPrefix(p.event);
-    if (action === "pre_tool_use") return { message: `Using ${tool}`, severity: "info" };
-    if (action === "post_tool_use_failure") return { message: `${tool} failed`, severity: "error" };
-    return { message: `${tool} completed`, severity: "info" };
+    // Filter out pre_tool_use ("Using X") noise — only show completions/failures
+    if (action === "pre_tool_use") return;
+    const tool = p.tool_name || (p.data?.tool_name as string) || "unknown";
+    if (action === "post_tool_use_failure") {
+      emit({ category: "tool", event: p.event || "post_tool_use_failure", message: `${tool} failed`, severity: "error", data: p.data });
+    } else {
+      emit({ category: "tool", event: p.event || "post_tool_use", message: tool, severity: "success", data: p.data });
+    }
   });
 
   useAgentEvent(channel, emit, EVENTS.agent.subagent, "subagent", (p) => {
@@ -225,22 +213,6 @@ export function useEngineEvents(channel: Channel | null): void {
     return { message: `Permission requested: ${tool}`, severity: "warning" };
   });
 
-  useAgentEvent(channel, emit, EVENTS.agent.config, "config", (p) => {
-    const label = snakeToWords(stripPrefix(p.event));
-    const file = (p.data?.file_path as string) || (p.data?.config_key as string) || "";
-    return { message: `${capitalize(label)}${file ? `: ${file}` : ""}`, severity: "info" };
-  });
-
-  useAgentEvent(channel, emit, EVENTS.agent.worktree, "worktree", (p) => {
-    const action = stripPrefix(p.event) === "worktree_create" ? "created" : "removed";
-    return { message: `Worktree ${action}`, severity: "info" };
-  });
-
-  useAgentEvent(channel, emit, EVENTS.agent.elicitation, "elicitation", (p) => {
-    const server = (p.data?.mcp_server as string) || "MCP";
-    return { message: `${server} elicitation`, severity: "info" };
-  });
-
   useAgentEvent(channel, emit, EVENTS.agent.notification, "notification", (p) => {
     const body = (p.data?.body as string) || (p.data?.title as string) || "Notification";
     return { message: body, severity: "info" };
@@ -250,17 +222,6 @@ export function useEngineEvents(channel: Channel | null): void {
     const desc = (p.data?.task_description as string) || (p.data?.task_name as string) || "";
     const truncated = desc.length > 80 ? `${desc.slice(0, 80)}...` : desc;
     return { message: truncated ? `Task done: ${truncated}` : "Task completed", severity: "success" };
-  });
-
-  useAgentEvent(channel, emit, EVENTS.agent.hook, "agent", (p) => {
-    const label = snakeToWords(stripPrefix(p.event));
-    return { message: capitalize(label), severity: "info" };
-  });
-
-  // Catch-all for non-hook agent events (e.g. from Python emitter)
-  useAgentEvent(channel, emit, EVENTS.agent.event, "agent", (p) => {
-    const label = snakeToWords(p.event || "event");
-    return { message: capitalize(label), severity: "info" };
   });
 
   useChannelSub(channel, EVENTS.skill.candidate, (payload: Record<string, unknown>) => {
@@ -284,74 +245,23 @@ export function useEngineEvents(channel: Channel | null): void {
       data: payload,
     });
   });
-}
 
-// -- Helpers ------------------------------------------------------------------
+  // -- Scheduled task events --------------------------------------------------
 
-interface AgentPayload {
-  event?: string;
-  agent_type?: string;
-  session_id?: string;
-  tool_name?: string;
-  data?: Record<string, unknown>;
-  received_at?: string;
-}
+  useChannelSub(channel, "scheduled_task:failed", (payload: Record<string, unknown>) => {
+    const title = (payload.title as string) || "unknown";
+    emit({ category: "engine", event: "scheduled_task:failed", message: `Scheduled task failed: ${title}`, severity: "error", data: payload });
+  });
 
-type Formatter = (p: AgentPayload) => { message: string; severity: EventSeverity };
+  useChannelSub(channel, "scheduled_task:executed", (payload: Record<string, unknown>) => {
+    const title = (payload.title as string) || "unknown";
+    emit({ category: "engine", event: "scheduled_task:executed", message: `Task ran: ${title}`, severity: "success", data: payload });
+  });
 
-function useChannelSub(
-  channel: Channel | null,
-  event: string,
-  handler: (payload: Record<string, unknown>) => void,
-) {
-  const handlerRef = useRef(handler);
-  handlerRef.current = handler;
-  useEffect(() => {
-    if (!channel) return;
-    const ref = channel.on(event, (payload: Record<string, unknown>) => {
-      console.debug("[engine-event]", event, payload);
-      handlerRef.current(payload);
-    });
-    return () => { channel.off(event, ref); };
-  }, [channel, event]);
-}
+  // -- Mesh events ------------------------------------------------------------
 
-function useAgentEvent(
-  channel: Channel | null,
-  emit: ReturnType<typeof useEventBus>["emit"],
-  channelEvent: string,
-  category: string,
-  format: Formatter,
-) {
-  const formatRef = useRef(format);
-  formatRef.current = format;
-  const emitRef = useRef(emit);
-  emitRef.current = emit;
-  useEffect(() => {
-    if (!channel) return;
-    const ref = channel.on(channelEvent, (payload: AgentPayload) => {
-      console.debug("[engine-event]", channelEvent, payload);
-      const { message, severity } = formatRef.current(payload);
-      emitRef.current({
-        category,
-        event: payload.event || channelEvent,
-        message,
-        severity,
-        data: payload.data,
-      });
-    });
-    return () => { channel.off(channelEvent, ref); };
-  }, [channel, channelEvent, category]);
-}
-
-function stripPrefix(event?: string): string {
-  return (event || "").replace("hook/", "");
-}
-
-function snakeToWords(s: string): string {
-  return s.replace(/_/g, " ");
-}
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
+  useChannelSub(channel, EVENTS.mesh.nodeDown, (payload: Record<string, unknown>) => {
+    const node = (payload.node as string) || (payload.name as string) || "unknown";
+    emit({ category: "engine", event: "mesh:node_down", message: `Mesh node disconnected: ${node}`, severity: "error", data: payload });
+  });
 }

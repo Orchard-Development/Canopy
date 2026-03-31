@@ -46,6 +46,29 @@ export function actionLabel(meta: EventActionMeta): string {
   }
 }
 
+const CATEGORY_LABELS: Record<string, string> = {
+  tool: "Tool",
+  session: "Session",
+  engine: "System",
+  prompt: "Prompt",
+  subagent: "Agent",
+  proposal: "Proposal",
+  autocommit: "Git",
+  autopush: "Git",
+  autopull: "Git",
+  task: "Task",
+  context: "Context",
+  permission: "Permission",
+  notification: "Notice",
+  project: "Project",
+  analysis: "Analysis",
+  skill: "Skill",
+};
+
+export function formatCategory(category: string): string {
+  return CATEGORY_LABELS[category] ?? category.charAt(0).toUpperCase() + category.slice(1);
+}
+
 export const SEVERITY_COLOR: Record<EventSeverity, string> = {
   success: "success.main",
   error: "error.main",

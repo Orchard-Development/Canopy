@@ -8,7 +8,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import { useEvents, type EventActionMeta, type EventSeverity } from "../hooks/useEventBus";
 import {
-  groupEventsByTime, formatExactTime, actionLabel, SEVERITY_COLOR,
+  groupEventsByTime, formatExactTime, actionLabel, formatCategory, SEVERITY_COLOR,
   type EventCluster,
 } from "./notificationBellHelpers";
 
@@ -67,7 +67,7 @@ function ClusterSection({ cluster, defaultExpanded, onAction }: ClusterSectionPr
                 )}
               </Box>
               <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mt: 0.25 }}>
-                <Chip label={event.category} size="small" variant="outlined"
+                <Chip label={formatCategory(event.category)} size="small" variant="outlined"
                   sx={{ fontSize: 10, height: 16, "& .MuiChip-label": { px: 0.75 } }} />
                 <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>
                   {formatExactTime(event.timestamp)}
