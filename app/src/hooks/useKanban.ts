@@ -11,6 +11,7 @@ export interface Epic {
   title: string;
   description: string | null;
   color: string;
+  labels: string[];
   source_proposal_slug: string | null;
   created_at: string;
   updated_at: string;

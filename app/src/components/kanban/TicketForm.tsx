@@ -22,6 +22,7 @@ export interface TicketFormValues {
   priority: string;
   labels: string[];
   epic_id: string | null;
+  color: string;
 }
 
 export const DEFAULT_FORM_VALUES: TicketFormValues = {
@@ -31,6 +32,7 @@ export const DEFAULT_FORM_VALUES: TicketFormValues = {
   priority: "medium",
   labels: [],
   epic_id: null,
+  color: "#7c3aed",
 };
 
 interface TicketFormProps {
@@ -42,7 +44,7 @@ interface TicketFormProps {
 
 // -- Constants ---------------------------------------------------------------
 
-const TYPES = ["bug", "feature", "improvement", "task"] as const;
+const TYPES = ["bug", "feature", "improvement", "task", "epic"] as const;
 const PRIORITIES = ["critical", "high", "medium", "low"] as const;
 
 const PRIORITY_COLORS: Record<string, string> = {
