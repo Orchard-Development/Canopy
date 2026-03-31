@@ -2,7 +2,7 @@ import { Card, CardContent, Typography, FormGroup, FormControlLabel, Switch, But
 import { useSettingsContext } from "../../contexts/SettingsContext";
 
 const DEFAULT_ENABLED = new Set([
-  "engine", "session", "prompt", "subagent", "task", "proposal", "autocommit", "autopush",
+  "engine", "session", "prompt", "subagent", "proposal", "autocommit", "autopush",
 ]);
 
 const CATEGORY_GROUPS = [

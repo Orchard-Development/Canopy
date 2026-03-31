@@ -1,6 +1,7 @@
-import { createContext, useContext, useCallback, useState, useEffect, type ReactNode, createElement } from "react";
+import { createContext, useContext, useCallback, useState, useEffect, useMemo, type ReactNode, createElement } from "react";
 import { useEvents, type EngineEvent, type EventSeverity, type EventActionMeta } from "./useEventBus";
 import { useSettingsContext } from "../contexts/SettingsContext";
+import { useToastThrottle } from "./useToastThrottle";
 
 export type ToastSeverity = EventSeverity;
 
@@ -33,38 +34,44 @@ let nextId = 1;
 
 /**
  * Provides the toast popup system. Toasts can be triggered in two ways:
- * 1. Automatically from EventBus events (all engine events show as toasts)
+ * 1. Automatically from EventBus events (throttled + batched via useToastThrottle)
  * 2. Manually via toast.show() for non-event toasts (e.g. local UI feedback)
  */
 export function useToastProvider(): { api: ToastApi; visible: ToastEntry[] } {
-  const [visible, setVisible] = useState<ToastEntry[]>([]);
+  const [manualEntries, setManualEntries] = useState<ToastEntry[]>([]);
   const { events } = useEvents();
   const { settings } = useSettingsContext();
 
-  // React to new events from the bus
-  const lastSeenRef = useCallback(() => { /* ref holder */ }, []);
-  const [lastSeenId, setLastSeenId] = useState(0);
-
-  useEffect(() => {
+  // Build the filtered event list to pass to throttle hook
+  const filteredEvents = useMemo(() => {
     const toastCategories = buildToastSet(settings);
-    const newEvents = events.filter((e) => e.id > lastSeenId);
-    if (newEvents.length === 0) return;
-    setLastSeenId(newEvents[newEvents.length - 1].id);
+    return events.filter((e) => isToastWorthy(e, toastCategories));
+  }, [events, settings]);
 
-    for (const event of newEvents) {
-      if (!isToastWorthy(event, toastCategories)) continue;
-      const entry: ToastEntry = {
-        id: nextId++,
-        message: event.message,
-        severity: event.severity,
-        duration: toastDuration(event),
-        action: event.actionMeta ? actionMetaToButton(event.actionMeta) : undefined,
-      };
-      setVisible((prev) => [...prev.slice(-(MAX_VISIBLE - 1)), entry]);
-    }
-  }, [events, lastSeenId, settings]);
+  // Get throttled/batched entries from the hook
+  const throttledEntries = useToastThrottle(filteredEvents);
 
-  // Manual toast API (for non-event toasts)
+  // Attach action nodes to throttled entries that need them (single-event pass-throughs)
+  const throttledWithActions = useMemo(() => {
+    return throttledEntries.map((entry) => {
+      // Find if there's a corresponding single event with actionMeta
+      const match = events.find(
+        (e) => e.message === entry.message && e.actionMeta,
+      );
+      if (match?.actionMeta) {
+        return { ...entry, action: actionMetaToButton(match.actionMeta) };
+      }
+      return entry;
+    });
+  }, [throttledEntries, events]);
+
+  // Merge manual + throttled entries; keep most recent MAX_VISIBLE
+  const visible = useMemo(() => {
+    const all = [...manualEntries, ...throttledWithActions];
+    return all.slice(-MAX_VISIBLE);
+  }, [manualEntries, throttledWithActions]);
+
+  // Manual toast API (bypasses throttle — user-initiated)
   const show = useCallback((opts: { message: string; severity?: ToastSeverity; duration?: number | null; action?: ReactNode }) => {
     const entry: ToastEntry = {
       id: nextId++,
@@ -73,11 +80,11 @@ export function useToastProvider(): { api: ToastApi; visible: ToastEntry[] } {
       duration: opts.duration === undefined ? 4000 : opts.duration ?? 0,
       action: opts.action,
     };
-    setVisible((prev) => [...prev.slice(-(MAX_VISIBLE - 1)), entry]);
+    setManualEntries((prev) => [...prev.slice(-(MAX_VISIBLE - 1)), entry]);
   }, []);
 
   const dismiss = useCallback((id?: number) => {
-    setVisible((prev) => {
+    setManualEntries((prev) => {
       if (id !== undefined) return prev.filter((t) => t.id !== id);
       return prev.slice(1);
     });
@@ -98,14 +105,14 @@ export function useToast(): ToastApi {
   return ctx;
 }
 
-const DEFAULT_TOAST_CATEGORIES = new Set([
-  "engine", "session", "prompt", "subagent", "task", "proposal", "autocommit", "autopush",
+export const DEFAULT_TOAST_CATEGORIES = new Set([
+  "engine", "session", "prompt", "subagent", "proposal", "autocommit", "autopush",
 ]);
 
 const ALL_CATEGORIES = [
-  "engine", "session", "prompt", "subagent", "task", "proposal", "autocommit", "autopush",
+  "engine", "session", "prompt", "subagent", "proposal", "autocommit", "autopush",
   "tool", "context", "permission", "config", "worktree", "elicitation", "notification",
-  "agent", "project", "analysis", "autopull",
+  "agent", "project", "analysis", "autopull", "task",
 ];
 
 function buildToastSet(settings: Record<string, string>): Set<string> {
@@ -152,12 +159,4 @@ function actionMetaToButton(meta: EventActionMeta): ReactNode {
     },
     label,
   );
-}
-
-/** Determine toast duration based on event severity/category. */
-function toastDuration(event: EngineEvent): number {
-  if (event.severity === "error") return 6000;
-  if (event.category === "proposal") return 0; // sticky
-  if (event.event === "session:needs_attention") return 0; // sticky -- user must dismiss
-  return 3000;
 }
