@@ -92,13 +92,20 @@ function RestoreRoute() {
   const navigate = useNavigate();
   const location = useLocation();
   const [ready, setReady] = useState(false);
+  const { settings } = useSettingsContext();
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
 
   useEffect(() => {
     Promise.all([
       import("./hooks/useNavHistory").then(({ fetchNavState }) => fetchNavState()),
-      fetch("/api/settings").then((r) => r.json()).catch(() => ({})),
-    ]).then(([{ current }, settings]) => {
-      const hasActiveProject = !!(settings as Record<string, string>).active_project;
+      // Use already-loaded context settings if available, otherwise fetch directly
+      // to avoid blocking on the context load race during cold start.
+      Object.keys(settingsRef.current).length > 0
+        ? Promise.resolve(settingsRef.current)
+        : fetch("/api/settings").then((r) => r.json()).catch(() => ({})),
+    ]).then(([{ current }, resolvedSettings]) => {
+      const hasActiveProject = !!(resolvedSettings as Record<string, string>).active_project;
       const fallback = hasActiveProject ? "/workspace" : "/ai";
       const target = current?.path ? current.path + (current.search ?? "") : fallback;
       // Only navigate if the target is a real route (not the catch-all we're on)
@@ -165,6 +172,8 @@ function AppLayout({ onResetOnboarding, onResetTour, showTour, onTourComplete, p
   const [proposalModalOpen, setProposalModalOpen] = useState(false); // kept for ProposalFabModal
   const [tunnelAuthModalOpen, setTunnelAuthModalOpen] = useState(false);
   const [accessRequestModalOpen, setAccessRequestModalOpen] = useState(false);
+  const { settings: appLayoutSettings } = useSettingsContext();
+  const terminalOpenRestoredRef = useRef(false);
 
   // Auto-open tunnel auth modal when a connection request arrives
   useEffect(() => {
@@ -190,15 +199,13 @@ function AppLayout({ onResetOnboarding, onResetTour, showTour, onTourComplete, p
     }
   }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Restore terminal open state
+  // Restore terminal open state from context settings (populated by SettingsContext on mount)
   useEffect(() => {
-    fetch("/api/settings")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data["terminal.open"] === "true") setTerminalOpen(true);
-      })
-      .catch(() => {});
-  }, []);
+    if (terminalOpenRestoredRef.current) return;
+    if (Object.keys(appLayoutSettings).length === 0) return;
+    terminalOpenRestoredRef.current = true;
+    if (appLayoutSettings["terminal.open"] === "true") setTerminalOpen(true);
+  }, [appLayoutSettings]);
 
   // Auto-open terminal drawer if a session was handed off from onboarding
   useEffect(() => {

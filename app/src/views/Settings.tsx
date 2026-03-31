@@ -54,7 +54,7 @@ interface ModelOption {
 }
 
 function useSettings() {
-  const { setAllSettings } = useSettingsContext();
+  const { settings: contextSettings, setAllSettings } = useSettingsContext();
   const [settings, setSettings] = useState<SettingsData>({});
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,15 +65,18 @@ function useSettings() {
   const initialized = useRef(false);
 
   useEffect(() => {
-    fetch("/api/settings").then((r) => r.json()).then((data) => {
-      setSettings(data);
-      initialized.current = true;
-    }).catch(() => {});
     fetch("/api/ai/models")
       .then((r) => r.json())
       .then((data) => setModels(data.models ?? []))
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!initialized.current && Object.keys(contextSettings).length > 0) {
+      setSettings(contextSettings as SettingsData);
+      initialized.current = true;
+    }
+  }, [contextSettings]);
 
   useEffect(() => {
     if (!initialized.current) return;
