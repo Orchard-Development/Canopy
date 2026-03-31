@@ -42,6 +42,7 @@ import { useToastProvider, ToastProvider, useToast } from "./hooks/useToast";
 import { useEventBusProvider, EventBusProvider, useEventBus } from "./hooks/useEventBus";
 import { SettingsProvider, useSettingsContext } from "./contexts/SettingsContext";
 import { useEngineEvents } from "./hooks/useEngineEvents";
+import { useNotificationHydration } from "./hooks/useNotificationHydration";
 import { useUserActivity } from "./hooks/useUserActivity";
 import { ProjectThemeBridge } from "./components/ProjectThemeBridge";
 import { ToastHost } from "./components/ToastHost";
@@ -258,6 +259,9 @@ function AppLayout({ onResetOnboarding, onResetTour, showTour, onTourComplete, p
 
   // Engine channel events -> EventBus (feeds both toasts and notification bell)
   useEngineEvents(appDashChannel);
+
+  // Boot hydration: pre-populate EventBus with recent events once the engine exposes the endpoint
+  useNotificationHydration();
 
   // User activity tracking -- captures all in-app interactions
   useUserActivity(appDashChannel);
