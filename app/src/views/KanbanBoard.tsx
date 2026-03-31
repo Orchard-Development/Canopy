@@ -16,7 +16,7 @@ import {
 } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
 import { PageLayout } from "../components/PageLayout";
-import { useKanban, COLUMNS, COLUMN_LABELS, type Ticket, type ColumnId } from "../hooks/useKanban";
+import { useKanban, COLUMNS, COLUMN_LABELS, type Epic, type Ticket, type ColumnId } from "../hooks/useKanban";
 import { useActiveProject } from "../hooks/useActiveProject";
 import { useToast } from "../hooks/useToast";
 import { KanbanColumn } from "../components/kanban/KanbanColumn";
@@ -69,7 +69,7 @@ function findTicketColumn(tickets: Ticket[], ticketId: string): ColumnId | null 
 
 export default function KanbanBoard() {
   const { project } = useActiveProject();
-  const { ticketsByColumn, connected, tickets, setTickets, projectId } = useKanban();
+  const { ticketsByColumn, connected, tickets, setTickets, projectId, epics } = useKanban();
   const toast = useToast();
 
   // Filter state (Plan 04)
@@ -295,6 +295,11 @@ export default function KanbanBoard() {
     setDialogOpen(false);
   }, []);
 
+  // Epic click handler (placeholder for future epic detail dialog)
+  const handleEpicClick = useCallback((_epic: Epic) => {
+    // Epic CRUD dialogs are added in a future plan
+  }, []);
+
   // Keyboard shortcuts: "N" opens create dialog, Cmd/Ctrl+F focuses search
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -388,6 +393,9 @@ export default function KanbanBoard() {
                   isOver={overColumnId === col}
                   onCardClick={handleCardClick}
                   onCreate={openCreateDialog}
+                  epics={epics}
+                  allTickets={tickets}
+                  onEpicClick={handleEpicClick}
                 />
               ))}
         </Box>
@@ -422,7 +430,7 @@ export default function KanbanBoard() {
           }}
         >
           {activeTicket ? (
-            <TicketCard ticket={activeTicket} isOverlay />
+            <TicketCard ticket={activeTicket} isOverlay epics={epics} />
           ) : null}
         </DragOverlay>
       </DndContext>

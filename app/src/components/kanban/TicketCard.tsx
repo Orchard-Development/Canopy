@@ -1,21 +1,23 @@
 import { Card, CardActionArea, Stack, Typography, Box, Chip } from "@mui/material";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { Ticket } from "../../hooks/useKanban";
+import type { Epic, Ticket } from "../../hooks/useKanban";
 import { TypeIcon } from "./TypeIcon";
 import { PriorityBadge } from "./PriorityBadge";
 import { LabelChip } from "./LabelChip";
+import { EpicBadge } from "./EpicBadge";
 
 interface TicketCardProps {
   ticket: Ticket;
   onClick?: (ticket: Ticket) => void;
   /** When true, render as a static overlay clone (no sortable wiring). */
   isOverlay?: boolean;
+  epics?: Epic[];
 }
 
 const MAX_VISIBLE_LABELS = 3;
 
-export function TicketCard({ ticket, onClick, isOverlay }: TicketCardProps) {
+export function TicketCard({ ticket, onClick, isOverlay, epics }: TicketCardProps) {
   const {
     attributes,
     listeners,
@@ -50,6 +52,9 @@ export function TicketCard({ ticket, onClick, isOverlay }: TicketCardProps) {
         borderColor: "divider",
         cursor: isOverlay ? "grabbing" : "grab",
         transition: "box-shadow 0.15s ease, transform 0.15s ease",
+        ...(ticket.epic_id && !isOverlay
+          ? { borderLeft: `3px solid ${epics?.find((e) => e.id === ticket.epic_id)?.color ?? "transparent"}` }
+          : {}),
         ...(isOverlay
           ? {
               opacity: 0.85,
@@ -118,6 +123,12 @@ export function TicketCard({ ticket, onClick, isOverlay }: TicketCardProps) {
               )}
             </Box>
           )}
+
+          {/* Row 4: Epic association per D-03 */}
+          {ticket.epic_id && epics && (() => {
+            const epic = epics.find((e) => e.id === ticket.epic_id);
+            return epic ? <EpicBadge epic={epic} /> : null;
+          })()}
 
           {/* Future: agent status indicator space */}
           <Box sx={{ minHeight: 0 }} />

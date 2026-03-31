@@ -3,8 +3,9 @@ import { alpha } from "@mui/material/styles";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import AddRounded from "@mui/icons-material/AddRounded";
-import type { ColumnId, Ticket } from "../../hooks/useKanban";
+import type { ColumnId, Epic, Ticket } from "../../hooks/useKanban";
 import { TicketCard } from "./TicketCard";
+import { EpicCard } from "./EpicCard";
 
 // -- Column accent colors ----------------------------------------------------
 
@@ -22,9 +23,12 @@ interface KanbanColumnProps {
   onCardClick?: (ticket: Ticket) => void;
   onCreate?: () => void;
   isOver?: boolean;
+  epics?: Epic[];
+  allTickets?: Ticket[];
+  onEpicClick?: (epic: Epic) => void;
 }
 
-export function KanbanColumn({ status, label, tickets, onCardClick, onCreate, isOver }: KanbanColumnProps) {
+export function KanbanColumn({ status, label, tickets, onCardClick, onCreate, isOver, epics, allTickets, onEpicClick }: KanbanColumnProps) {
   const { setNodeRef } = useDroppable({ id: `column-${status}` });
   const accentColor = COLUMN_COLORS[status] ?? "#6b7280";
 
@@ -103,6 +107,19 @@ export function KanbanColumn({ status, label, tickets, onCardClick, onCreate, is
             gap: 1,
           }}
         >
+          {/* Epic cards rendered at the top of the todo column */}
+          {status === "todo" && epics?.map((epic) => {
+            const childTickets = allTickets?.filter((t) => t.epic_id === epic.id) ?? [];
+            return (
+              <EpicCard
+                key={epic.id}
+                epic={epic}
+                childTickets={childTickets}
+                onClick={onEpicClick}
+              />
+            );
+          })}
+
           {tickets.length === 0 ? (
             <Box
               onClick={onCreate}
@@ -138,7 +155,7 @@ export function KanbanColumn({ status, label, tickets, onCardClick, onCreate, is
             </Box>
           ) : (
             tickets.map((ticket) => (
-              <TicketCard key={ticket.id} ticket={ticket} onClick={onCardClick} />
+              <TicketCard key={ticket.id} ticket={ticket} onClick={onCardClick} epics={epics} />
             ))
           )}
         </Box>
