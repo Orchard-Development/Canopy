@@ -136,15 +136,7 @@ export function useEngineEvents(channel: Channel | null): void {
     });
   });
 
-  useChannelSub(channel, EVENTS.analysis.complete, (payload: Record<string, unknown>) => {
-    emit({
-      category: "analysis",
-      event: "complete",
-      message: `Analysis complete${payload.label ? `: ${payload.label}` : ""}`,
-      severity: "info",
-      data: payload,
-    });
-  });
+  // analysis:complete suppressed — background indexing, not user-actionable.
 
   useChannelSub(channel, EVENTS.analysis.error, (payload: Record<string, unknown>) => {
     emit({
@@ -175,17 +167,15 @@ export function useEngineEvents(channel: Channel | null): void {
     return { message: `Session ${snakeToWords(action)}`, severity: "info" };
   });
 
+  // Tool events: only failures reach the bell. Successful tool use is telemetry, not a notification.
   useChannelSub(channel, EVENTS.agent.tool, (payload: Record<string, unknown>) => {
     const p = payload as AgentPayload;
     const action = stripPrefix(p.event);
-    // Filter out pre_tool_use ("Using X") noise — only show completions/failures
-    if (action === "pre_tool_use") return;
-    const tool = p.tool_name || (p.data?.tool_name as string) || "unknown";
     if (action === "post_tool_use_failure") {
-      emit({ category: "tool", event: p.event || "post_tool_use_failure", message: `${tool} failed`, severity: "error", data: p.data });
-    } else {
-      emit({ category: "tool", event: p.event || "post_tool_use", message: tool, severity: "success", data: p.data });
+      const tool = p.tool_name || (p.data?.tool_name as string) || "unknown";
+      emit({ category: "tool", event: "post_tool_use_failure", message: `${tool} failed`, severity: "error", data: p.data });
     }
+    // pre_tool_use and post_tool_use (success) are suppressed — not user-actionable
   });
 
   useAgentEvent(channel, emit, EVENTS.agent.subagent, "subagent", (p) => {
@@ -197,26 +187,17 @@ export function useEngineEvents(channel: Channel | null): void {
     return { message: `Subagent finished${desc ? `: ${desc}` : ""}`, severity: "info" };
   });
 
-  useAgentEvent(channel, emit, EVENTS.agent.compact, "context", (p) => {
-    const label = stripPrefix(p.event) === "pre_compact" ? "compacting" : "compacted";
-    return { message: `Context ${label}`, severity: "warning" };
-  });
+  // Context compaction suppressed — internal optimization, not user-actionable.
 
-  useAgentEvent(channel, emit, EVENTS.agent.prompt, "prompt", (p) => {
-    const prompt = (p.data?.prompt as string) || (p.data?.user_prompt as string) || "";
-    const truncated = prompt.length > 80 ? `${prompt.slice(0, 80)}...` : prompt;
-    return { message: truncated ? `Prompt: ${truncated}` : "Prompt submitted", severity: "info" };
-  });
+  // Prompts suppressed from bell — the user already knows what they typed.
+  // Kept as a channel subscription in case other consumers need it in the future.
 
   useAgentEvent(channel, emit, EVENTS.agent.permission, "permission", (p) => {
     const tool = p.tool_name || (p.data?.tool_name as string) || "unknown";
     return { message: `Permission requested: ${tool}`, severity: "warning" };
   });
 
-  useAgentEvent(channel, emit, EVENTS.agent.notification, "notification", (p) => {
-    const body = (p.data?.body as string) || (p.data?.title as string) || "Notification";
-    return { message: body, severity: "info" };
-  });
+  // Generic agent notifications suppressed — low signal, often internal plumbing.
 
   useAgentEvent(channel, emit, EVENTS.agent.task, "task", (p) => {
     const desc = (p.data?.task_description as string) || (p.data?.task_name as string) || "";
@@ -224,27 +205,7 @@ export function useEngineEvents(channel: Channel | null): void {
     return { message: truncated ? `Task done: ${truncated}` : "Task completed", severity: "success" };
   });
 
-  useChannelSub(channel, EVENTS.skill.candidate, (payload: Record<string, unknown>) => {
-    const name = (payload.name as string) || "skill";
-    emit({
-      category: "skill",
-      event: "candidate",
-      message: `New skill candidate: ${name}`,
-      severity: "info",
-      data: payload,
-    });
-  });
-
-  useChannelSub(channel, EVENTS.skill.improvement, (payload: Record<string, unknown>) => {
-    const name = (payload.skill_name as string) || "skill";
-    emit({
-      category: "skill",
-      event: "improvement",
-      message: `Skill improvement suggested: ${name}`,
-      severity: "info",
-      data: payload,
-    });
-  });
+  // Skill candidates/improvements suppressed from bell — available in Intelligence tab.
 
   // -- Scheduled task events --------------------------------------------------
 
@@ -253,10 +214,7 @@ export function useEngineEvents(channel: Channel | null): void {
     emit({ category: "engine", event: "scheduled_task:failed", message: `Scheduled task failed: ${title}`, severity: "error", data: payload });
   });
 
-  useChannelSub(channel, "scheduled_task:executed", (payload: Record<string, unknown>) => {
-    const title = (payload.title as string) || "unknown";
-    emit({ category: "engine", event: "scheduled_task:executed", message: `Task ran: ${title}`, severity: "success", data: payload });
-  });
+  // scheduled_task:executed (success) suppressed — only failures need attention.
 
   // -- Mesh events ------------------------------------------------------------
 
