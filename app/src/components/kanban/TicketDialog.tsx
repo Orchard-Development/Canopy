@@ -8,7 +8,7 @@ import {
   CircularProgress,
   Box,
 } from "@mui/material";
-import type { Ticket } from "../../hooks/useKanban";
+import type { Ticket, Epic } from "../../hooks/useKanban";
 import { useToast } from "../../hooks/useToast";
 import { TicketForm, DEFAULT_FORM_VALUES } from "./TicketForm";
 import type { TicketFormValues } from "./TicketForm";
@@ -22,6 +22,7 @@ interface TicketDialogProps {
   ticket?: Ticket | null;
   projectId: string;
   mode: "create" | "edit";
+  epics?: Epic[];
 }
 
 // -- Helpers ----------------------------------------------------------------
@@ -33,12 +34,13 @@ function ticketToFormValues(ticket: Ticket): TicketFormValues {
     type: ticket.type,
     priority: ticket.priority,
     labels: ticket.labels ?? [],
+    epic_id: ticket.epic_id ?? null,
   };
 }
 
 // -- Component ---------------------------------------------------------------
 
-export function TicketDialog({ open, onClose, ticket, projectId, mode }: TicketDialogProps) {
+export function TicketDialog({ open, onClose, ticket, projectId, mode, epics }: TicketDialogProps) {
   const toast = useToast();
   const [values, setValues] = useState<TicketFormValues>(DEFAULT_FORM_VALUES);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -85,6 +87,7 @@ export function TicketDialog({ open, onClose, ticket, projectId, mode }: TicketD
             type: values.type,
             priority: values.priority,
             labels: JSON.stringify(values.labels),
+            epic_id: values.epic_id,
           }),
         });
         if (!res.ok) {
@@ -102,6 +105,7 @@ export function TicketDialog({ open, onClose, ticket, projectId, mode }: TicketD
             type: values.type,
             priority: values.priority,
             labels: JSON.stringify(values.labels),
+            epic_id: values.epic_id,
           }),
         });
         if (!res.ok) {
@@ -145,7 +149,7 @@ export function TicketDialog({ open, onClose, ticket, projectId, mode }: TicketD
         <DialogTitle>{isCreate ? "Create Ticket" : ticket?.title ?? "Edit Ticket"}</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 1 }}>
-            <TicketForm values={values} onChange={setValues} errors={errors} />
+            <TicketForm values={values} onChange={setValues} errors={errors} epics={epics} />
           </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>

@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
-import { Box, Stack, Typography, Skeleton, Button } from "@mui/material";
+import { Box, Stack, Typography, Button } from "@mui/material";
 import Add from "@mui/icons-material/Add";
 import { FilterBar, getDefaultFilters, type FilterState } from "../components/kanban/FilterBar";
 import {
@@ -22,48 +22,8 @@ import { useToast } from "../hooks/useToast";
 import { KanbanColumn } from "../components/kanban/KanbanColumn";
 import { TicketCard } from "../components/kanban/TicketCard";
 import { TicketDialog } from "../components/kanban/TicketDialog";
-
-function SkeletonColumn() {
-  return (
-    <Box
-      sx={(theme) => ({
-        flex: 1,
-        minWidth: 260,
-        borderRadius: `${theme.shape.borderRadius}px`,
-        border: `1px solid ${theme.palette.divider}`,
-        p: 2,
-      })}
-    >
-      <Skeleton variant="text" width={100} height={28} sx={{ mb: 2 }} />
-      {[1, 2, 3].map((i) => (
-        <Skeleton
-          key={i}
-          variant="rounded"
-          height={80}
-          sx={{ mb: 1 }}
-        />
-      ))}
-    </Box>
-  );
-}
-
-// -- Helpers ------------------------------------------------------------------
-
-/** Determine which column a droppable id belongs to. */
-function resolveColumnId(droppableId: string): ColumnId | null {
-  // Column droppable: "column-todo", "column-in_progress", etc.
-  if (droppableId.startsWith("column-")) {
-    const col = droppableId.slice(7) as ColumnId;
-    return COLUMNS.includes(col) ? col : null;
-  }
-  return null;
-}
-
-/** Find the column that contains a ticket by its id. */
-function findTicketColumn(tickets: Ticket[], ticketId: string): ColumnId | null {
-  const ticket = tickets.find((t) => t.id === ticketId);
-  return ticket ? (ticket.status as ColumnId) : null;
-}
+import { EpicDialog } from "../components/kanban/EpicDialog";
+import { SkeletonColumn, resolveColumnId, findTicketColumn } from "./KanbanBoardHelpers";
 
 // -- Component ----------------------------------------------------------------
 
@@ -129,6 +89,11 @@ export default function KanbanBoard() {
   const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const lastDragEndRef = useRef(0);
+
+  // Epic dialog state (Plan 03: epic CRUD dialogs)
+  const [epicDialogOpen, setEpicDialogOpen] = useState(false);
+  const [epicDialogMode, setEpicDialogMode] = useState<"create" | "edit">("create");
+  const [selectedEpic, setSelectedEpic] = useState<Epic | null>(null);
 
   // Sensors: pointer (5px activation distance) + touch (200ms delay)
   const sensors = useSensors(
@@ -295,9 +260,21 @@ export default function KanbanBoard() {
     setDialogOpen(false);
   }, []);
 
-  // Epic click handler (placeholder for future epic detail dialog)
-  const handleEpicClick = useCallback((_epic: Epic) => {
-    // Epic CRUD dialogs are added in a future plan
+  // Epic dialog handlers
+  const openCreateEpicDialog = useCallback(() => {
+    setEpicDialogMode("create");
+    setSelectedEpic(null);
+    setEpicDialogOpen(true);
+  }, []);
+
+  const handleEpicClick = useCallback((epic: Epic) => {
+    setEpicDialogMode("edit");
+    setSelectedEpic(epic);
+    setEpicDialogOpen(true);
+  }, []);
+
+  const closeEpicDialog = useCallback(() => {
+    setEpicDialogOpen(false);
   }, []);
 
   // Keyboard shortcuts: "N" opens create dialog, Cmd/Ctrl+F focuses search
@@ -356,14 +333,25 @@ export default function KanbanBoard() {
         Drag tickets between columns to update status
       </Typography>
 
-      {/* Filter bar with create button */}
-      <FilterBar
-        filters={filters}
-        onChange={setFilters}
-        allLabels={allLabels}
-        searchInputRef={searchInputRef}
-        onCreate={openCreateDialog}
-      />
+      {/* Filter bar with create buttons */}
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+        <FilterBar
+          filters={filters}
+          onChange={setFilters}
+          allLabels={allLabels}
+          searchInputRef={searchInputRef}
+          onCreate={openCreateDialog}
+        />
+        <Button
+          size="small"
+          variant="contained"
+          startIcon={<Add />}
+          onClick={openCreateEpicDialog}
+          sx={{ whiteSpace: "nowrap", flexShrink: 0 }}
+        >
+          Create Epic
+        </Button>
+      </Stack>
 
       {/* Column container with drag-and-drop */}
       <DndContext
@@ -442,6 +430,16 @@ export default function KanbanBoard() {
         ticket={selectedTicket}
         projectId={project.id}
         mode={dialogMode}
+        epics={epics}
+      />
+
+      {/* Epic CRUD dialog (Plan 03) */}
+      <EpicDialog
+        open={epicDialogOpen}
+        onClose={closeEpicDialog}
+        epic={selectedEpic}
+        projectId={project.id}
+        mode={epicDialogMode}
       />
     </Box>
   );

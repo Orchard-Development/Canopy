@@ -11,6 +11,7 @@ import {
 } from "@mui/material";
 import { TipTapEditor } from "./TipTapEditor";
 import { TypeIcon } from "./TypeIcon";
+import type { Epic } from "../../hooks/useKanban";
 
 // -- Types ------------------------------------------------------------------
 
@@ -20,6 +21,7 @@ export interface TicketFormValues {
   type: string;
   priority: string;
   labels: string[];
+  epic_id: string | null;
 }
 
 export const DEFAULT_FORM_VALUES: TicketFormValues = {
@@ -28,12 +30,14 @@ export const DEFAULT_FORM_VALUES: TicketFormValues = {
   type: "task",
   priority: "medium",
   labels: [],
+  epic_id: null,
 };
 
 interface TicketFormProps {
   values: TicketFormValues;
   onChange: (values: TicketFormValues) => void;
   errors?: Record<string, string>;
+  epics?: Epic[];
 }
 
 // -- Constants ---------------------------------------------------------------
@@ -54,7 +58,7 @@ function capitalize(s: string): string {
 
 // -- Component ---------------------------------------------------------------
 
-export function TicketForm({ values, onChange, errors }: TicketFormProps) {
+export function TicketForm({ values, onChange, errors, epics }: TicketFormProps) {
   const update = <K extends keyof TicketFormValues>(key: K, value: TicketFormValues[K]) => {
     onChange({ ...values, [key]: value });
   };
@@ -154,6 +158,35 @@ export function TicketForm({ values, onChange, errors }: TicketFormProps) {
           <TextField {...params} label="Labels" placeholder="Add labels..." fullWidth />
         )}
       />
+
+      {/* Epic picker (shown only when epics exist) */}
+      {epics && epics.length > 0 && (
+        <Autocomplete
+          size="small"
+          options={epics}
+          getOptionLabel={(e) => e.title}
+          value={epics.find((e) => e.id === values.epic_id) ?? null}
+          onChange={(_event, newValue) => update("epic_id", newValue?.id ?? null)}
+          renderOption={(props, option) => (
+            <li {...props}>
+              <Box
+                sx={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  bgcolor: option.color,
+                  mr: 1,
+                  flexShrink: 0,
+                }}
+              />
+              {option.title}
+            </li>
+          )}
+          renderInput={(params) => (
+            <TextField {...params} label="Epic" placeholder="No epic" />
+          )}
+        />
+      )}
     </Stack>
   );
 }
