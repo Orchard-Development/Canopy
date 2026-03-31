@@ -4,6 +4,7 @@ import BugReport from "@mui/icons-material/BugReport";
 import AutoAwesome from "@mui/icons-material/AutoAwesome";
 import TrendingUp from "@mui/icons-material/TrendingUp";
 import Task from "@mui/icons-material/Task";
+import AccountTree from "@mui/icons-material/AccountTree";
 
 interface TypeIconProps {
   type: string;
@@ -18,6 +19,7 @@ const ICON_MAP: Record<
   feature: { Icon: AutoAwesome, colorToken: "success.main", label: "Feature" },
   improvement: { Icon: TrendingUp, colorToken: "primary.main", label: "Improvement" },
   task: { Icon: Task, colorToken: "text.secondary", label: "Task" },
+  epic: { Icon: AccountTree, colorToken: "secondary.main", label: "Epic" },
 };
 
 function resolveToken(theme: Theme, tokenPath: string): string {
