@@ -43,12 +43,10 @@ export default function Autoresearch() {
   // Sync local dropdown with worker backend when status loads
   const workerBackend = status?.eval_backend;
   const [synced, setSynced] = useState(false);
-  useEffect(() => {
-    if (workerBackend && !synced) {
-      setEvalMode(workerBackend);
-      setSynced(true);
-    }
-  }, [workerBackend, synced]);
+  if (workerBackend && !synced) {
+    setEvalMode(workerBackend);
+    setSynced(true);
+  }
 
   const handleBackendChange = (value: string) => {
     setEvalMode(value);
@@ -195,8 +193,8 @@ export default function Autoresearch() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {candidates.map((c) => (
-                    <TableRow key={`${c.type}:${c.target}`}>
+                  {candidates.map((c, i) => (
+                    <TableRow key={i}>
                       <TableCell><TypeChip type={c.type} /></TableCell>
                       <TableCell sx={{ fontWeight: 500 }}>{c.target}</TableCell>
                       <TableCell sx={{ maxWidth: 420, whiteSpace: "normal" }}>
@@ -326,25 +324,22 @@ export default function Autoresearch() {
 }
 
 function Elapsed({ phase }: { phase: string }) {
-  const spanRef = useRef<HTMLSpanElement>(null);
-  const startRef = useRef(Date.now());
+  const [seconds, setSeconds] = useState(0);
+  const ref = useRef<ReturnType<typeof setInterval>>();
 
   useEffect(() => {
-    startRef.current = Date.now();
-    const id = setInterval(() => {
-      if (spanRef.current) {
-        const total = Math.floor((Date.now() - startRef.current) / 1000);
-        const m = Math.floor(total / 60);
-        const s = total % 60;
-        spanRef.current.textContent = m > 0 ? `${m}m ${s}s` : `${s}s`;
-      }
-    }, 1000);
-    return () => clearInterval(id);
+    setSeconds(0);
+    ref.current = setInterval(() => setSeconds((s) => s + 1), 1000);
+    return () => clearInterval(ref.current);
   }, [phase]);
+
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  const label = m > 0 ? `${m}m ${s}s` : `${s}s`;
 
   return (
     <Typography variant="caption" color="text.secondary" sx={{ fontVariantNumeric: "tabular-nums" }}>
-      <span ref={spanRef}>0s</span>
+      {label}
     </Typography>
   );
 }

@@ -10,21 +10,28 @@ import { PageLayout } from "../components/PageLayout";
 import { api, type TunnelStatus, type MeshNode } from "../lib/api";
 import { useRefetchOnDashboardEvent } from "../hooks/useRefetchOnDashboardEvent";
 import { EVENTS } from "../lib/events";
-import { useSettingsContext } from "../contexts/SettingsContext";
+
+function useSettings() {
+  const [settings, setSettings] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    fetch("/api/settings").then((r) => r.json()).then(setSettings).catch(() => {});
+  }, []);
+
+  const update = (key: string, value: string) => {
+    setSettings((prev) => ({ ...prev, [key]: value }));
+    fetch("/api/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [key]: value }),
+    }).catch(() => {});
+  };
+
+  return { settings, update };
+}
 
 export default function MeshView() {
-  const { settings, setSetting } = useSettingsContext();
-  const s = {
-    settings,
-    update: (key: string, value: string) => {
-      setSetting(key, value);
-      fetch("/api/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ [key]: value }),
-      }).catch(() => {});
-    },
-  };
+  const s = useSettings();
   const [nodeName, setNodeName] = useState("");
   const [cookie, setCookie] = useState("");
   const [peers, setPeers] = useState<MeshNode[]>([]);

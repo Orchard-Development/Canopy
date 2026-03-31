@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef, useEffect, type ReactNode } from "react";
 import { Box, useMediaQuery, useTheme } from "@mui/material";
-import { useSettingsContext } from "../contexts/SettingsContext";
 
 const NAV_WIDTH = 72;
 
@@ -44,15 +43,19 @@ export function ResizableDrawer({
   const drawerWidthRef = useRef(defaultWidth);
   const [dragging, setDragging] = useState(false);
   const draggingRef = useRef(false);
-  const { settings } = useSettingsContext();
 
   useEffect(() => {
-    const saved = parseInt(settings[`${settingsPrefix}.drawerWidth`], 10);
-    if (!isNaN(saved) && saved >= minWidth) {
-      setDrawerWidth(saved);
-      drawerWidthRef.current = saved;
-    }
-  }, [settings, settingsPrefix, minWidth]);
+    fetch("/api/settings")
+      .then((r) => r.json())
+      .then((data) => {
+        const saved = parseInt(data[`${settingsPrefix}.drawerWidth`], 10);
+        if (!isNaN(saved) && saved >= minWidth) {
+          setDrawerWidth(saved);
+          drawerWidthRef.current = saved;
+        }
+      })
+      .catch(() => {});
+  }, [settingsPrefix, minWidth]);
 
   const handleDragStart = useCallback(
     (e: React.MouseEvent) => {
