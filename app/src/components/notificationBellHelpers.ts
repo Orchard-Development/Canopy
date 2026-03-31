@@ -1,14 +1,92 @@
-import type { EngineEvent, EventActionMeta, EventSeverity } from "../hooks/useEventBus";
+import type { EngineEvent, EventActionMeta, EventSeverity, EventTier } from "../hooks/useEventBus";
 
-export interface EventCluster {
+export interface DayGroup {
   label: string;
+  dateKey: string;
   events: EngineEvent[];
+  /** @deprecated Kept for backward compat with EventCluster consumers */
   startTimestamp: number;
 }
 
-export type { EventActionMeta, EventSeverity };
+export interface SummaryRow {
+  category: string;
+  label: string;
+  count: number;
+  events: EngineEvent[];
+  severity: EventSeverity;
+  latestTimestamp: number;
+}
 
-const CLUSTER_GAP_MS = 60_000; // 60 seconds
+export type { EventActionMeta, EventSeverity, EventTier };
+
+function dayLabel(date: Date): string {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diffDays = Math.floor((today.getTime() - target.getTime()) / 86_400_000);
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return date.toLocaleDateString([], { weekday: "long" });
+  return date.toLocaleDateString([], { month: "short", day: "numeric" });
+}
+
+function dateKey(timestamp: number): string {
+  const d = new Date(timestamp);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+export function groupByDay(events: EngineEvent[]): DayGroup[] {
+  const noteworthy = events.filter((e) => e.tier === "noteworthy");
+  const grouped = new Map<string, EngineEvent[]>();
+  for (const event of noteworthy) {
+    const key = dateKey(event.timestamp);
+    const existing = grouped.get(key) ?? [];
+    existing.push(event);
+    grouped.set(key, existing);
+  }
+  const groups: DayGroup[] = [];
+  for (const [key, dayEvents] of grouped) {
+    dayEvents.sort((a, b) => b.timestamp - a.timestamp);
+    groups.push({ label: dayLabel(new Date(dayEvents[0].timestamp)), dateKey: key, events: dayEvents, startTimestamp: dayEvents[0].timestamp });
+  }
+  groups.sort((a, b) => b.dateKey.localeCompare(a.dateKey));
+  return groups;
+}
+
+const SUMMARY_LABELS: Record<string, (count: number) => string> = {
+  autocommit: (n) => `${n} commit${n === 1 ? "" : "s"} saved`,
+  autopush: (n) => `${n} push${n === 1 ? "" : "es"} completed`,
+  session: (n) => `${n} session${n === 1 ? "" : "s"} completed`,
+  subagent: (n) => `${n} sub-task${n === 1 ? "" : "s"} ran`,
+  task: (n) => `${n} task${n === 1 ? "" : "s"} completed`,
+};
+
+export function collapseToSummaries(events: EngineEvent[]): SummaryRow[] {
+  const byCategory = new Map<string, EngineEvent[]>();
+  const standalone: SummaryRow[] = [];
+  for (const event of events) {
+    if (event.actionMeta) {
+      standalone.push({ category: event.category, label: event.message, count: 1, events: [event], severity: event.severity, latestTimestamp: event.timestamp });
+      continue;
+    }
+    const existing = byCategory.get(event.category) ?? [];
+    existing.push(event);
+    byCategory.set(event.category, existing);
+  }
+  const summaries: SummaryRow[] = [...standalone];
+  for (const [category, catEvents] of byCategory) {
+    const labelFn = SUMMARY_LABELS[category];
+    if (catEvents.length > 1 && labelFn) {
+      summaries.push({ category, label: labelFn(catEvents.length), count: catEvents.length, events: catEvents, severity: catEvents[0].severity, latestTimestamp: Math.max(...catEvents.map((e) => e.timestamp)) });
+    } else {
+      for (const event of catEvents) {
+        summaries.push({ category: event.category, label: event.message, count: 1, events: [event], severity: event.severity, latestTimestamp: event.timestamp });
+      }
+    }
+  }
+  summaries.sort((a, b) => b.latestTimestamp - a.latestTimestamp);
+  return summaries;
+}
 
 export function formatRelativeTime(timestamp: number): string {
   const now = Date.now();
@@ -76,41 +154,6 @@ export const SEVERITY_COLOR: Record<EventSeverity, string> = {
   info: "info.main",
 };
 
-/**
- * Groups events into time clusters. Events within 60s of each other form one cluster.
- * Returns clusters ordered newest-first.
- */
-export function groupEventsByTime(events: EngineEvent[]): EventCluster[] {
-  if (events.length === 0) return [];
-
-  const sorted = [...events].sort((a, b) => b.timestamp - a.timestamp);
-  const clusters: EventCluster[] = [];
-  let current: EngineEvent[] = [sorted[0]];
-
-  for (let i = 1; i < sorted.length; i++) {
-    const prev = sorted[i - 1];
-    const curr = sorted[i];
-    if (prev.timestamp - curr.timestamp <= CLUSTER_GAP_MS) {
-      current.push(curr);
-    } else {
-      clusters.push({
-        label: formatRelativeTime(current[current.length - 1].timestamp),
-        events: current,
-        startTimestamp: current[0].timestamp,
-      });
-      current = [curr];
-    }
-  }
-
-  clusters.push({
-    label: formatRelativeTime(current[current.length - 1].timestamp),
-    events: current,
-    startTimestamp: current[0].timestamp,
-  });
-
-  return clusters;
-}
-
 const TOOL_LABELS: Record<string, string> = {
   Bash: "run a command",
   Read: "read a file",
@@ -133,3 +176,8 @@ export function humanizeDuration(seconds: number): string {
   if (seconds < 3600) return `${Math.round(seconds / 60)} min`;
   return `${Math.round(seconds / 3600)}h`;
 }
+
+/** @deprecated Use DayGroup instead */
+export type EventCluster = DayGroup;
+/** @deprecated Use groupByDay instead */
+export const groupEventsByTime = groupByDay;
