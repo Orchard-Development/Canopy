@@ -25,6 +25,7 @@ export interface EventBusState {
   events: EngineEvent[];
   unreadCount: number;
   markAllRead: () => void;
+  clearAll: () => void;
 }
 
 export interface EventBusApi {
@@ -56,9 +57,14 @@ export function useEventBusProvider(): EventBusApi {
     setUnreadCount(0);
   }, []);
 
+  const clearAll = useCallback(() => {
+    setEvents([]);
+    setUnreadCount(0);
+  }, []);
+
   return {
     emit,
-    state: { events, unreadCount, markAllRead },
+    state: { events, unreadCount, markAllRead, clearAll },
   };
 }
 
