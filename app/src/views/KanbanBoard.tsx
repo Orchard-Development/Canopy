@@ -333,16 +333,14 @@ export default function KanbanBoard() {
         Drag tickets between columns to update status
       </Typography>
 
-      {/* Filter bar with create buttons */}
-      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-        <FilterBar
-          filters={filters}
-          onChange={setFilters}
-          allLabels={allLabels}
-          searchInputRef={searchInputRef}
-          onCreate={openCreateDialog}
-        />
-      </Stack>
+      {/* Filter bar with create button */}
+      <FilterBar
+        filters={filters}
+        onChange={setFilters}
+        allLabels={allLabels}
+        searchInputRef={searchInputRef}
+        onCreate={openCreateDialog}
+      />
 
       {/* Column container with drag-and-drop */}
       <DndContext
