@@ -342,15 +342,6 @@ export default function KanbanBoard() {
           searchInputRef={searchInputRef}
           onCreate={openCreateDialog}
         />
-        <Button
-          size="small"
-          variant="contained"
-          startIcon={<Add />}
-          onClick={openCreateEpicDialog}
-          sx={{ whiteSpace: "nowrap", flexShrink: 0 }}
-        >
-          Create Epic
-        </Button>
       </Stack>
 
       {/* Column container with drag-and-drop */}

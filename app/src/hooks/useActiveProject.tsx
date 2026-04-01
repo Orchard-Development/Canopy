@@ -45,8 +45,19 @@ export function ActiveProjectProvider({ children }: { children: ReactNode }) {
     fetchSettings()
       .then(async (settings: Record<string, string>) => {
         const id = settings.active_project || settings.default_terminal_project;
-        if (cancelled || !id) { setLoading(false); return; }
-        const p = await api.getProject(id).catch(() => null);
+        if (cancelled) return;
+        let p: ProjectRecord | null = null;
+        if (id) {
+          p = await api.getProject(id).catch(() => null);
+        }
+        // No persisted project (or it was deleted) — auto-select the first available one
+        if (!p) {
+          const all = await api.listProjects().catch(() => [] as ProjectRecord[]);
+          if (!cancelled && all.length > 0) {
+            p = all[0];
+            persistActiveProject(p.id);
+          }
+        }
         if (!cancelled) setProject(p);
         setLoading(false);
       })
