@@ -20,6 +20,9 @@ export interface PaletteConfig {
 
 export type ElevationLevel = "flat" | "subtle" | "raised";
 
+export type Density = "compact" | "normal" | "spacious";
+export type ChromeCase = "uppercase" | "none";
+
 export interface BrandingConfig {
   name: string;
   subtitle: string;
@@ -30,6 +33,11 @@ export interface BrandingConfig {
   elevation: ElevationLevel;
   dark: PaletteConfig;
   light: PaletteConfig;
+  density?: Density;
+  chromeCase?: ChromeCase;
+  borderWeight?: 1 | 2;
+  headingWeight?: 600 | 700 | 800;
+  transitionMs?: number;
 }
 
 declare const __BRAND_NAME__: string;
@@ -38,43 +46,48 @@ declare const __BRAND_SUBTITLE__: string;
 export const DEFAULT_BRANDING: BrandingConfig = {
   name: typeof __BRAND_NAME__ !== "undefined" ? __BRAND_NAME__ : "Orchard",
   subtitle: typeof __BRAND_SUBTITLE__ !== "undefined" ? __BRAND_SUBTITLE__ : "Command Center",
-  accentGradient: "linear-gradient(135deg, #3b82f6, #6366f1)",
-  useGradient: true,
-  borderRadius: 10,
-  elevation: "subtle",
+  accentGradient: "linear-gradient(135deg, #ffcc00, #ffffff)",
+  useGradient: false,
+  borderRadius: 4,
+  elevation: "flat",
+  density: "compact",
+  chromeCase: "uppercase",
+  borderWeight: 2,
+  headingWeight: 700,
+  transitionMs: 150,
   dark: {
-    primary: "#60a5fa",
-    secondary: "#818cf8",
-    tertiary: "#a78bfa",
-    success: "#4ade80",
-    warning: "#fbbf24",
-    error: "#f87171",
-    background: "#0f172a",
-    surface: "#1e293b",
-    surfaceAlt: "#273548",
-    border: "#334155",
-    highlight: "#1e3a5f",
-    accent: "#3b82f6",
-    text: "#f1f5f9",
-    textSecondary: "#a1b1c7",
-    textMuted: "#7e8fa3",
+    primary: "#ffffff",
+    secondary: "#ffcc00",
+    tertiary: "#00ccff",
+    success: "#00ff00",
+    warning: "#ffcc00",
+    error: "#ff3333",
+    background: "#000000",
+    surface: "#0a0a0a",
+    surfaceAlt: "#141414",
+    border: "#555555",
+    highlight: "#1a1a1a",
+    accent: "#ffcc00",
+    text: "#ffffff",
+    textSecondary: "#cccccc",
+    textMuted: "#888888",
   },
   light: {
-    primary: "#2563eb",
-    secondary: "#4f46e5",
-    tertiary: "#7c3aed",
-    success: "#16a34a",
-    warning: "#d97706",
-    error: "#dc2626",
-    background: "#f8fafc",
+    primary: "#000000",
+    secondary: "#0000cc",
+    tertiary: "#006600",
+    success: "#006600",
+    warning: "#884400",
+    error: "#cc0000",
+    background: "#ffffff",
     surface: "#ffffff",
-    surfaceAlt: "#f1f5f9",
-    border: "#e2e8f0",
-    highlight: "#eff6ff",
-    accent: "#3b82f6",
-    text: "#0f172a",
-    textSecondary: "#3e4f63",
-    textMuted: "#64748b",
+    surfaceAlt: "#f0f0f0",
+    border: "#333333",
+    highlight: "#f5f5f5",
+    accent: "#0000cc",
+    text: "#000000",
+    textSecondary: "#222222",
+    textMuted: "#555555",
   },
 };
 

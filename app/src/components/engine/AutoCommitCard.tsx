@@ -44,9 +44,10 @@ function timeAgo(iso: string | null): string {
   return `${Math.round(diff / 3_600_000)}h ago`;
 }
 
-function buildStatusColor(status: string | null): "success" | "error" | "default" {
+function buildStatusColor(status: string | null): "success" | "error" | "warning" | "default" {
   if (!status) return "default";
   if (status === "ok" || status === "nothing_to_push") return "success";
+  if (status === "resolving_conflicts") return "warning";
   return "error";
 }
 
@@ -54,6 +55,7 @@ function buildStatusLabel(status: string | null): string {
   if (!status) return "no push yet";
   if (status === "ok") return "build passed";
   if (status === "nothing_to_push") return "up to date";
+  if (status === "resolving_conflicts") return "resolving conflicts...";
   if (status.startsWith("failed:")) return "build failed";
   return status;
 }

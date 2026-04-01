@@ -33,6 +33,8 @@ export function SessionHistoryDialog({ open, onClose, projectCwd }: Props) {
   const [projectOnly, setProjectOnly] = useState(!!projectCwd);
   const [selected, setSelected] = useState<string | null>(null);
   const [resuming, setResuming] = useState(false);
+  const [messageMatches, setMessageMatches] = useState<Record<string, string>>({});
+  const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -43,6 +45,26 @@ export function SessionHistoryDialog({ open, onClose, projectCwd }: Props) {
       .finally(() => setLoading(false));
   }, [open]);
 
+  // Debounced server-side message content search
+  useEffect(() => {
+    if (!search || search.length < 2) {
+      setMessageMatches({});
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    const timer = setTimeout(() => {
+      api.searchSessionLogs(search).then((res) => {
+        const map: Record<string, string> = {};
+        for (const m of res.matches) map[m.id] = m.snippet;
+        setMessageMatches(map);
+      }).catch(() => {
+        setMessageMatches({});
+      }).finally(() => setSearching(false));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return sessions.filter((s) => {
@@ -52,9 +74,10 @@ export function SessionHistoryDialog({ open, onClose, projectCwd }: Props) {
       if (!q) return true;
       const haystack = [s.summary, s.cwd, s.command, labelForCommand(s.command)]
         .filter(Boolean).join(" ").toLowerCase();
-      return haystack.includes(q);
+      if (haystack.includes(q)) return true;
+      return !!messageMatches[s.id];
     });
-  }, [sessions, search, agentFilter, resumableOnly, projectOnly, projectCwd]);
+  }, [sessions, search, agentFilter, resumableOnly, projectOnly, projectCwd, messageMatches]);
 
   const selectedSession = useMemo(
     () => filtered.find((s) => s.id === selected) ?? null,
@@ -95,13 +118,14 @@ export function SessionHistoryDialog({ open, onClose, projectCwd }: Props) {
           autoFocus
           fullWidth
           size="small"
-          placeholder="Search sessions..."
+          placeholder="Search sessions and messages..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           slotProps={{ input: {
             startAdornment: (
               <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>
             ),
+            endAdornment: searching ? <InputAdornment position="end"><CircularProgress size={16} /></InputAdornment> : undefined,
           }}}
           sx={{ mb: 1 }}
         />

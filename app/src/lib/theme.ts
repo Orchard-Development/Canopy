@@ -10,15 +10,6 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-const shared = {
-  typography: {
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-    h4: { fontWeight: 600 },
-    h5: { fontWeight: 600 },
-    h6: { fontWeight: 600 },
-  },
-};
-
 function elevationComponents(
   mode: "dark" | "light",
   level: ElevationLevel,
@@ -127,6 +118,18 @@ function buildMode(
   const accentColor = p.accent ?? p.primary;
   const isDark = mode === "dark";
 
+  // Structural personality -- read from config with sensible defaults
+  const chromeCase = cfg.chromeCase ?? "none";
+  const headingWeight = cfg.headingWeight ?? 600;
+  const bw = cfg.borderWeight ?? 1;
+  const ms = cfg.transitionMs ?? 200;
+  const density = cfg.density ?? "normal";
+
+  const ct = chromeCase === "uppercase" ? ("uppercase" as const) : ("none" as const);
+  const cw = chromeCase === "uppercase" ? 700 : 500;
+  const cs = chromeCase === "uppercase" ? "0.04em" : undefined;
+  const ta = `all ${ms}ms ease-out`;
+
   const gradientButton = gradient ? {
     background: gradient,
     color: "#ffffff",
@@ -137,8 +140,26 @@ function buildMode(
   } : {};
 
   return createTheme({
-    ...shared,
+    typography: {
+      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      h4: { fontWeight: headingWeight, letterSpacing: "-0.01em" },
+      h5: { fontWeight: headingWeight, letterSpacing: "-0.01em" },
+      h6: { fontWeight: headingWeight, letterSpacing: "-0.01em" },
+      button: { textTransform: ct, fontWeight: cw, letterSpacing: cs },
+      ...(chromeCase === "uppercase" ? {
+        caption: { textTransform: "uppercase" as const, letterSpacing: "0.08em", fontWeight: 500 },
+        overline: { letterSpacing: "0.12em", fontWeight: 700 },
+      } : {}),
+    },
     shape: { borderRadius },
+    transitions: {
+      duration: {
+        shortest: Math.round(ms * 0.5),
+        shorter: Math.round(ms * 0.75),
+        standard: ms,
+        complex: Math.round(ms * 1.5),
+      },
+    },
     palette: {
       mode,
       primary: { main: p.primary },
@@ -170,8 +191,9 @@ function buildMode(
         } : {},
       },
       MuiChip: {
+        ...(density === "compact" ? { defaultProps: { size: "small" as const } } : {}),
         styleOverrides: {
-          root: { fontWeight: 500 },
+          root: { fontWeight: cw, textTransform: ct, letterSpacing: cs },
           filled: gradient ? {
             background: gradient,
             color: "#ffffff",
@@ -179,18 +201,31 @@ function buildMode(
         },
       },
       MuiButton: {
+        ...(density === "compact" ? { defaultProps: { size: "small" as const } } : {}),
         styleOverrides: {
+          root: {
+            textTransform: ct,
+            fontWeight: cw,
+            letterSpacing: cs,
+            transition: ta,
+          },
           contained: {
             ...gradientButton,
             ...(elevationComponents(mode, elevation, p).MuiButton?.styleOverrides as Record<string, unknown>)?.contained as object,
           },
-          outlined: gradient ? {
-            borderColor: hexToRgba(accentColor, 0.4),
+          outlined: {
+            borderWidth: bw,
             "&:hover": {
-              borderColor: accentColor,
-              backgroundColor: hexToRgba(accentColor, 0.08),
+              borderWidth: bw,
+              ...(gradient ? {
+                borderColor: accentColor,
+                backgroundColor: hexToRgba(accentColor, 0.08),
+              } : {}),
             },
-          } : {},
+            ...(gradient ? {
+              borderColor: hexToRgba(accentColor, 0.4),
+            } : {}),
+          },
         },
       },
       MuiListItemButton: {
@@ -215,7 +250,7 @@ function buildMode(
             backgroundColor: hexToRgba(p.background, 0.85),
             borderBottom: gradient
               ? `1px solid ${hexToRgba(accentColor, isDark ? 0.2 : 0.12)}`
-              : `1px solid ${p.border ?? hexToRgba(p.text, 0.08)}`,
+              : `${bw}px solid ${p.border ?? hexToRgba(p.text, 0.08)}`,
           },
         },
       },
@@ -242,6 +277,7 @@ function buildMode(
         },
       },
       MuiOutlinedInput: {
+        ...(density === "compact" ? { defaultProps: { size: "small" as const } } : {}),
         styleOverrides: gradient ? {
           root: {
             "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
@@ -271,12 +307,35 @@ function buildMode(
           },
         },
       },
+      MuiTableHead: {
+        styleOverrides: chromeCase === "uppercase" ? {
+          root: {
+            "& .MuiTableCell-head": {
+              textTransform: "uppercase" as const,
+              letterSpacing: "0.06em",
+              fontWeight: 700,
+              fontSize: "0.75rem",
+            },
+          },
+        } : {},
+      },
       MuiTooltip: {
         styleOverrides: {
-          tooltip: {
+          tooltip: chromeCase === "uppercase" ? {
+            backgroundColor: isDark ? p.text : p.background,
+            color: isDark ? p.background : p.text,
+            border: `1px solid ${p.border ?? hexToRgba(p.text, 0.12)}`,
+            borderRadius: 0,
+            fontWeight: 600,
+            textTransform: "uppercase" as const,
+            letterSpacing: "0.04em",
+            fontSize: "0.65rem",
+          } : {
             backgroundColor: p.surfaceAlt ?? p.surface,
             color: p.text,
             border: `1px solid ${p.border ?? hexToRgba(p.text, 0.12)}`,
+            backdropFilter: "blur(8px)",
+            fontSize: "0.75rem",
           },
         },
       },
@@ -288,6 +347,10 @@ function buildMode(
       MuiTab: {
         styleOverrides: {
           root: {
+            textTransform: ct,
+            fontWeight: cw,
+            letterSpacing: cs,
+            transition: ta,
             "&.Mui-selected": {
               color: accentColor,
               backgroundImage: gradient
@@ -298,18 +361,24 @@ function buildMode(
         },
       },
       MuiToggleButton: {
-        styleOverrides: gradient ? {
+        styleOverrides: {
           root: {
-            "&.Mui-selected": {
-              backgroundColor: hexToRgba(accentColor, 0.14),
-              color: accentColor,
-              borderColor: hexToRgba(accentColor, 0.4),
-              "&:hover": {
-                backgroundColor: hexToRgba(accentColor, 0.2),
+            textTransform: ct,
+            fontWeight: cw >= 700 ? 600 : 500,
+            letterSpacing: cs,
+            transition: ta,
+            ...(gradient ? {
+              "&.Mui-selected": {
+                backgroundColor: hexToRgba(accentColor, 0.14),
+                color: accentColor,
+                borderColor: hexToRgba(accentColor, 0.4),
+                "&:hover": {
+                  backgroundColor: hexToRgba(accentColor, 0.2),
+                },
               },
-            },
+            } : {}),
           },
-        } : {},
+        },
       },
     },
   });

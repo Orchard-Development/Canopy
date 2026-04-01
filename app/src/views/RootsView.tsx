@@ -24,11 +24,8 @@ export default function RootsView() {
     setReprofiling(true);
     setReprofileError(null);
     try {
-      const result = await api.reprofile();
+      await api.reprofile();
       refetch();
-      if (result?.reprofiled === 0) {
-        setReprofileError("No sessions found to profile. Start a coding session first.");
-      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setReprofileError(`Reprofile failed: ${msg}`);

@@ -8,8 +8,10 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
 import HistoryIcon from "@mui/icons-material/History";
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import { api, type SessionLogMeta } from "../../lib/api";
 import { labelForCommand } from "../../lib/session-log-utils";
+import { requestTerminalOpen } from "../../hooks/useDispatch";
 import { timeAgo } from "../../lib/time";
 
 const SESSION_KEY = "orchard:recent-sessions-shown";
@@ -195,11 +197,35 @@ export function RecentSessionsModal({ onNavigate }: { onNavigate: (path: string)
     });
   }, [sessions]);
 
+  const [resumingAll, setResumingAll] = useState(false);
+
+  const resumableSessions = sessions.filter(
+    (s) => s.resumable && s.exitCode !== undefined,
+  );
+
   const handleClose = () => setOpen(false);
 
   const handleCardClick = (s: SessionLogMeta) => {
     setOpen(false);
     onNavigate(`/sessions/${s.id}`);
+  };
+
+  const handleResumeAll = async () => {
+    if (resumableSessions.length === 0) return;
+    setResumingAll(true);
+    try {
+      const results = await Promise.allSettled(
+        resumableSessions.map((s) => api.resumeSession(s.id, false)),
+      );
+      for (const result of results) {
+        if (result.status === "fulfilled") {
+          requestTerminalOpen(result.value.id, labelForCommand(result.value.command));
+        }
+      }
+      setOpen(false);
+    } finally {
+      setResumingAll(false);
+    }
   };
 
   if (!open) return null;
@@ -247,6 +273,16 @@ export function RecentSessionsModal({ onNavigate }: { onNavigate: (path: string)
 
       <DialogActions>
         <Button onClick={handleClose} size="small">Dismiss</Button>
+        {resumableSessions.length > 0 && (
+          <Button
+            size="small"
+            startIcon={<PlayArrowIcon />}
+            onClick={handleResumeAll}
+            disabled={resumingAll}
+          >
+            {resumingAll ? "Resuming..." : `Resume All (${resumableSessions.length})`}
+          </Button>
+        )}
         <Button
           variant="contained"
           size="small"

@@ -6,11 +6,13 @@ import ViewModuleIcon from "@mui/icons-material/ViewModule";
 import { OrchardIcon } from "./OrchardIcon";
 import { ClaudeIcon } from "./ClaudeIcon";
 import { OpenAIIcon } from "./OpenAIIcon";
+import { OpenCodeIcon } from "./OpenCodeIcon";
 
 const PRESETS = [
   { label: "Claude Code", command: "claude", args: ["--dangerously-skip-permissions"], icon: <ClaudeIcon /> },
   { label: "Codex", command: "codex", args: ["--full-auto"], icon: <OpenAIIcon /> },
-  { label: "Orchard", command: "opencode", args: [] as string[], icon: <OrchardIcon /> },
+  { label: "OpenCode", command: "opencode", args: [] as string[], icon: <OpenCodeIcon /> },
+  { label: "Orchard Code", command: "orchard-code", args: [] as string[], icon: <OrchardIcon /> },
   { label: "Shell", command: "", args: [] as string[], icon: <TerminalIcon /> },
 ];
 

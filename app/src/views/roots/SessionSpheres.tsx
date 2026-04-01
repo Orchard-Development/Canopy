@@ -3,7 +3,7 @@ import { type ThreeEvent } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import type { OrchardSession, SelectedItem } from "./types";
-import { sessionSize, POSITION_SCALE } from "./constants";
+import { sessionSize, POSITION_SCALE, type SceneColors } from "./constants";
 
 interface SessionSpheresProps {
   sessions: OrchardSession[];
@@ -14,12 +14,13 @@ interface SessionSpheresProps {
   onSelect: (item: SelectedItem) => void;
   palette: string[];
   isDark: boolean;
+  sceneColors: SceneColors;
 }
 
 const SPHERE_GEO = new THREE.IcosahedronGeometry(1, 1);
 
 export default function SessionSpheres({
-  sessions, connectedIds, selected, hoveredSession, onHover, onSelect, palette,
+  sessions, connectedIds, selected, hoveredSession, onHover, onSelect, palette, sceneColors,
 }: SessionSpheresProps) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
@@ -94,19 +95,27 @@ export default function SessionSpheres({
           transparent
           opacity={0.9}
           depthWrite={false}
-          emissive="#ffffff"
-          emissiveIntensity={0.8}
-          roughness={0.3}
+          emissive={sceneColors.fillLight}
+          emissiveIntensity={0.3}
+          roughness={0.4}
           metalness={0.1}
         />
       </instancedMesh>
 
-      {hoveredSession && <SessionTooltip sessions={sessions} id={hoveredSession} />}
+      {hoveredSession && (
+        <SessionTooltip sessions={sessions} id={hoveredSession} sceneColors={sceneColors} />
+      )}
     </group>
   );
 }
 
-function SessionTooltip({ sessions, id }: { sessions: OrchardSession[]; id: string }) {
+function SessionTooltip({
+  sessions, id, sceneColors,
+}: {
+  sessions: OrchardSession[];
+  id: string;
+  sceneColors: SceneColors;
+}) {
   const s = sessions.find((s) => s.id === id);
   if (!s) return null;
   const topTools = Object.entries(s.tools)
@@ -119,11 +128,16 @@ function SessionTooltip({ sessions, id }: { sessions: OrchardSession[]; id: stri
     <group position={[s.x * POSITION_SCALE, s.y * POSITION_SCALE + sessionSize(s.total_tool_calls) + 0.8, s.z * POSITION_SCALE]}>
       <Html center style={{ pointerEvents: "none", whiteSpace: "nowrap" }}>
         <div style={{
-          background: "rgba(5,5,16,0.92)", color: "#fff", padding: "8px 12px",
-          borderRadius: 8, fontSize: 11, maxWidth: 260, lineHeight: 1.5,
-          border: "1px solid rgba(99,102,241,0.3)",
+          background: sceneColors.tooltipBg,
+          color: sceneColors.tooltipText,
+          padding: "8px 12px",
+          borderRadius: 8,
+          fontSize: 11,
+          maxWidth: 260,
+          lineHeight: 1.5,
+          border: `1px solid ${sceneColors.tooltipBorder}`,
         }}>
-          <div style={{ fontWeight: 600, color: "#818cf8", fontSize: 12 }}>
+          <div style={{ fontWeight: 600, color: sceneColors.tooltipAccent, fontSize: 12 }}>
             {s.date ? new Date(s.date).toLocaleDateString() : "Unknown"}
           </div>
           {s.label && (

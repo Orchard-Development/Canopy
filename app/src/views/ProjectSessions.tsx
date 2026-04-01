@@ -288,6 +288,8 @@ export default function ProjectSessions() {
   const [resuming, setResuming] = useState<string | null>(null);
   const [viewing, setViewing] = useState<SessionLogMeta | null>(null);
   const [search, setSearch] = useState("");
+  const [messageMatches, setMessageMatches] = useState<Record<string, string>>({});
+  const [searching, setSearching] = useState(false);
   const [projectFilter, setProjectFilter] = useState(true);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
@@ -315,19 +317,42 @@ export default function ProjectSessions() {
     });
   }, [all, page, rowsPerPage, projectCwd, projectFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Debounced server-side message content search
+  useEffect(() => {
+    if (!search || search.length < 2) {
+      setMessageMatches({});
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    const timer = setTimeout(() => {
+      api.searchSessionLogs(search).then((res) => {
+        const map: Record<string, string> = {};
+        for (const m of res.matches) map[m.id] = m.snippet;
+        setMessageMatches(map);
+      }).catch(() => {
+        setMessageMatches({});
+      }).finally(() => setSearching(false));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const sessions = useMemo(() => {
     let list = projectCwd && projectFilter ? all.filter((s) => s.cwd === projectCwd) : all;
     if (search) {
       const q = search.toLowerCase();
       list = list.filter((s) => {
+        // Check metadata fields
         const hay = [s.label, s.summary, s.command, labelForCommand(s.command), s.agentType,
           enrichments[s.id]?.firstPrompt, enrichments[s.id]?.analysisSummary]
           .filter(Boolean).join(" ").toLowerCase();
-        return hay.includes(q);
+        if (hay.includes(q)) return true;
+        // Check server-side message content matches
+        return !!messageMatches[s.id];
       });
     }
     return list;
-  }, [all, projectCwd, projectFilter, search, enrichments]);
+  }, [all, projectCwd, projectFilter, search, enrichments, messageMatches]);
 
   // Auto-disable project filter if it yields zero results but all has sessions
   useEffect(() => {
@@ -405,11 +430,12 @@ export default function ProjectSessions() {
           <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
             <TextField
               size="small"
-              placeholder="Search sessions..."
+              placeholder="Search sessions and messages..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               slotProps={{ input: {
                 startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>,
+                endAdornment: searching ? <InputAdornment position="end"><CircularProgress size={16} /></InputAdornment> : undefined,
               }}}
               sx={{ maxWidth: 400 }}
               fullWidth

@@ -6,15 +6,16 @@ interface ConnectionLinesProps {
   data: OrchardData;
   seedName: string;
   visibleSessionIds: Set<string>;
+  seedTypeColors?: [RegExp, { color: string; emissive: string }][];
 }
 
 export default function ConnectionLines({
-  data, seedName, visibleSessionIds,
+  data, seedName, visibleSessionIds, seedTypeColors,
 }: ConnectionLinesProps) {
   const seed = data.seeds.find((s) => s.name === seedName);
   if (!seed?.centroid) return null;
 
-  const colors = seedColor(seedName);
+  const colors = seedColor(seedName, seedTypeColors);
 
   const positions = useMemo(() => {
     const pts: number[] = [];

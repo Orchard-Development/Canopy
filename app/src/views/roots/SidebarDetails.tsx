@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { Box, Typography, Chip, LinearProgress, Button, alpha } from "@mui/material";
 import ArticleIcon from "@mui/icons-material/Article";
 import { api } from "../../lib/api";
+import type { SessionLogMeta } from "../../lib/api";
 import type { OrchardData, OrchardSeed, OrchardSession } from "./types";
 
 export function SeedDetail({ data, seedName }: { data: OrchardData; seedName: string }) {
@@ -52,34 +53,73 @@ interface SessionDetailProps {
 
 export function SessionDetail({ data, sessionId, onViewTranscript }: SessionDetailProps) {
   const session = data.sessions.find((s) => s.id === sessionId);
+  const [meta, setMeta] = useState<SessionLogMeta | null>(null);
   const [hasTranscript, setHasTranscript] = useState(false);
 
+  const realId = session?.id ?? sessionId;
+  const sourceType = session?.source_type ?? "session";
+
   useEffect(() => {
+    setMeta(null);
     setHasTranscript(false);
-    api.getSessionMessages(sessionId)
-      .then((msgs) => setHasTranscript(msgs.length > 0))
-      .catch(() => setHasTranscript(false));
-  }, [sessionId]);
+
+    if (sourceType === "session") {
+      api.listSessionLogs()
+        .then((logs) => {
+          const found = logs.find((l) => l.id === realId);
+          if (found) setMeta(found);
+        })
+        .catch(() => {});
+
+      api.getSessionMessages(realId)
+        .then((msgs) => setHasTranscript(msgs.length > 0))
+        .catch(() => setHasTranscript(false));
+    }
+  }, [realId, sourceType]);
 
   if (!session) return <Typography color="text.disabled">Session not found</Typography>;
-
-  const toolEntries = useMemo(
-    () => Object.entries(session.tools).sort((a, b) => b[1] - a[1]).slice(0, 8),
-    [session.tools],
-  );
-  const maxCount = toolEntries.length > 0 ? toolEntries[0][1] : 1;
 
   const connectedSeeds = useMemo(
     () => data.connections.filter((c) => c.session_id === sessionId).map((c) => c.seed_name),
     [data.connections, sessionId],
   );
 
+  const label = meta?.label || meta?.summary || cleanSummary(session.label);
+  const profile = meta?.profile;
+
   return (
     <>
-      <InfoRow label="Date" value={new Date(session.date).toLocaleDateString()} />
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, fontSize: 12 }}>
-        {session.label?.slice(0, 200) || "No query preview"}
+      <Chip
+        label={sourceType}
+        size="small"
+        sx={(t) => ({
+          bgcolor: alpha(typeColor(sourceType, t), 0.12),
+          color: typeColor(sourceType, t),
+          mb: 1,
+          textTransform: "capitalize",
+        })}
+      />
+
+      {meta?.startedAt && (
+        <InfoRow label="Started" value={new Date(meta.startedAt).toLocaleString()} />
+      )}
+      {!meta?.startedAt && session.date && (
+        <InfoRow label="Date" value={new Date(session.date).toLocaleDateString()} />
+      )}
+      {meta?.cwd && (
+        <InfoRow label="Project" value={meta.cwd.split("/").slice(-2).join("/")} />
+      )}
+      {meta?.exitCode !== undefined && (
+        <InfoRow label="Exit" value={meta.exitCode === 0 ? "Clean" : `Code ${meta.exitCode}`} />
+      )}
+      {meta && (
+        <InfoRow label="Size" value={`${meta.lineCount} lines`} />
+      )}
+
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, mt: 1, fontSize: 13, lineHeight: 1.5 }}>
+        {label || "No summary available"}
       </Typography>
+
       {onViewTranscript && hasTranscript && (
         <Button
           size="small"
@@ -92,50 +132,53 @@ export function SessionDetail({ data, sessionId, onViewTranscript }: SessionDeta
           View Transcript
         </Button>
       )}
-      <PositionExplanation session={session} connectedSeeds={connectedSeeds} />
-      {toolEntries.length > 0 && <ToolBars entries={toolEntries} maxCount={maxCount} />}
+
+      {profile && <ProfileSection profile={profile} />}
       {connectedSeeds.length > 0 && <SeedChips seeds={connectedSeeds} />}
     </>
   );
 }
 
-function PositionExplanation({
-  session,
-  connectedSeeds,
-}: {
-  session: OrchardSession;
-  connectedSeeds: string[];
-}) {
-  const topTools = Object.entries(session.tools)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-    .map(([name]) => name);
-
-  const drivers: string[] = [];
-  if (topTools.length > 0) drivers.push(`tools: ${topTools.join(", ")}`);
-  if (connectedSeeds.length > 0) drivers.push(`skills: ${connectedSeeds.slice(0, 3).join(", ")}`);
-  if (session.total_tool_calls > 50) drivers.push("high activity");
-  else if (session.total_tool_calls === 0) drivers.push("no tool usage");
-
-  if (drivers.length === 0) return null;
+function ProfileSection({ profile }: { profile: NonNullable<SessionLogMeta["profile"]> }) {
+  const topTools = useMemo(
+    () => Object.entries(profile.tools || {}).sort((a, b) => b[1] - a[1]).slice(0, 6),
+    [profile.tools],
+  );
+  const maxCount = topTools.length > 0 ? topTools[0][1] : 1;
 
   return (
-    <Box sx={(t) => ({
-      mb: 1.5, p: 1, borderRadius: 1,
-      bgcolor: alpha(t.palette.info.main, 0.08),
-      border: `1px solid ${alpha(t.palette.info.main, 0.15)}`,
-    })}>
-      <Typography sx={{ fontSize: 10, color: "info.main", fontWeight: 600, mb: 0.3 }}>
-        Position driven by
-      </Typography>
-      <Typography sx={{ fontSize: 11, color: "text.secondary" }}>
-        {drivers.join(" · ")}
-      </Typography>
-      <Typography sx={{ fontSize: 10, color: "text.disabled", mt: 0.3 }}>
-        Sessions with similar tool/skill profiles cluster together via PCA
-      </Typography>
-    </Box>
+    <>
+      {profile.skills && profile.skills.length > 0 && (
+        <SeedChips seeds={profile.skills.map((s: { name: string }) => s.name)} />
+      )}
+      {topTools.length > 0 && (
+        <Box sx={{ mt: 1.5 }}>
+          <ToolBars entries={topTools} maxCount={maxCount} />
+        </Box>
+      )}
+    </>
   );
+}
+
+function typeColor(type: string, theme: { palette: Record<string, any> }): string {
+  const p = theme.palette;
+  const map: Record<string, string> = {
+    session: p.primary.main,
+    memory: p.error.main,
+    proposal: p.success.main,
+    skill: p.warning.main,
+    rule: p.secondary.main,
+  };
+  return map[type] ?? p.text.secondary;
+}
+
+function cleanSummary(raw?: string): string {
+  if (!raw) return "";
+  return raw
+    .replace(/^##\s*(User|Assistant)\s*/gm, "")
+    .replace(/\n{2,}/g, "\n")
+    .trim()
+    .slice(0, 300);
 }
 
 function ToolBars({ entries, maxCount }: { entries: [string, number][]; maxCount: number }) {

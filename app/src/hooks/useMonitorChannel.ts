@@ -1,17 +1,17 @@
-import { useEffect, useRef, useState, useCallback } from "react";
-import type { Channel } from "phoenix";
-import { useChannel } from "./useChannel";
+import { useContext, useEffect, useRef, useState, useCallback } from "react";
+import { MonitorChannelContext } from "@/contexts/MonitorChannelContext";
 import type { EventMessage } from "../components/events/types";
 
 const MAX_MESSAGES = 500;
 
 /**
- * Hook that joins the "monitor" Phoenix channel and collects all
- * PubSub events into a buffered message list. Drop-in replacement
- * for the previous topic-based monitor.
+ * Hook that uses the shared "monitor" Phoenix channel and collects all
+ * PubSub events into a buffered message list.
+ *
+ * All consumers share one channel join via MonitorChannelProvider.
  */
 export function useMonitorChannel() {
-  const { channel, connected } = useChannel("monitor");
+  const { channel, connected } = useContext(MonitorChannelContext);
   const [messages, setMessages] = useState<EventMessage[]>([]);
   const [paused, setPaused] = useState(false);
   const bufferRef = useRef<EventMessage[]>([]);

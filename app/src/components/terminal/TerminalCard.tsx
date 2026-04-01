@@ -6,6 +6,7 @@ import ArticleOutlinedIcon from "@mui/icons-material/ArticleOutlined";
 import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
 import CallSplitIcon from "@mui/icons-material/CallSplit";
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
@@ -13,9 +14,11 @@ import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 import TerminalIcon from "@mui/icons-material/Terminal";
 import { api } from "../../lib/api";
 import { requestTerminalOpen } from "../../hooks/useDispatch";
+import { useLinkedKnowledge } from "../../hooks/useLinkedKnowledge";
 import { SessionStateDot } from "./SessionStateDot";
 import { ProfileTooltip, type SessionProfile } from "./ProfileTooltip";
 import { TerminalPanel, type RenderMode } from "./TerminalPanel";
+import { LinkedKnowledgeBanner } from "./LinkedKnowledgeBanner";
 import type { TerminalTab } from "./TerminalDrawerContent";
 
 interface Props {
@@ -48,6 +51,7 @@ export const TerminalCard = forwardRef(function TerminalCard(
     if (typeof forwardedRef === "function") forwardedRef(el);
     else if (forwardedRef) (forwardedRef as React.MutableRefObject<HTMLElement | null>).current = el;
   }, [forwardedRef]);
+  const { matches: linkedMatches } = useLinkedKnowledge(tab.id);
   const [forking, setForking] = useState(false);
   const handleFork = useCallback(async () => {
     if (forking) return;
@@ -58,8 +62,19 @@ export const TerminalCard = forwardRef(function TerminalCard(
     } catch { /* fork failed */ }
     setForking(false);
   }, [tab.id, tab.label, forking]);
+  const [resuming, setResuming] = useState(false);
+  const handleResume = useCallback(async () => {
+    if (resuming) return;
+    setResuming(true);
+    try {
+      const result = await api.resumeSession(tab.id);
+      requestTerminalOpen(result.id, `Resume: ${tab.label || "session"}`);
+    } catch { /* resume failed */ }
+    setResuming(false);
+  }, [tab.id, tab.label, resuming]);
   const label = tab.label || tab.command || "Terminal";
   const resolvedState = tab.exitCode !== undefined ? "idle" as const : (tab.state ?? "running" as const);
+  const isExited = tab.exitCode !== undefined;
 
   return (
     <Card
@@ -351,8 +366,49 @@ export const TerminalCard = forwardRef(function TerminalCard(
           )}
         </Box>
       )}
-      <CardContent sx={{ flex: 1, p: 0, "&:last-child": { pb: 0 }, overflow: "hidden" }}>
+      <LinkedKnowledgeBanner
+        matches={linkedMatches}
+        onNavigate={(sid) => requestTerminalOpen(sid, `Session ${sid.slice(0, 8)}`)}
+      />
+      <CardContent sx={{ flex: 1, p: 0, "&:last-child": { pb: 0 }, overflow: "hidden", position: "relative" }}>
         <TerminalPanel key={`${tab.id}-${refreshKey}-${externalRefreshKey || 0}`} sessionId={tab.id} active renderMode={renderMode} onExit={onExit} />
+        {isExited && (
+          <Box
+            onClick={handleResume}
+            sx={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              bgcolor: "rgba(0, 0, 0, 0.45)",
+              cursor: resuming ? "wait" : "pointer",
+              zIndex: 5,
+              transition: "background-color 200ms ease",
+              "&:hover": { bgcolor: "rgba(0, 0, 0, 0.55)" },
+              "&:hover .resume-icon": { transform: "scale(1.1)" },
+            }}
+          >
+            <Box
+              className="resume-icon"
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 64,
+                height: 64,
+                borderRadius: "50%",
+                bgcolor: "primary.main",
+                color: "primary.contrastText",
+                boxShadow: 4,
+                transition: "transform 200ms ease",
+                opacity: resuming ? 0.5 : 1,
+              }}
+            >
+              <PlayArrowIcon sx={{ fontSize: 36 }} />
+            </Box>
+          </Box>
+        )}
       </CardContent>
       {/* Left edge drag-to-reorder handle */}
       <Box

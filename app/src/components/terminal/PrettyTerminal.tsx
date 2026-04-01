@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Box, Divider, IconButton, InputBase, CircularProgress, Typography } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
+import StopIcon from "@mui/icons-material/Stop";
 import { alpha, useTheme } from "@mui/material/styles";
 import { useHookLog } from "../../hooks/useHookLog";
 import { useDashboardChannel } from "../../hooks/useDashboardChannel";
@@ -88,6 +89,12 @@ export function PrettyTerminal({ sessionId, onSend }: Props) {
     drafts.delete(sessionId);
     setTimeout(() => setFetchKey((k) => k + 1), 2000);
   }, [input, images, onSend, sessionId, clearImages]);
+
+  const isStreaming = streamState === "streaming";
+
+  const handleStop = useCallback(() => {
+    onSend("\x03");
+  }, [onSend]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -182,7 +189,8 @@ export function PrettyTerminal({ sessionId, onSend }: Props) {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
-          placeholder="Send a message..."
+          placeholder={isStreaming ? "Waiting for response..." : "Send a message..."}
+          disabled={isStreaming}
           multiline
           maxRows={4}
           sx={{
@@ -196,14 +204,24 @@ export function PrettyTerminal({ sessionId, onSend }: Props) {
             "& .MuiInputBase-input": { p: 0 },
           }}
         />
-        <IconButton
-          size="small"
-          onClick={handleSend}
-          disabled={!input.trim() && images.length === 0}
-          sx={{ color: "primary.main", "&.Mui-disabled": { opacity: 0.3 } }}
-        >
-          <SendIcon fontSize="small" />
-        </IconButton>
+        {isStreaming ? (
+          <IconButton
+            size="small"
+            onClick={handleStop}
+            sx={{ color: "error.main" }}
+          >
+            <StopIcon fontSize="small" />
+          </IconButton>
+        ) : (
+          <IconButton
+            size="small"
+            onClick={handleSend}
+            disabled={!input.trim() && images.length === 0}
+            sx={{ color: "primary.main", "&.Mui-disabled": { opacity: 0.3 } }}
+          >
+            <SendIcon fontSize="small" />
+          </IconButton>
+        )}
       </Box>
     </Box>
   );

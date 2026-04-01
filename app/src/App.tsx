@@ -6,6 +6,7 @@ import { BrandingContext, SetBrandingContext, DEFAULT_BRANDING, fetchBranding, t
 import { ColorModeContext } from "./hooks/useColorMode";
 import { useChannelEvent } from "./hooks/useChannelEvent";
 import { DashboardChannelProvider } from "@/contexts/DashboardChannelContext";
+import { MonitorChannelProvider } from "@/contexts/MonitorChannelContext";
 import { useDashboardChannel } from "@/hooks/useDashboardChannel";
 import { EVENTS } from "./lib/events";
 import { ProjectProvider } from "./hooks/useProject";
@@ -602,6 +603,7 @@ export function App() {
             <SettingsProvider>
             <EventBusProvider value={eventBus}>
             <DashboardChannelProvider>
+            <MonitorChannelProvider>
             <ToastProviderBridge>
             <TunnelAuthProvider>
             <AuthProvider>
@@ -632,6 +634,7 @@ export function App() {
             </AuthProvider>
             </TunnelAuthProvider>
             </ToastProviderBridge>
+            </MonitorChannelProvider>
             </DashboardChannelProvider>
             </EventBusProvider>
             </SettingsProvider>

@@ -1,7 +1,7 @@
 import { type ThreeEvent } from "@react-three/fiber";
 import { Billboard, Text } from "@react-three/drei";
 import type { OrchardSeed, SelectedItem } from "./types";
-import { seedSize, seedColor, POSITION_SCALE } from "./constants";
+import { seedSize, seedColor, POSITION_SCALE, type SceneColors } from "./constants";
 
 interface SeedOctahedronsProps {
   seeds: OrchardSeed[];
@@ -9,10 +9,12 @@ interface SeedOctahedronsProps {
   hoveredSeed: string | null;
   onHoverSeed: (name: string | null) => void;
   onSelect: (item: SelectedItem) => void;
+  seedTypeColors: [RegExp, { color: string; emissive: string }][];
+  sceneColors: SceneColors;
 }
 
 export default function SeedOctahedrons({
-  seeds, selected, hoveredSeed, onHoverSeed, onSelect,
+  seeds, selected, hoveredSeed, onHoverSeed, onSelect, seedTypeColors, sceneColors,
 }: SeedOctahedronsProps) {
   return (
     <group>
@@ -25,7 +27,7 @@ export default function SeedOctahedrons({
         const cx = seed.centroid.x * POSITION_SCALE;
         const cy = seed.centroid.y * POSITION_SCALE;
         const cz = seed.centroid.z * POSITION_SCALE;
-        const colors = seedColor(seed.name);
+        const colors = seedColor(seed.name, seedTypeColors);
 
         return (
           <group key={seed.name}>
@@ -46,11 +48,11 @@ export default function SeedOctahedrons({
               <meshStandardMaterial
                 color={colors.color}
                 emissive={colors.emissive}
-                emissiveIntensity={1.5}
+                emissiveIntensity={2.0}
                 transparent
-                opacity={0.9}
-                roughness={0.2}
-                metalness={0.1}
+                opacity={0.95}
+                roughness={0.1}
+                metalness={0.2}
               />
             </mesh>
 
@@ -61,7 +63,7 @@ export default function SeedOctahedrons({
                 anchorX="center"
                 anchorY="middle"
                 outlineWidth={0.02}
-                outlineColor="#000000"
+                outlineColor={sceneColors.textOutline}
               >
                 {seed.name}
               </Text>

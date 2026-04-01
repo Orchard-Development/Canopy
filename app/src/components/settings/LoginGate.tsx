@@ -7,13 +7,15 @@ import { wrap, card, inputStyle, btnPrimary, btnSecondary, errBox, successBox, d
 const logoUrl = "/logo-icon.png";
 
 export function LoginGate({ children }: { children: React.ReactNode }) {
-  const { user, loading, configured, isOwner } = useAuth();
+  const { user, loading, configured, isOwner, engineSynced } = useAuth();
 
   if (!configured) return <>{children}</>;
   if (loading) return null;
   if (!user) return <LoginForm />;
   if (isOwner === null) return null;
   if (!isOwner) return <AccessDenied email={user.email ?? "unknown"} />;
+  if (engineSynced === null) return null;
+  if (engineSynced === false) return <EngineSyncFailed email={user.email ?? "unknown"} />;
 
   return <>{children}</>;
 }
@@ -65,6 +67,39 @@ function AccessDenied({ email }: { email: string }) {
             {requestState === "requesting" ? "Requesting..." : "Request access"}
           </button>
         )}
+        <button style={btnSecondary} onClick={signOut}>Sign out</button>
+      </div>
+    </div>
+  );
+}
+
+function EngineSyncFailed({ email }: { email: string }) {
+  const { signOut } = useAuth();
+  const [retrying, setRetrying] = useState(false);
+
+  async function handleRetry() {
+    setRetrying(true);
+    try {
+      // Re-trigger the sync by reloading -- the AuthProvider init will re-run saveTokensToEngine
+      window.location.reload();
+    } catch {
+      setRetrying(false);
+    }
+  }
+
+  return (
+    <div style={wrap}>
+      <LockBackground />
+      <div style={card}>
+        <img src={logoUrl} alt="Orchard" width={64} height={64} style={{ borderRadius: 14, marginBottom: 20 }} />
+        <div style={{ fontSize: "1.5rem", fontWeight: 600, marginBottom: 8 }}>Engine sync failed</div>
+        <div style={{ fontSize: "0.85rem", color: "rgba(224,224,224,0.6)", textAlign: "center", marginBottom: 28 }}>
+          Signed in as <strong style={{ color: "#e0e0e0" }}>{email}</strong>, but could not
+          connect your identity to the Engine. Make sure the Engine is running and try again.
+        </div>
+        <button style={btnPrimary} onClick={handleRetry} disabled={retrying}>
+          {retrying ? "Retrying..." : "Retry"}
+        </button>
         <button style={btnSecondary} onClick={signOut}>Sign out</button>
       </div>
     </div>

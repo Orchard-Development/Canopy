@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useRef } from "react";
-import { useChannel } from "./useChannel";
-import { usePersistedState } from "./usePersistedState";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { MonitorChannelContext } from "@/contexts/MonitorChannelContext";
 
 export type Severity = "info" | "success" | "warning" | "error";
 
@@ -160,8 +159,8 @@ function classifyEvent(
 }
 
 /**
- * Subscribes to the Phoenix "monitor" channel and surfaces meaningful
- * events as an activity feed.
+ * Subscribes to the shared Phoenix "monitor" channel and surfaces meaningful
+ * events as an activity feed. Uses in-memory state only -- no settings writes.
  */
 export interface WorkspacePulse {
   summary: string;
@@ -169,21 +168,11 @@ export interface WorkspacePulse {
   timestamp: string;
 }
 
-/**
- * Subscribes to the Phoenix "monitor" channel and surfaces meaningful
- * events as an activity feed. Also tracks the latest workspace pulse
- * from the pollinator hive.
- */
 export function useActivityFeed() {
-  const { channel, connected } = useChannel("monitor");
-  const [entries, setEntries] = usePersistedState<ActivityEntry[]>("activity.entries", []);
-  const [lastSync, setLastSync] = usePersistedState<string | null>("activity.lastSync", null);
-  const [pulseRaw, setPulseRaw] = usePersistedState<Record<string, unknown> | null>("activity.pulse", null);
-  const pulse: WorkspacePulse | null = pulseRaw
-    ? { summary: pulseRaw.summary as string, sessionCount: pulseRaw.sessionCount as number, timestamp: pulseRaw.timestamp as string }
-    : null;
-  const connectedRef = useRef(connected);
-  connectedRef.current = connected;
+  const { channel, connected } = useContext(MonitorChannelContext);
+  const [entries, setEntries] = useState<ActivityEntry[]>([]);
+  const [lastSync, setLastSync] = useState<string | null>(null);
+  const [pulse, setPulse] = useState<WorkspacePulse | null>(null);
 
   useEffect(() => {
     if (!channel) return;
@@ -198,7 +187,7 @@ export function useActivityFeed() {
 
         // Capture workspace pulse separately (pinned, not in timeline)
         if (data.topic === "pollinator/pulse") {
-          setPulseRaw({
+          setPulse({
             summary: (payload.summary as string) || "",
             sessionCount: (payload.session_count as number) || 0,
             timestamp: ts,
@@ -241,7 +230,7 @@ export function useActivityFeed() {
 
   const clear = useCallback(() => {
     setEntries([]);
-    setPulseRaw(null);
+    setPulse(null);
   }, []);
 
   return { entries, pulse, lastSync, clear, connected };

@@ -21,8 +21,17 @@ export default function BloomEffect({
   const bloomRef = useRef<UnrealBloomPass | null>(null);
 
   useEffect(() => {
-    const composer = new EffectComposer(gl);
-    composer.addPass(new RenderPass(scene, camera));
+    // Create a render target with alpha so the transparent canvas is preserved
+    const rt = new THREE.WebGLRenderTarget(size.width, size.height, {
+      format: THREE.RGBAFormat,
+      type: THREE.HalfFloatType,
+    });
+
+    const composer = new EffectComposer(gl, rt);
+
+    const renderPass = new RenderPass(scene, camera);
+    renderPass.clearAlpha = 0;
+    composer.addPass(renderPass);
 
     const bloom = new UnrealBloomPass(
       new THREE.Vector2(size.width, size.height),
@@ -35,8 +44,12 @@ export default function BloomEffect({
     composerRef.current = composer;
     bloomRef.current = bloom;
 
+    // Tell the renderer to clear with transparent black
+    gl.setClearColor(0x000000, 0);
+
     return () => {
       composer.dispose();
+      rt.dispose();
     };
   }, [gl, scene, camera]);
 
@@ -54,6 +67,7 @@ export default function BloomEffect({
 
   useFrame(() => {
     if (composerRef.current) {
+      gl.setClearColor(0x000000, 0);
       composerRef.current.render();
     }
   }, 1);

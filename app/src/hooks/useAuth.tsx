@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase, supabaseConfigured, supabaseUrl, supabaseAnonKey } from "../lib/supabase";
 import { PROXY_BASE } from "../lib/api";
@@ -10,6 +10,7 @@ interface AuthState {
   loading: boolean;
   configured: boolean;
   isOwner: boolean | null;
+  engineSynced: boolean | null;
   signInWithGoogle: () => Promise<void>;
   signInWithMagicLink: (email: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string) => Promise<{ error: string | null }>;
@@ -24,8 +25,9 @@ function isLocalAccess(): boolean {
 
 const AuthContext = createContext<AuthState | null>(null);
 
-/** Persist Supabase tokens and profile info to the engine so both Electron and browser share them. */
-function saveTokensToEngine(s: Session): void {
+/** Persist Supabase tokens and profile info to the engine so both Electron and browser share them.
+ *  Retries up to 3 times on failure. Returns true if the Engine accepted the write. */
+async function saveTokensToEngine(s: Session): Promise<boolean> {
   const meta = s.user?.user_metadata ?? {};
   const profile: Record<string, string> = {
     "auth.access_token": s.access_token,
@@ -38,11 +40,19 @@ function saveTokensToEngine(s: Session): void {
   if (s.user?.email) profile["auth.email"] = s.user.email;
   if (s.user?.id) profile["auth.user_id"] = s.user.id;
 
-  fetch(`${PROXY_BASE}/api/settings`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(profile),
-  }).catch(() => {});
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(`${PROXY_BASE}/api/settings`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(profile),
+      });
+      if (res.ok) return true;
+    } catch { /* retry */ }
+    if (attempt < 2) await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+  }
+  console.error("[useAuth] failed to sync auth to Engine after 3 attempts");
+  return false;
 }
 
 function clearTokensFromEngine(): void {
@@ -59,8 +69,26 @@ function clearTokensFromEngine(): void {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
+  const sessionRef = useRef<Session | null>(null);
   const [loading, setLoading] = useState(supabaseConfigured);
   const [isOwner, setIsOwner] = useState<boolean | null>(null);
+  const [engineSynced, setEngineSynced] = useState<boolean | null>(null);
+
+  /** Save tokens to Engine and verify via health check. */
+  async function syncToEngine(s: Session): Promise<void> {
+    const ok = await saveTokensToEngine(s);
+    if (ok) {
+      // Verify Engine actually has auth.user_id via health
+      try {
+        const h = await fetch(`${PROXY_BASE}/api/health`).then((r) => r.json());
+        setEngineSynced(h.authUserId === true);
+      } catch {
+        setEngineSynced(ok);
+      }
+    } else {
+      setEngineSynced(false);
+    }
+  }
 
   useEffect(() => {
     if (!supabaseConfigured) return;
@@ -70,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
       if (data.session) {
         setSession(data.session);
-        if (isLocalAccess()) saveTokensToEngine(data.session);
+        syncToEngine(data.session);
         setLoading(false);
         return;
       }
@@ -87,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           });
           if (!error && restored.session) {
             setSession(restored.session);
+            setEngineSynced(true);
             setLoading(false);
             return;
           }
@@ -104,9 +133,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       (event, newSession) => {
         setSession(newSession);
 
-        // Persist new tokens so Electron picks them up (local only)
-        if (newSession && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && isLocalAccess()) {
-          saveTokensToEngine(newSession);
+        // Persist tokens to Engine on sign-in and token refresh
+        if (newSession && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED")) {
+          syncToEngine(newSession);
         }
 
         // Clean up auth tokens from URL after successful sign-in
@@ -119,7 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Poll engine for tokens set by the browser (e.g. after magic link in system browser).
     // Stops once a session is established.
     const poll = setInterval(async () => {
-      if (session) return;
+      if (sessionRef.current) return;
       try {
         const settings = await fetchSettings();
         const access = settings["auth.access_token"];
@@ -140,6 +169,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearInterval(poll);
     };
   }, []);
+
+  // Keep ref in sync so the polling interval can read current session without stale closure
+  useEffect(() => { sessionRef.current = session; }, [session]);
 
   // Check ownership: local access is always owner; tunnel must match stored user_id
   // unless tunnel_allow_any_user is enabled
@@ -242,6 +274,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     configured: supabaseConfigured,
     isOwner,
+    engineSynced,
     signInWithGoogle,
     signInWithMagicLink,
     signUp,

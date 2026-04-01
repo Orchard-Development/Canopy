@@ -3,9 +3,8 @@ import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import BloomEffect from "./BloomEffect";
 import { useTheme } from "@mui/material";
-import * as THREE from "three";
 import type { OrchardData, SelectedItem } from "./types";
-import { buildPalette } from "./constants";
+import { buildPalette, buildSceneColors, buildSeedTypeColors, type SceneColors } from "./constants";
 import SessionSpheres from "./SessionSpheres";
 import SeedOctahedrons from "./SeedOctahedrons";
 import AllSeedConnections from "./AllSeedConnections";
@@ -23,15 +22,18 @@ interface RootsCanvasProps {
 
 interface SceneProps extends RootsCanvasProps {
   palette: string[];
+  sceneColors: SceneColors;
+  seedTypeColors: [RegExp, { color: string; emissive: string }][];
   pointerOver: boolean;
 }
 
 export default function RootsCanvas({
   data, timePosition, selected, onSelect, hoveredSeed, onHoverSeed, isDark,
 }: RootsCanvasProps) {
-  const bg = "#050510";
   const theme = useTheme();
   const palette = useMemo(() => buildPalette(theme), [theme]);
+  const sceneColors = useMemo(() => buildSceneColors(theme), [theme]);
+  const seedTypeColors = useMemo(() => buildSeedTypeColors(theme), [theme]);
 
   const sessions = data?.sessions ?? [];
   const seeds = data?.seeds ?? [];
@@ -43,14 +45,13 @@ export default function RootsCanvas({
 
   return (
     <Canvas
-      camera={{ position: [0, 0, 50], fov: 55 }}
-      style={{ background: bg }}
+      camera={{ position: [40, 10, 40], fov: 55 }}
+      style={{ background: "transparent" }}
       onPointerMissed={() => onSelect(null)}
       onPointerEnter={() => setPointerOver(true)}
       onPointerLeave={() => setPointerOver(false)}
-      gl={{ antialias: true, toneMapping: THREE.ReinhardToneMapping, toneMappingExposure: 1.5 }}
+      gl={{ antialias: true, alpha: true }}
     >
-      <color attach="background" args={[bg]} />
       <SceneContents
         data={{ ...data, sessions, seeds, connections }}
         timePosition={timePosition}
@@ -60,6 +61,8 @@ export default function RootsCanvas({
         onHoverSeed={onHoverSeed}
         isDark={isDark}
         palette={palette}
+        sceneColors={sceneColors}
+        seedTypeColors={seedTypeColors}
         pointerOver={pointerOver}
       />
     </Canvas>
@@ -67,7 +70,7 @@ export default function RootsCanvas({
 }
 
 function SceneContents(props: SceneProps) {
-  const { data, timePosition, selected, onSelect, hoveredSeed, onHoverSeed, isDark, palette, pointerOver } = props;
+  const { data, timePosition, selected, onSelect, hoveredSeed, onHoverSeed, isDark, palette, sceneColors, seedTypeColors, pointerOver } = props;
   const [hoveredSession, setHoveredSession] = useState<string | null>(null);
 
   const sessions = data?.sessions ?? [];
@@ -89,7 +92,6 @@ function SceneContents(props: SceneProps) {
 
   const visibleSeeds = useMemo(
     () => {
-      // Only show seeds that have at least one visible connection
       const seedsWithVisibleEdge = new Set<string>();
       for (const c of connections) {
         if (visibleSessionIds.has(c.session_id)) {
@@ -116,13 +118,12 @@ function SceneContents(props: SceneProps) {
 
   return (
     <>
-      <ambientLight intensity={0.1} />
-      <directionalLight position={[15, 20, 25]} intensity={1.5} color="#c7d2fe" />
-      <pointLight position={[12, 10, 10]} intensity={1.5} color="#818cf8" distance={40} />
-      <pointLight position={[-10, -8, 8]} intensity={1.2} color="#f59e0b" distance={35} />
-      <pointLight position={[0, -12, -8]} intensity={1.0} color="#ec4899" distance={30} />
-      <directionalLight position={[-10, -15, -20]} intensity={0.4} color="#a78bfa" />
-<fog attach="fog" args={["#050510", 120, 300]} />
+      <ambientLight intensity={0.4} />
+      <directionalLight position={[15, 20, 25]} intensity={2.0} color={sceneColors.keyLight} />
+      <pointLight position={[12, 10, 10]} intensity={2.0} color={sceneColors.fillLight} distance={50} />
+      <pointLight position={[-10, -8, 8]} intensity={1.5} color={sceneColors.rimLight} distance={45} />
+      <pointLight position={[0, -12, -8]} intensity={1.2} color={sceneColors.accentLightA} distance={40} />
+      <directionalLight position={[-10, -15, -20]} intensity={0.6} color={sceneColors.accentLightB} />
 
       <NeuralMesh sessions={visibleSessions} palette={palette} isDark={isDark} />
       <SessionSpheres
@@ -134,6 +135,7 @@ function SceneContents(props: SceneProps) {
         onSelect={onSelect}
         palette={palette}
         isDark={isDark}
+        sceneColors={sceneColors}
       />
       <SeedOctahedrons
         seeds={visibleSeeds}
@@ -141,14 +143,17 @@ function SceneContents(props: SceneProps) {
         hoveredSeed={hoveredSeed}
         onHoverSeed={onHoverSeed}
         onSelect={onSelect}
+        seedTypeColors={seedTypeColors}
+        sceneColors={sceneColors}
       />
       <AllSeedConnections
         data={data}
         visibleSessionIds={visibleSessionIds}
         activeSeed={activeSeed}
+        seedTypeColors={seedTypeColors}
       />
 
-      <BloomEffect threshold={0.3} strength={0.6} radius={0.45} />
+      {isDark && <BloomEffect threshold={0.8} strength={0.25} radius={0.3} />}
 
       <OrbitControls
         enableDamping

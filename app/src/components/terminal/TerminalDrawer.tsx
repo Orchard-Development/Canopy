@@ -3,6 +3,7 @@ import { useMediaQuery } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import TerminalIcon from "@mui/icons-material/Terminal";
 import { api, onRemoteOrchardChange } from "../../lib/api";
+import { persistSetting } from "../../hooks/usePersistedState";
 import { useActiveProject } from "../../hooks/useActiveProject";
 import { useDefaultCwd } from "../../lib/use-default-cwd";
 import { randomWord } from "../../lib/random-word";
@@ -15,15 +16,18 @@ import { useDashboardChannel } from "../../hooks/useDashboardChannel";
 import { OrchardIcon } from "./OrchardIcon";
 import { ClaudeIcon } from "./ClaudeIcon";
 import { OpenAIIcon } from "./OpenAIIcon";
+import { OpenCodeIcon } from "./OpenCodeIcon";
 import { OrchardModelPicker } from "./OrchardModelPicker";
 import { fetchSettings } from "../../lib/settingsCache";
 
-const ORCHARD_PRESET = "Orchard";
+const OPENCODE_PRESET = "OpenCode";
+const ORCHARD_CODE_PRESET = "Orchard Code";
 
 const PRESETS = [
   { label: "Claude Code", command: "claude", args: ["--dangerously-skip-permissions"], icon: <ClaudeIcon /> },
   { label: "Codex", command: "codex", args: ["--full-auto"], icon: <OpenAIIcon /> },
-  { label: ORCHARD_PRESET, command: "opencode", args: [] as string[], icon: <OrchardIcon /> },
+  { label: OPENCODE_PRESET, command: "opencode", args: [] as string[], icon: <OpenCodeIcon /> },
+  { label: "Orchard Code", command: "orchard-code", args: [] as string[], icon: <OrchardIcon /> },
   { label: "Shell", command: "", args: [] as string[], icon: <TerminalIcon /> },
 ];
 
@@ -34,7 +38,7 @@ function defaultShell(): string {
 function labelForCommand(cmd: string): string {
   if (!cmd || cmd === defaultShell() || cmd.endsWith("/zsh") || cmd.endsWith("/bash")) return "Shell";
   const base = cmd.split("/").pop() ?? cmd;
-  const labels: Record<string, string> = { claude: "Claude Code", codex: "Codex", opencode: "Orchard" };
+  const labels: Record<string, string> = { claude: "Claude Code", codex: "Codex", opencode: "OpenCode", "orchard-code": "Orchard Code" };
   return labels[base] ?? base;
 }
 
@@ -95,11 +99,7 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
 
   const setProjectFilterEnabled = useCallback((next: boolean) => {
     setProjectFilterEnabledRaw(next);
-    fetch("/api/settings", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ "terminal.projectFilter": String(next) }),
-    }).catch(() => {});
+    persistSetting("terminal.projectFilter", String(next));
   }, []);
 
   const tabs = useMemo(
@@ -129,11 +129,7 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
   }, []);
 
   const persistFocusedId = useCallback((id: string) => {
-    fetch("/api/settings", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ "terminal.lastFocusedId": id }),
-    }).catch(() => {});
+    persistSetting("terminal.lastFocusedId", id);
   }, []);
 
   const tabsRef = useRef(tabs);
@@ -151,7 +147,7 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
     }
     if (open && !prevOpen.current) pendingFocusSync.current = true;
     prevOpen.current = open;
-    if (!open || !pendingFocusSync.current || tabs.length === 0) return;
+    if (!open || !pendingFocusSync.current || tabsRef.current.length === 0) return;
     // Skip focus restore when a dispatch just attached a session
     if (skipFocusSyncRef.current) {
       pendingFocusSync.current = false;
@@ -168,52 +164,35 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
         }
         const focusedId = data["terminal.lastFocusedId"];
         if (!focusedId) return;
-        const idx = tabs.findIndex((t) => t.id === focusedId);
+        const idx = tabsRef.current.findIndex((t: TerminalTab) => t.id === focusedId);
         if (idx >= 0) setActiveTab(idx);
       })
       .catch(() => {});
-  }, [open, tabs]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const setActiveTab = useCallback((next: number | ((p: number) => number)) => {
     setActiveTabRaw((prev) => {
       const val = typeof next === "function" ? next(prev) : next;
       const focused = tabsRef.current[val];
-      const settings: Record<string, string> = { "terminal.activeTab": String(val) };
-      if (focused) settings["terminal.lastFocusedId"] = focused.id;
-      fetch("/api/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settings),
-      }).catch(() => {});
+      persistSetting("terminal.activeTab", String(val));
+      if (focused) persistSetting("terminal.lastFocusedId", focused.id);
       return val;
     });
   }, []);
 
   const setGridMode = useCallback((next: boolean) => {
     setGridModeRaw(next);
-    fetch("/api/settings", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ "terminal.gridMode": String(next) }),
-    }).catch(() => {});
+    persistSetting("terminal.gridMode", String(next));
   }, []);
 
   const setGridSpans = useCallback((spans: Record<string, GridSpan>) => {
     setGridSpansRaw(spans);
-    fetch("/api/settings", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ "terminal.gridSpans": JSON.stringify(spans) }),
-    }).catch(() => {});
+    persistSetting("terminal.gridSpans", JSON.stringify(spans));
   }, []);
 
   const setFreeformGrid = useCallback((next: boolean) => {
     setFreeformGridRaw(next);
-    fetch("/api/settings", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ "terminal.freeformGrid": String(next) }),
-    }).catch(() => {});
+    persistSetting("terminal.freeformGrid", String(next));
   }, []);
 
   const onExpandedChangeRef = useRef(onExpandedChange);
@@ -222,11 +201,7 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
   const setExpanded = useCallback((next: boolean) => {
     setExpandedRaw(next);
     onExpandedChangeRef.current?.(next);
-    fetch("/api/settings", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ "terminal.expanded": String(next) }),
-    }).catch(() => {});
+    persistSetting("terminal.expanded", String(next));
   }, []);
 
   // Restore sessions and settings on mount
@@ -439,6 +414,7 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
   }, [exitedEvent]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [modelPickerOpen, setModelPickerOpen] = useState(false);
+  const [modelPickerPreset, setModelPickerPreset] = useState<string>(OPENCODE_PRESET);
 
   const spawnAndAttach = useCallback(async (result: { id: string }, label: string, command: string) => {
     attachedSessions.current.add(result.id);
@@ -463,7 +439,8 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
 
   const handleSpawn = useCallback(async (command: string, args: string[], label: string) => {
     setMenuAnchor(null);
-    if (label === ORCHARD_PRESET) {
+    if (label === OPENCODE_PRESET || label === ORCHARD_CODE_PRESET) {
+      setModelPickerPreset(label);
       setModelPickerOpen(true);
       return;
     }
@@ -474,10 +451,12 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
   const handleOrchardModelSelect = useCallback(async (modelId: string) => {
     setModelPickerOpen(false);
     const modelName = modelId.split("/").pop() ?? modelId;
-    const label = `Orchard (${modelName})`;
-    const result = await api.spawnOrchardTerminal(modelId, defaultCwd, activeProjectId);
-    spawnAndAttach(result, label, "opencode");
-  }, [defaultCwd, activeProjectId, spawnAndAttach]);
+    const isOrchardCode = modelPickerPreset === ORCHARD_CODE_PRESET;
+    const command = isOrchardCode ? "orchard-code" : "opencode";
+    const label = isOrchardCode ? `Orchard Code (${modelName})` : `OpenCode (${modelName})`;
+    const result = await api.spawnOrchardTerminal(modelId, defaultCwd, activeProjectId, command);
+    spawnAndAttach(result, label, command);
+  }, [defaultCwd, activeProjectId, spawnAndAttach, modelPickerPreset]);
 
   const handleClose = useCallback(
     async (index: number) => {

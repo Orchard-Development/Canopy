@@ -15,7 +15,23 @@ const EXCLUDED_KEYS = new Set([
   // Auth tokens are machine-local; never sync to Supabase
   "auth.access_token",
   "auth.refresh_token",
+  // API keys go to user_secrets table, not user_settings JSONB
+  "anthropic_api_key",
+  "openai_api_key",
+  "xai_api_key",
+  "gemini_api_key",
+  "groq_api_key",
+  "openrouter_api_key",
 ]);
+
+const API_KEY_PROVIDERS: Record<string, string> = {
+  anthropic_api_key: "anthropic",
+  openai_api_key: "openai",
+  xai_api_key: "xai",
+  gemini_api_key: "gemini",
+  groq_api_key: "groq",
+  openrouter_api_key: "openrouter",
+};
 
 interface CloudSync {
   pushToCloud: () => Promise<void>;
@@ -66,6 +82,29 @@ export function useCloudSync(): CloudSync {
         });
 
       if (upsertError) throw new Error(upsertError.message);
+
+      // Sync API keys to user_secrets (write-only, encrypted at rest)
+      await supabase
+        .from("user_secrets")
+        .delete()
+        .eq("user_id", user.id)
+        .is("project_id", null);
+
+      const secretRows = Object.entries(API_KEY_PROVIDERS)
+        .filter(([key]) => settings[key])
+        .map(([key, provider]) => ({
+          user_id: user.id,
+          provider,
+          secret_value: settings[key],
+        }));
+
+      if (secretRows.length > 0) {
+        const { error: secretErr } = await supabase
+          .from("user_secrets")
+          .insert(secretRows);
+        if (secretErr) console.warn("Failed to sync secrets:", secretErr.message);
+      }
+
       const now = new Date().toISOString();
       setLastSynced(now);
       await fetch("/api/settings", {

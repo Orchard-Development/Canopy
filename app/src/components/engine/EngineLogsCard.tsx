@@ -16,6 +16,7 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import PauseIcon from "@mui/icons-material/Pause";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
+import { useDashboardChannel } from "../../hooks/useDashboardChannel";
 
 interface LogEntry {
   level: string;
@@ -34,8 +35,6 @@ const LEVEL_COLORS: Record<string, string> = {
   debug: "#78909c",
 };
 
-const POLL_MS = 2_000;
-
 export function EngineLogsCard() {
   const [entries, setEntries] = useState<LogEntry[]>([]);
   const [level, setLevel] = useState<Level>("all");
@@ -45,7 +44,13 @@ export function EngineLogsCard() {
   const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const autoScroll = useRef(true);
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
+  const bufferRef = useRef<LogEntry[]>([]);
 
+  const { channel } = useDashboardChannel();
+
+  // Initial fetch to hydrate existing logs
   const fetchLogs = useCallback(async () => {
     try {
       const params = new URLSearchParams({ limit: "500" });
@@ -64,12 +69,43 @@ export function EngineLogsCard() {
     }
   }, [level, source]);
 
+  // Fetch once on mount or when filters change
   useEffect(() => {
     fetchLogs();
-    if (paused) return;
-    const id = setInterval(fetchLogs, POLL_MS);
-    return () => clearInterval(id);
-  }, [fetchLogs, paused]);
+  }, [fetchLogs]);
+
+  // Stream log entries via dashboard channel instead of polling
+  useEffect(() => {
+    if (!channel) return;
+
+    const ref = channel.on("logs:batch", (data: { entries: LogEntry[] }) => {
+      if (pausedRef.current) {
+        bufferRef.current.push(...data.entries);
+        if (bufferRef.current.length > 500) {
+          bufferRef.current = bufferRef.current.slice(-500);
+        }
+        return;
+      }
+      setEntries((prev) => {
+        const next = [...prev, ...data.entries];
+        return next.length > 500 ? next.slice(-500) : next;
+      });
+    });
+
+    return () => {
+      channel.off("logs:batch", ref);
+    };
+  }, [channel]);
+
+  // Flush buffer on unpause
+  useEffect(() => {
+    if (paused || bufferRef.current.length === 0) return;
+    setEntries((prev) => {
+      const merged = [...prev, ...bufferRef.current];
+      bufferRef.current = [];
+      return merged.length > 500 ? merged.slice(-500) : merged;
+    });
+  }, [paused]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -89,10 +125,15 @@ export function EngineLogsCard() {
   }, [entries]);
 
   const filtered = useMemo(() => {
-    if (!search) return entries;
-    const q = search.toLowerCase();
-    return entries.filter((e) => e.message.toLowerCase().includes(q));
-  }, [entries, search]);
+    let result = entries;
+    if (level !== "all") result = result.filter((e) => e.level === level);
+    if (source !== "all") result = result.filter((e) => e.source === source);
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter((e) => e.message.toLowerCase().includes(q));
+    }
+    return result;
+  }, [entries, level, source, search]);
 
   const display = useMemo(() => [...filtered].reverse(), [filtered]);
 

@@ -7,10 +7,11 @@ interface AllSeedConnectionsProps {
   data: OrchardData;
   visibleSessionIds: Set<string>;
   activeSeed: string | null;
+  seedTypeColors?: [RegExp, { color: string; emissive: string }][];
 }
 
 export default function AllSeedConnections({
-  data, visibleSessionIds, activeSeed,
+  data, visibleSessionIds, activeSeed, seedTypeColors,
 }: AllSeedConnectionsProps) {
   const { positions, colors, activePositions, activeColors } = useMemo(() => {
     const sessionMap = new Map(data.sessions.map((s) => [s.id, s]));
@@ -30,7 +31,7 @@ export default function AllSeedConnections({
       const sx = seed.centroid.x * POSITION_SCALE;
       const sy = seed.centroid.y * POSITION_SCALE;
       const sz = seed.centroid.z * POSITION_SCALE;
-      const col = new THREE.Color(seedColor(seed.name).emissive);
+      const col = new THREE.Color(seedColor(seed.name, seedTypeColors).emissive);
 
       const isActive = c.seed_name === activeSeed;
       const tgt = isActive ? aPts : pts;
@@ -49,7 +50,7 @@ export default function AllSeedConnections({
       activePositions: new Float32Array(aPts),
       activeColors: new Float32Array(aCols),
     };
-  }, [data, visibleSessionIds, activeSeed]);
+  }, [data, visibleSessionIds, activeSeed, seedTypeColors]);
 
   return (
     <>

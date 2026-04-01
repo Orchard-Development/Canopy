@@ -22,6 +22,8 @@ import CloseFullscreenIcon from "@mui/icons-material/CloseFullscreen";
 import ViewStreamIcon from "@mui/icons-material/ViewStream";
 import ArticleOutlinedIcon from "@mui/icons-material/ArticleOutlined";
 import FolderOpenIcon from "@mui/icons-material/FolderOpen";
+import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import FilterAltIcon from "@mui/icons-material/FilterAlt";
 import FilterAltOffIcon from "@mui/icons-material/FilterAltOff";
 import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
@@ -30,6 +32,9 @@ import HistoryIcon from "@mui/icons-material/History";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import { SessionHistoryDialog } from "./SessionHistoryDialog";
 import { SessionSummaryList } from "./SessionSummaryList";
+import { LinkedKnowledgeBanner } from "./LinkedKnowledgeBanner";
+import { useLinkedKnowledge } from "../../hooks/useLinkedKnowledge";
+import { requestTerminalOpen } from "../../hooks/useDispatch";
 import { TerminalPanel } from "./TerminalPanel";
 import { TerminalGrid } from "./TerminalGrid";
 import type { GridSpan } from "../ResizableGrid";
@@ -312,6 +317,8 @@ export function TerminalDrawerContent({
   mobileFullscreen,
   onEnterMobileFullscreen,
 }: Props) {
+  const activeSessionId = tabs[activeTab]?.id ?? "";
+  const { matches: linkedMatches } = useLinkedKnowledge(activeSessionId);
   const [summaryMode, setSummaryMode] = useState(false);
   const [refreshKeys, setRefreshKeys] = useState<Record<string, number>>({});
   const [globalRefreshKey, setGlobalRefreshKey] = useState(0);
@@ -750,58 +757,95 @@ export function TerminalDrawerContent({
           />
         </Box>
       ) : (
-        <Box sx={{ flex: 1, position: "relative" }}>
-          {tabs[activeTab]?.summary && (
+        <Box sx={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+          {(tabs[activeTab]?.cwd || tabs[activeTab]?.startedAt || tabs[activeTab]?.summary) && (
             <Box sx={{
               display: "flex",
-              alignItems: "center",
-              gap: 0.5,
-              px: 1.5, py: 0.5,
+              flexDirection: "column",
+              px: 1.5,
+              py: 0.25,
               bgcolor: "action.hover",
               borderBottom: 1,
               borderColor: "divider",
-              fontSize: 12,
-              color: "text.secondary",
-              fontStyle: "italic",
             }}>
-              <Box sx={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {tabs[activeTab].summary}
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1, minHeight: 22 }}>
+                {tabs[activeTab]?.cwd && (
+                  <Tooltip title={tabs[activeTab].cwd}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, minWidth: 0, flex: 1 }}>
+                      <FolderOutlinedIcon sx={{ fontSize: 12, color: "text.disabled", flexShrink: 0 }} />
+                      <Typography variant="caption" noWrap sx={{ fontSize: 10, color: "text.secondary" }}>
+                        {tabs[activeTab].cwd!.replace(/^\/Users\/[^/]+/, "~")}
+                      </Typography>
+                    </Box>
+                  </Tooltip>
+                )}
+                {tabs[activeTab]?.startedAt && (
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.25, flexShrink: 0 }}>
+                    <AccessTimeIcon sx={{ fontSize: 11, color: "text.disabled" }} />
+                    <Typography variant="caption" sx={{ fontSize: 10, color: "text.disabled" }}>
+                      {(() => {
+                        const ms = Date.now() - new Date(tabs[activeTab].startedAt!).getTime();
+                        const s = Math.floor(ms / 1000);
+                        if (s < 60) return `${s}s`;
+                        const m = Math.floor(s / 60);
+                        if (m < 60) return `${m}m`;
+                        const h = Math.floor(m / 60);
+                        return `${h}h ${m % 60}m`;
+                      })()}
+                    </Typography>
+                  </Box>
+                )}
+                {onViewLog && (
+                  <Tooltip title="View session transcript">
+                    <IconButton size="small" onClick={() => onViewLog(tabs[activeTab].id)} sx={{ p: 0.25, flexShrink: 0 }}>
+                      <ArticleOutlinedIcon sx={{ fontSize: 14 }} />
+                    </IconButton>
+                  </Tooltip>
+                )}
+                {onOpenLogFile && (
+                  <Tooltip title="Open log file">
+                    <IconButton size="small" onClick={() => onOpenLogFile(tabs[activeTab].id)} sx={{ p: 0.25, flexShrink: 0 }}>
+                      <FolderOpenIcon sx={{ fontSize: 14 }} />
+                    </IconButton>
+                  </Tooltip>
+                )}
               </Box>
-              {onViewLog && (
-                <Tooltip title="View session transcript">
-                  <IconButton size="small" onClick={() => onViewLog(tabs[activeTab].id)} sx={{ p: 0.25, flexShrink: 0 }}>
-                    <ArticleOutlinedIcon sx={{ fontSize: 14 }} />
-                  </IconButton>
-                </Tooltip>
-              )}
-              {onOpenLogFile && (
-                <Tooltip title="Open log file">
-                  <IconButton size="small" onClick={() => onOpenLogFile(tabs[activeTab].id)} sx={{ p: 0.25, flexShrink: 0 }}>
-                    <FolderOpenIcon sx={{ fontSize: 14 }} />
-                  </IconButton>
-                </Tooltip>
+              {tabs[activeTab]?.summary && (
+                <Typography variant="caption" noWrap sx={{
+                  fontSize: 10,
+                  color: "text.secondary",
+                  fontStyle: "italic",
+                  pb: 0.25,
+                }}>
+                  {tabs[activeTab].summary}
+                </Typography>
               )}
             </Box>
           )}
-          {tabs.map((tab, index) => (
-            <Box
-              key={tab.id}
-              sx={{
-                position: "absolute",
-                inset: 0,
-                top: tabs[activeTab]?.summary ? 28 : 0,
-                display: index === activeTab ? "block" : "none",
-              }}
-            >
-              <TerminalPanel
-                key={`${tab.id}-${refreshKeys[tab.id] || 0}`}
-                sessionId={tab.id}
-                active={open && index === activeTab}
-                suspendResize={drawerDragging}
-                onExit={(code) => onExit(index, code)}
-              />
-            </Box>
-          ))}
+          <LinkedKnowledgeBanner
+            matches={linkedMatches}
+            onNavigate={(sid) => requestTerminalOpen(sid, `Session ${sid.slice(0, 8)}`)}
+          />
+          <Box sx={{ position: "relative", flex: 1 }}>
+            {tabs.map((tab, index) => (
+              <Box
+                key={tab.id}
+                sx={{
+                  position: "absolute",
+                  inset: 0,
+                  display: index === activeTab ? "block" : "none",
+                }}
+              >
+                <TerminalPanel
+                  key={`${tab.id}-${refreshKeys[tab.id] || 0}`}
+                  sessionId={tab.id}
+                  active={open && index === activeTab}
+                  suspendResize={drawerDragging}
+                  onExit={(code) => onExit(index, code)}
+                />
+              </Box>
+            ))}
+          </Box>
         </Box>
       )}
       <SessionHistoryDialog open={historyOpen} onClose={() => setHistoryOpen(false)} projectCwd={projectCwd} />

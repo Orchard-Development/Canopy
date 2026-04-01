@@ -125,6 +125,9 @@ export const EVENTS = {
   project: {
     created: "project:created",
   },
+  roots: {
+    matches: "roots:matches",
+  },
   toast: {
     show: "toast:show",
   },

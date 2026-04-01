@@ -98,8 +98,15 @@ export default function StatsBar({ data, onReprofile }: StatsBarProps) {
     >
       <StatItem label="Sessions" value={stats.sessions.toLocaleString()} color={p.primary.main} />
       <StatItem label="Seeds" value={stats.seeds.toLocaleString()} color={p.warning.main} />
-      <StatItem label="Clusters" value={String(stats.clusters)} color={p.info.main} />
       <StatItem label="Reuse" value={`${stats.reuseRate}%`} color={p.success.main} />
+
+      <Box sx={{ mx: 1, height: 16, borderLeft: 1, borderColor: "divider" }} />
+
+      <LegendDot color={p.primary.light} label="Session" />
+      <LegendDot color={p.error.light} label="Memory" />
+      <LegendDot color={p.success.light} label="Proposal" />
+      <LegendDot color={p.warning.light} label="Skill" />
+      <LegendDot color={p.secondary.light} label="Rule" />
 
       <Box sx={{ flex: 1 }} />
 
@@ -143,6 +150,15 @@ function StatItem({ label, value, color }: { label: string; value: string; color
       <Typography variant="body2" sx={{ color, fontWeight: 700, fontSize: 14 }}>
         {value}
       </Typography>
+    </Box>
+  );
+}
+
+function LegendDot({ color, label }: { color: string; label: string }) {
+  return (
+    <Box sx={{ display: "flex", alignItems: "center", gap: 0.4 }}>
+      <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: color, flexShrink: 0 }} />
+      <Typography sx={{ fontSize: 11, color: "text.secondary" }}>{label}</Typography>
     </Box>
   );
 }

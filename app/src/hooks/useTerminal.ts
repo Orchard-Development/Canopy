@@ -261,11 +261,16 @@ export function useTerminal({
       }
     };
 
+    let upgradeFailures = 0;
+
     const connectWs = () => {
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
+      let opened = false;
 
       ws.onopen = () => {
+        opened = true;
+        upgradeFailures = 0;
         if (reconnectAttempt > 0) {
           term.clear();
           reconnectAttempt = 0;
@@ -290,6 +295,15 @@ export function useTerminal({
       ws.onclose = (event) => {
         console.warn(`[terminal:${sessionId}] ws close: code=${event.code}`);
         if (disposed || exitReceived) return;
+        // If the WS was never opened, the server rejected the upgrade (404/401).
+        // Stop reconnecting after a few attempts — the session doesn't exist.
+        if (!opened) {
+          upgradeFailures++;
+          if (upgradeFailures >= 3) {
+            term.write("\r\n\x1b[90m[session ended -- view session log for details]\x1b[0m\r\n");
+            return;
+          }
+        }
         term.write("\r\n\x1b[90m[disconnected -- reconnecting...]\x1b[0m\r\n");
         const delay = Math.min(1000 * Math.pow(2, reconnectAttempt), 30000);
         reconnectAttempt++;

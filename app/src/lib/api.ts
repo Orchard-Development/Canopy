@@ -403,6 +403,8 @@ export interface SessionAnalysis {
 
 export interface OrchardSession {
   id: string;
+  source_type: string;
+  source_path: string;
   x: number;
   y: number;
   z: number;
@@ -792,10 +794,10 @@ export const api = {
       { command, args, cwd, projectId, initialInput },
     ),
 
-  spawnOrchardTerminal: (gatewayModel: string, cwd?: string, projectId?: string) =>
+  spawnOrchardTerminal: (gatewayModel: string, cwd?: string, projectId?: string, command = "opencode") =>
     postJson<{ id: string; command: string; cwd: string; startedAt: string; label?: string; state?: string; projectId?: string }>(
       "/api/terminal",
-      { command: "opencode", args: [], cwd, projectId, gatewayModel },
+      { command, args: [], cwd, projectId, gatewayModel },
     ),
 
   getGatewayModels: () =>
@@ -1000,6 +1002,9 @@ export const api = {
   getSessionMessages: (id: string) =>
     get<Array<{ role: string; text: string; ts?: string }>>(`/api/session-logs/${id}/messages`),
 
+  searchSessionLogs: (q: string) =>
+    get<{ matches: Array<{ id: string; snippet: string }> }>(`/api/session-logs/search?q=${encodeURIComponent(q)}`),
+
   resumeSession: (id: string, fork = false) =>
     postJson<{ id: string; command: string; cwd: string; startedAt: string }>(
       "/api/terminal",
@@ -1034,8 +1039,8 @@ export const api = {
     return get<SessionMapData>(`/api/sessions/map${qs}`);
   },
 
-  // Orchard Research
-  getOrchardData: () => get<OrchardData>("/api/research/orchard"),
+  // Orchard Research (Roots -- pgvector RAG)
+  getOrchardData: () => get<OrchardData>("/api/roots/graph"),
 
   getSimilarSessions: (sessionId: string, k = 10) =>
     get<{ session_id: string; k: number; results: SimilarResult[] }>(
@@ -1044,7 +1049,7 @@ export const api = {
 
   getResearchStats: () => get<ResearchStats>("/api/research/stats"),
 
-  reprofile: () => postJson<{ ok: boolean; reprofiled: number }>("/api/research/reprofile", {}),
+  reprofile: () => postJson<{ status: string }>("/api/roots/index", {}),
 
   getProfileStatus: () => get<ProfileStatus>("/api/research/profile-status"),
 

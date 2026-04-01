@@ -63,7 +63,7 @@ export default function RootsSidebar({ data, selected, onClose }: RootsSidebarPr
             <SessionDetail
               data={data}
               sessionId={selected.id}
-              onViewTranscript={() => setTranscriptId(selected.id)}
+              onViewTranscript={() => session && setTranscriptId(session.id)}
             />
           )}
         </>

@@ -65,7 +65,15 @@ export function useEngineEvents(channel: Channel | null): void {
   useChannelSub(channel, EVENTS.autoPull.status, (payload: Record<string, unknown>) => {
     const data = (payload.data || payload) as Record<string, unknown>;
     const status = data.status as string;
-    if (status === "failed") {
+    if (status === "resolving") {
+      emit({
+        category: "autopull",
+        event: "resolving",
+        message: `Resolving pull conflicts: ${data.project || ""} (agent session started)`,
+        severity: "warning",
+        data,
+      });
+    } else if (status === "failed") {
       emit({
         category: "autopull",
         event: "error",
@@ -79,7 +87,15 @@ export function useEngineEvents(channel: Channel | null): void {
   useChannelSub(channel, EVENTS.autoPush.status, (payload: Record<string, unknown>) => {
     const data = (payload.data || payload) as Record<string, unknown>;
     const status = data.status as string;
-    if (status === "build_failed" || status === "rebase_failed" || status === "push_failed") {
+    if (status === "resolving_conflicts") {
+      emit({
+        category: "autopush",
+        event: "resolving",
+        message: `Resolving conflicts: ${data.project || ""} (agent session started)`,
+        severity: "warning",
+        data,
+      });
+    } else if (status === "build_failed" || status === "rebase_failed" || status === "push_failed") {
       const pushMessages: Record<string, string> = {
         build_failed: "Build failed before push",
         rebase_failed: "Merge conflict blocked push",

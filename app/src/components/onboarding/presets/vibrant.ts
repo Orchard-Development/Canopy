@@ -95,6 +95,11 @@ export const highcon: MoodPreset = {
     useGradient: false,
     borderRadius: 4,
     elevation: "flat",
+    density: "compact",
+    chromeCase: "uppercase",
+    borderWeight: 2,
+    headingWeight: 700,
+    transitionMs: 150,
     dark: {
       primary: "#ffffff", secondary: "#ffcc00", tertiary: "#00ccff",
       success: "#00ff00", warning: "#ffcc00", error: "#ff3333",
