@@ -11,7 +11,8 @@ interface AuthState {
   configured: boolean;
   isOwner: boolean | null;
   engineSynced: boolean | null;
-  teamId: string | null;
+  activeTeamId: string | null;
+  teams: { id: string; name: string }[];
   signInWithGoogle: () => Promise<void>;
   signInWithMagicLink: (email: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string) => Promise<{ error: string | null }>;
@@ -68,7 +69,7 @@ function clearTokensFromEngine(): void {
       "auth.access_token": "",
       "auth.refresh_token": "",
       "auth.user_id": "",
-      "auth.team_id": "",
+      "auth.team_id": null,
     }),
   }).catch(() => {});
 }
@@ -79,7 +80,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(supabaseConfigured);
   const [isOwner, setIsOwner] = useState<boolean | null>(null);
   const [engineSynced, setEngineSynced] = useState<boolean | null>(null);
-  const [teamId, setTeamId] = useState<string | null>(null);
+  const [activeTeamId, setActiveTeamId] = useState<string | null>(null);
+  const [teams, setTeams] = useState<{ id: string; name: string }[]>([]);
 
   /** Save tokens to Engine and verify via health check. */
   async function syncToEngine(s: Session): Promise<void> {
@@ -94,6 +96,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } else {
       setEngineSynced(false);
+    }
+  }
+
+  async function fetchTeams(userId: string): Promise<void> {
+    try {
+      const { data, error } = await supabase
+        .from("team_members")
+        .select("teams(id, name)")
+        .eq("user_id", userId);
+      if (error) {
+        console.error("[useAuth] fetchTeams error:", error);
+        return;
+      }
+      const loaded = (data ?? [])
+        .map((row: Record<string, unknown>) => row.teams as { id: string; name: string } | null)
+        .filter((t): t is { id: string; name: string } => t != null);
+      setTeams(loaded);
+      if (loaded.length === 1 && !activeTeamId) {
+        selectTeam(loaded[0].id);
+      }
+    } catch (err) {
+      console.error("[useAuth] fetchTeams exception:", err);
     }
   }
 
@@ -124,7 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const access = settings["auth.access_token"];
         const refresh = settings["auth.refresh_token"];
         const storedTeamId = settings["auth.team_id"];
-        if (storedTeamId) setTeamId(storedTeamId);
+        if (storedTeamId) setActiveTeamId(storedTeamId);
         if (access && refresh) {
           const { data: restored, error } = await supabase.auth.setSession({
             access_token: access,
@@ -153,6 +177,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Persist tokens to Engine on sign-in and token refresh
         if (newSession && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED")) {
           syncToEngine(newSession);
+        }
+
+        // Fetch teams on sign-in (not on token refresh)
+        if (newSession && event === "SIGNED_IN" && newSession.user) {
+          fetchTeams(newSession.user.id);
         }
 
         // Clean up auth tokens from URL after successful sign-in
@@ -291,7 +320,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     clearTokensFromEngine();
     setSession(null);
-    setTeamId(null);
+    setActiveTeamId(null);
+    setTeams([]);
   }
 
   async function selectTeam(id: string): Promise<void> {
@@ -300,7 +330,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ "auth.team_id": id }),
     });
-    if (res.ok) setTeamId(id);
+    if (res.ok) setActiveTeamId(id);
   }
 
   const value: AuthState = {
@@ -310,7 +340,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     configured: supabaseConfigured,
     isOwner,
     engineSynced,
-    teamId,
+    activeTeamId,
+    teams,
     signInWithGoogle,
     signInWithMagicLink,
     signUp,
