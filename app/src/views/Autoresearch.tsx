@@ -170,9 +170,6 @@ export default function Autoresearch() {
         </CardContent>
       </Card>
 
-      {/* AWS credentials card -- show when GPU backend is selected */}
-      <AwsCard aws={status?.aws ?? null} backend={evalMode} />
-
       {/* What it plans to improve next */}
       <Card sx={{ mb: 2 }}>
         <CardContent>
@@ -291,7 +288,7 @@ export default function Autoresearch() {
                   >
                     <MenuItem value="keywords">Local (fast, free)</MenuItem>
                     <MenuItem value="ollama">Ollama (local GPU)</MenuItem>
-                    <MenuItem value="gpu">AWS GPU (accurate, costs $)</MenuItem>
+                    <MenuItem value="gpu">Vertex AI GPU (accurate, costs $)</MenuItem>
                   </Select>
                 </Box>
                 <Button
@@ -407,66 +404,6 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function AwsCard({ aws, backend }: {
-  aws: { configured: boolean; key_set: boolean; secret_set: boolean; region: string | null } | null;
-  backend: string;
-}) {
-  if (backend !== "gpu" && backend !== "transformers") return null;
-  if (!aws) return null;
-
-  return (
-    <Card sx={{ mb: 2 }}>
-      <CardContent>
-        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-          AWS GPU Evaluation
-        </Typography>
-        <Stack spacing={1}>
-          <Stack direction="row" spacing={2} alignItems="center">
-            <Box sx={{
-              width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
-              bgcolor: aws.configured ? "success.main" : "error.main",
-            }} />
-            <Typography variant="body2">
-              {aws.configured
-                ? "AWS credentials configured"
-                : "AWS credentials missing"}
-            </Typography>
-          </Stack>
-          <Stack direction="row" spacing={3}>
-            <CredRow label="Access Key" set={aws.key_set} />
-            <CredRow label="Secret Key" set={aws.secret_set} />
-            <Stat label="Region" value={aws.region ?? "not set"} />
-          </Stack>
-          {!aws.configured && (
-            <Alert severity="warning" variant="outlined" sx={{ mt: 1 }}>
-              Set your AWS credentials in Settings to use GPU evaluation.
-              The system uses SkyPilot to spin up GPU instances for accurate
-              embedding-based scoring.
-            </Alert>
-          )}
-          {aws.configured && (
-            <Typography variant="caption" color="text.secondary">
-              Evaluations will use SkyPilot to provision a GPU instance in {aws.region ?? "your default region"}.
-              Instances are terminated after each evaluation.
-            </Typography>
-          )}
-        </Stack>
-      </CardContent>
-    </Card>
-  );
-}
-
-function CredRow({ label, set }: { label: string; set: boolean }) {
-  return (
-    <Box>
-      <Typography variant="caption" color="text.secondary">{label}</Typography>
-      <Typography variant="body2" sx={{ fontWeight: 600, color: set ? "success.main" : "error.main" }}>
-        {set ? "Set" : "Missing"}
-      </Typography>
-    </Box>
-  );
-}
-
 function activeDescription(phase: string, status: { experiment_type?: string; target_name?: string | null; session_state?: string; session_label?: string } | null): string {
   if (!status) return PHASE_LABELS[phase] ?? phase;
   const target = status.target_name ?? "";
@@ -492,8 +429,8 @@ function backendLabel(backend: string | undefined): string {
   const labels: Record<string, string> = {
     keywords: "Local (keywords)",
     ollama: "Ollama (local GPU)",
-    gpu: "AWS GPU",
-    transformers: "AWS GPU",
+    gpu: "Vertex AI GPU",
+    transformers: "Vertex AI GPU",
   };
   return labels[backend] ?? backend;
 }
