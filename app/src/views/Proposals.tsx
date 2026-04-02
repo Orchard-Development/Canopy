@@ -276,7 +276,10 @@ export default function Proposals() {
   }, {});
 
   const statusOrder = ["in-progress", "draft", "completed", "rejected"];
-  const sections = statusOrder.filter((s) => byStatus[s]?.length);
+  const sections = [
+    ...statusOrder.filter((s) => byStatus[s]?.length),
+    ...Object.keys(byStatus).filter((s) => !statusOrder.includes(s)),
+  ];
 
   return (
     <Box sx={{ pt: 1 }}>
