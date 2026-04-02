@@ -6,6 +6,7 @@ export interface RootsMatch {
   source_path: string;
   summary: string;
   similarity: number;
+  is_local: boolean;
 }
 
 interface RootsMatchesPayload {
