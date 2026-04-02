@@ -43,6 +43,7 @@ import { DesktopPermissionsCard } from "../components/settings/DesktopPermission
 import { UsageStatsCard } from "../components/settings/UsageStatsCard";
 import { useSettingsContext } from "../contexts/SettingsContext";
 import DatabaseOverview from "./database-explorer/DatabaseOverview";
+import { TeamCard } from "../components/settings/TeamCard";
 
 const TAB_KEYS = ["providers", "secrets", "audio", "appearance", "views", "seedpacks", "automation", "stats", "notifications", "general", "database", "engine", "account"] as const;
 type TabKey = (typeof TAB_KEYS)[number];
@@ -448,6 +449,7 @@ function AccountTab({ s }: { s: ReturnType<typeof useSettings> }) {
             Sign out
           </Button>
         </CardContent></Card>
+        <TeamCard />
         <CloudSyncCard />
       </Box>
     );

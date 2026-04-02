@@ -11,11 +11,13 @@ interface AuthState {
   configured: boolean;
   isOwner: boolean | null;
   engineSynced: boolean | null;
+  teamId: string | null;
   signInWithGoogle: () => Promise<void>;
   signInWithMagicLink: (email: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string) => Promise<{ error: string | null }>;
   signInWithPassword: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
+  selectTeam: (teamId: string) => Promise<void>;
 }
 
 function isLocalAccess(): boolean {
@@ -63,6 +65,7 @@ function clearTokensFromEngine(): void {
       "auth.access_token": "",
       "auth.refresh_token": "",
       "auth.user_id": "",
+      "auth.team_id": "",
     }),
   }).catch(() => {});
 }
@@ -73,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(supabaseConfigured);
   const [isOwner, setIsOwner] = useState<boolean | null>(null);
   const [engineSynced, setEngineSynced] = useState<boolean | null>(null);
+  const [teamId, setTeamId] = useState<string | null>(null);
 
   /** Save tokens to Engine and verify via health check. */
   async function syncToEngine(s: Session): Promise<void> {
@@ -108,6 +112,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const settings = await fetchSettings();
         const access = settings["auth.access_token"];
         const refresh = settings["auth.refresh_token"];
+        const storedTeamId = settings["auth.team_id"];
+        if (storedTeamId) setTeamId(storedTeamId);
         if (access && refresh) {
           const { data: restored, error } = await supabase.auth.setSession({
             access_token: access,
@@ -266,6 +272,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     clearTokensFromEngine();
     setSession(null);
+    setTeamId(null);
+  }
+
+  async function selectTeam(id: string): Promise<void> {
+    const res = await fetch(`${PROXY_BASE}/api/settings`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ "auth.team_id": id }),
+    });
+    if (res.ok) setTeamId(id);
   }
 
   const value: AuthState = {
@@ -275,11 +291,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     configured: supabaseConfigured,
     isOwner,
     engineSynced,
+    teamId,
     signInWithGoogle,
     signInWithMagicLink,
     signUp,
     signInWithPassword,
     signOut,
+    selectTeam,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
