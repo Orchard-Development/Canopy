@@ -9,6 +9,7 @@ import SessionSpheres from "./SessionSpheres";
 import SeedOctahedrons from "./SeedOctahedrons";
 import AllSeedConnections from "./AllSeedConnections";
 import NeuralMesh from "./NeuralMesh";
+import { useGravityLayout } from "./useGravityLayout";
 
 interface RootsCanvasProps {
   data: OrchardData;
@@ -73,9 +74,10 @@ function SceneContents(props: SceneProps) {
   const { data, timePosition, selected, onSelect, hoveredSeed, onHoverSeed, isDark, palette, sceneColors, seedTypeColors, pointerOver } = props;
   const [hoveredSession, setHoveredSession] = useState<string | null>(null);
 
-  const sessions = data?.sessions ?? [];
-  const seeds = data?.seeds ?? [];
-  const connections = data?.connections ?? [];
+  const gravData = useGravityLayout(data);
+  const sessions = gravData?.sessions ?? [];
+  const seeds = gravData?.seeds ?? [];
+  const connections = gravData?.connections ?? [];
 
   const visibleSessions = useMemo(
     () => sessions.filter((s) => {
@@ -147,7 +149,7 @@ function SceneContents(props: SceneProps) {
         sceneColors={sceneColors}
       />
       <AllSeedConnections
-        data={data}
+        data={gravData}
         visibleSessionIds={visibleSessionIds}
         activeSeed={activeSeed}
         seedTypeColors={seedTypeColors}
