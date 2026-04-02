@@ -22,8 +22,6 @@ interface Team {
 }
 
 export function TeamCard() {
-  if (!supabaseConfigured) return null;
-
   const { session } = useAuth();
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,12 +30,14 @@ export function TeamCard() {
   const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
 
   useEffect(() => {
-    if (!session?.user) {
+    if (!supabaseConfigured || !session?.user) {
       setLoading(false);
       return;
     }
     loadTeams(session.user.id);
   }, [session?.user?.id]);
+
+  if (!supabaseConfigured) return null;
 
   async function loadTeams(userId: string) {
     setLoading(true);
