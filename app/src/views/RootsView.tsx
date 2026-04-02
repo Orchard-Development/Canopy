@@ -14,7 +14,8 @@ export default function RootsView() {
   const isDark = theme.palette.mode === "dark";
   const bg = theme.palette.background.default;
 
-  const { data, loading, error, indexing, refetch } = useRootsData();
+  const [filterUserId, setFilterUserId] = useState<string | undefined>();
+  const { data, loading, error, indexing, refetch } = useRootsData(filterUserId);
   const [selected, setSelected] = useState<SelectedItem>(null);
   const [hoveredSeed, setHoveredSeed] = useState<string | null>(null);
   const [reprofiling, setReprofiling] = useState(false);
@@ -119,7 +120,12 @@ export default function RootsView() {
       display: "flex", flexDirection: "column", height: "100%",
       bgcolor: bg, position: "relative",
     }}>
-      <StatsBar data={data} onReprofile={refetch} />
+      <StatsBar
+        data={data}
+        onReprofile={refetch}
+        filterUserId={filterUserId}
+        onFilterUserChange={setFilterUserId}
+      />
 
       <Box sx={{ flex: 1, position: "relative", minHeight: 0 }}>
         <Suspense fallback={

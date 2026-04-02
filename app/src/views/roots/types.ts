@@ -6,6 +6,7 @@ export type {
   OrchardStats,
   SeedGrowthPoint,
   SimilarResult,
+  RootsUser,
 } from "../../lib/api";
 
 export type SelectedItem =

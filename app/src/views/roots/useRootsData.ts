@@ -14,7 +14,7 @@ interface UseRootsDataResult {
 
 const INDEXING_POLL_MS = 3_000;
 
-export function useRootsData(): UseRootsDataResult {
+export function useRootsData(userId?: string): UseRootsDataResult {
   const [data, setData] = useState<OrchardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +32,7 @@ export function useRootsData(): UseRootsDataResult {
     function fetchData() {
       setLoading(true);
       api
-        .getOrchardData()
+        .getOrchardData(userId)
         .then((result) => {
           if (cancelled) return;
           // Normalize arrays so downstream components never hit undefined.length
@@ -69,7 +69,7 @@ export function useRootsData(): UseRootsDataResult {
       cancelled = true;
       if (pollRef.current) clearTimeout(pollRef.current);
     };
-  }, [generation]);
+  }, [generation, userId]);
 
   return { data, loading, error, indexing, refetch };
 }

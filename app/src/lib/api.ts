@@ -405,6 +405,7 @@ export interface OrchardSession {
   id: string;
   source_type: string;
   source_path: string;
+  user_id?: string;
   x: number;
   y: number;
   z: number;
@@ -414,6 +415,11 @@ export interface OrchardSession {
   tools: Record<string, number>;
   skills: string[];
   total_tool_calls: number;
+}
+
+export interface RootsUser {
+  user_id: string;
+  embedding_count: number;
 }
 
 export interface SeedGrowthPoint {
@@ -1040,7 +1046,13 @@ export const api = {
   },
 
   // Orchard Research (Roots -- pgvector RAG)
-  getOrchardData: () => get<OrchardData>("/api/roots/graph"),
+  getOrchardData: (userId?: string) => {
+    const qs = userId ? `?user_id=${encodeURIComponent(userId)}` : "";
+    return get<OrchardData>(`/api/roots/graph${qs}`);
+  },
+
+  getRootsUsers: () =>
+    get<{ users: RootsUser[] }>("/api/roots/users"),
 
   getSimilarSessions: (sessionId: string, k = 10) =>
     get<{ session_id: string; k: number; results: SimilarResult[] }>(

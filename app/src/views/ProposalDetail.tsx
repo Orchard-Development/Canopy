@@ -23,22 +23,28 @@ import FactCheckIcon from "@mui/icons-material/FactCheck";
 import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
 import TerminalIcon from "@mui/icons-material/Terminal";
 import ArticleOutlinedIcon from "@mui/icons-material/ArticleOutlined";
+import DownloadIcon from "@mui/icons-material/Download";
 import { MarkdownContent } from "../components/MarkdownContent";
 import { useChannelEvent } from "../hooks/useChannelEvent";
 import { useDashboardChannel } from "../hooks/useDashboardChannel";
 import { EVENTS } from "../lib/events";
 import { useActiveProject } from "../hooks/useActiveProject";
+import { useBranding } from "../lib/branding";
+import { useColorMode } from "../hooks/useColorMode";
 import { api } from "../lib/api";
 import { requestTerminalOpen } from "../hooks/useDispatch";
 import { TasksTab } from "./proposal/TasksTab";
 import { STATUS_ACCENT } from "./proposal/types";
 import type { Proposal, TaskFile } from "./proposal/types";
+import { downloadHypeDoc } from "./proposal/generateHypeDoc";
 
 export default function ProposalDetailView() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { project } = useActiveProject();
   const projectId = project?.id;
+  const branding = useBranding();
+  const { mode } = useColorMode();
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +54,7 @@ export default function ProposalDetailView() {
   const [busy, setBusy] = useState(false);
   const [evaluation, setEvaluation] = useState<string | null>(null);
   const [evaluating, setEvaluating] = useState(false);
+  const [generatingHype, setGeneratingHype] = useState(false);
   const { channel } = useDashboardChannel();
   const evalEvent = useChannelEvent<{ slug: string; text: string }>(channel, EVENTS.proposals.eval);
   const evalDoneEvent = useChannelEvent<{ slug: string; error?: string }>(channel, EVENTS.proposals.evalDone);
@@ -183,6 +190,14 @@ export default function ProposalDetailView() {
             <Button variant="outlined" size="small" startIcon={evaluating ? <CircularProgress size={16} /> : <FactCheckIcon />} onClick={handleEvaluate} disabled={busy || evaluating}>
               {evaluating ? "Evaluating..." : "Evaluate"}
             </Button>
+          </Tooltip>
+          <Tooltip title="Generate AI hype doc and download as PNG">
+            <Button variant="outlined" size="small" startIcon={generatingHype ? <CircularProgress size={16} /> : <DownloadIcon />} disabled={generatingHype} onClick={async () => {
+              setGeneratingHype(true);
+              try { await downloadHypeDoc(proposal, branding[mode], branding.name, project?.name ?? "Orchard"); }
+              catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+              finally { setGeneratingHype(false); }
+            }}>{generatingHype ? "Generating..." : "Hype Doc"}</Button>
           </Tooltip>
           <Button variant="outlined" size="small" startIcon={<EditIcon />} onClick={() => handleEdit()} disabled={busy}>Edit</Button>
           <Button variant="contained" size="small" startIcon={<RocketLaunchIcon />} onClick={() => handleBuild()} disabled={busy || proposal.status === "completed"}>Build</Button>

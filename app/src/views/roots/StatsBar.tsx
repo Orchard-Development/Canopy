@@ -1,13 +1,15 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
-import { Box, Typography, Tooltip, IconButton, alpha, useTheme } from "@mui/material";
+import { Box, Typography, Tooltip, IconButton, Select, MenuItem, alpha, useTheme } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import type { OrchardData } from "./types";
-import type { ProfileStatus } from "../../lib/api";
+import type { ProfileStatus, RootsUser } from "../../lib/api";
 import { api } from "../../lib/api";
 
 interface StatsBarProps {
   data: OrchardData;
   onReprofile?: () => void;
+  filterUserId?: string;
+  onFilterUserChange?: (userId: string | undefined) => void;
 }
 
 function formatTimeAgo(iso: string): string {
@@ -27,10 +29,15 @@ function formatCountdown(ms: number): string {
   return `${Math.floor(mins / 60)}h ${mins % 60}m`;
 }
 
-export default function StatsBar({ data, onReprofile }: StatsBarProps) {
+export default function StatsBar({ data, onReprofile, filterUserId, onFilterUserChange }: StatsBarProps) {
   const theme = useTheme();
   const [status, setStatus] = useState<ProfileStatus | null>(null);
   const [reprofiling, setReprofiling] = useState(false);
+  const [users, setUsers] = useState<RootsUser[]>([]);
+
+  useEffect(() => {
+    api.getRootsUsers().then((res) => setUsers(res.users ?? [])).catch(() => {});
+  }, []);
 
   const fetchStatus = useCallback(() => {
     api.getProfileStatus().then(setStatus).catch(() => {});
@@ -107,6 +114,33 @@ export default function StatsBar({ data, onReprofile }: StatsBarProps) {
       <LegendDot color={p.success.light} label="Proposal" />
       <LegendDot color={p.warning.light} label="Skill" />
       <LegendDot color={p.secondary.light} label="Rule" />
+
+      {users.length > 1 && (
+        <>
+          <Box sx={{ mx: 1, height: 16, borderLeft: 1, borderColor: "divider" }} />
+          <Select
+            size="small"
+            value={filterUserId ?? "__all__"}
+            onChange={(e) => {
+              const v = e.target.value;
+              onFilterUserChange?.(v === "__all__" ? undefined : v);
+            }}
+            sx={{
+              fontSize: 12,
+              height: 26,
+              minWidth: 120,
+              "& .MuiSelect-select": { py: 0.3, px: 1 },
+            }}
+          >
+            <MenuItem value="__all__" sx={{ fontSize: 12 }}>All users</MenuItem>
+            {users.map((u) => (
+              <MenuItem key={u.user_id} value={u.user_id} sx={{ fontSize: 12 }}>
+                {u.user_id.slice(0, 8)}... ({u.embedding_count})
+              </MenuItem>
+            ))}
+          </Select>
+        </>
+      )}
 
       <Box sx={{ flex: 1 }} />
 

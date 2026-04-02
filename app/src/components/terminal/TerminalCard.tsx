@@ -366,10 +366,7 @@ export const TerminalCard = forwardRef(function TerminalCard(
           )}
         </Box>
       )}
-      <LinkedKnowledgeBanner
-        matches={linkedMatches}
-        onNavigate={(sid) => requestTerminalOpen(sid, `Session ${sid.slice(0, 8)}`)}
-      />
+      <LinkedKnowledgeBanner matches={linkedMatches} />
       <CardContent sx={{ flex: 1, p: 0, "&:last-child": { pb: 0 }, overflow: "hidden", position: "relative" }}>
         <TerminalPanel key={`${tab.id}-${refreshKey}-${externalRefreshKey || 0}`} sessionId={tab.id} active renderMode={renderMode} onExit={onExit} />
         {isExited && (

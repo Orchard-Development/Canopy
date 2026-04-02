@@ -34,7 +34,6 @@ import { SessionHistoryDialog } from "./SessionHistoryDialog";
 import { SessionSummaryList } from "./SessionSummaryList";
 import { LinkedKnowledgeBanner } from "./LinkedKnowledgeBanner";
 import { useLinkedKnowledge } from "../../hooks/useLinkedKnowledge";
-import { requestTerminalOpen } from "../../hooks/useDispatch";
 import { TerminalPanel } from "./TerminalPanel";
 import { TerminalGrid } from "./TerminalGrid";
 import type { GridSpan } from "../ResizableGrid";
@@ -822,10 +821,7 @@ export function TerminalDrawerContent({
               )}
             </Box>
           )}
-          <LinkedKnowledgeBanner
-            matches={linkedMatches}
-            onNavigate={(sid) => requestTerminalOpen(sid, `Session ${sid.slice(0, 8)}`)}
-          />
+          <LinkedKnowledgeBanner matches={linkedMatches} />
           <Box sx={{ position: "relative", flex: 1 }}>
             {tabs.map((tab, index) => (
               <Box
