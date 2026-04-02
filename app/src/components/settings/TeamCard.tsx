@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -11,85 +11,21 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { supabase, supabaseConfigured } from "../../lib/supabase";
-import { fetchSettings } from "../../lib/settingsCache";
-import { PROXY_BASE } from "../../lib/api";
 import { useAuth } from "../../hooks/useAuth";
 
-interface Team {
-  id: string;
-  name: string;
-}
-
 export function TeamCard() {
-  const { session } = useAuth();
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTeamId, setActiveTeamId] = useState<string | null>(null);
+  const { teams, activeTeamId, selectTeam, loading, configured } = useAuth();
   const [saving, setSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
 
-  useEffect(() => {
-    if (!supabaseConfigured || !session?.user) {
-      setLoading(false);
-      return;
-    }
-    loadTeams(session.user.id);
-  }, [session?.user?.id]);
+  if (!configured) return null;
 
-  if (!supabaseConfigured) return null;
-
-  async function loadTeams(userId: string) {
-    setLoading(true);
-    try {
-      const [memberResult, settings] = await Promise.all([
-        supabase
-          .from("team_members")
-          .select("teams(id, name)")
-          .eq("user_id", userId),
-        fetchSettings(),
-      ]);
-
-      const currentTeamId = settings["auth.team_id"] || null;
-      setActiveTeamId(currentTeamId);
-
-      if (!memberResult.error && memberResult.data) {
-        // Supabase returns teams as object (many-to-one) or array depending on inferred types
-        const loaded: Team[] = (memberResult.data as unknown as { teams: Team | Team[] | null }[])
-          .flatMap((row) => {
-            const t = row.teams;
-            if (!t) return [];
-            return Array.isArray(t) ? t : [t];
-          })
-          .filter((t): t is Team => !!t && typeof t.id === "string");
-        setTeams(loaded);
-
-        // Auto-select if exactly one team and none is set
-        if (loaded.length === 1 && !currentTeamId) {
-          await applyTeamSelect(loaded[0].id);
-        }
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function applyTeamSelect(teamId: string) {
+  async function handleTeamSwitch(id: string) {
     setSaving(true);
     try {
-      const res = await fetch(`${PROXY_BASE}/api/settings`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ "auth.team_id": teamId }),
-      });
-      if (res.ok) {
-        setActiveTeamId(teamId);
-        setSaveStatus("success");
-        setTimeout(() => setSaveStatus("idle"), 2000);
-      } else {
-        setSaveStatus("error");
-        setTimeout(() => setSaveStatus("idle"), 3000);
-      }
+      await selectTeam(id);
+      setSaveStatus("saved");
+      setTimeout(() => setSaveStatus("idle"), 2000);
     } catch {
       setSaveStatus("error");
       setTimeout(() => setSaveStatus("idle"), 3000);
@@ -119,7 +55,7 @@ export function TeamCard() {
               labelId="team-select-label"
               value={activeTeamId || ""}
               label="Active Team"
-              onChange={(e) => applyTeamSelect(e.target.value)}
+              onChange={(e) => handleTeamSwitch(e.target.value)}
               disabled={saving}
             >
               {teams.map((team) => (
@@ -129,11 +65,11 @@ export function TeamCard() {
           </FormControl>
         )}
 
-        {(saveStatus === "success" || saveStatus === "error") && (
+        {(saveStatus === "saved" || saveStatus === "error") && (
           <Stack direction="row" sx={{ mt: 1.5 }}>
             <Chip
-              label={saveStatus === "success" ? "Saved" : "Failed to save"}
-              color={saveStatus === "success" ? "success" : "error"}
+              label={saveStatus === "saved" ? "Saved" : "Failed to save"}
+              color={saveStatus === "saved" ? "success" : "error"}
               size="small"
             />
           </Stack>

@@ -138,6 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         setSession(data.session);
         syncToEngine(data.session);
+        if (data.session.user) fetchTeams(data.session.user.id);
         setLoading(false);
         return;
       }
@@ -157,6 +158,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (!error && restored.session) {
             setSession(restored.session);
             setEngineSynced(true);
+            if (restored.session.user) fetchTeams(restored.session.user.id);
             setLoading(false);
             return;
           }

@@ -19,6 +19,7 @@ import { useBranding, resolveAccent } from "../lib/branding";
 import { useIdentity } from "../hooks/useIdentity";
 import { ProjectSwitcher } from "./ProjectSwitcher";
 import { Breadcrumbs } from "./Breadcrumbs";
+import { TeamSwitcher } from "./TeamSwitcher";
 import { NotificationBell } from "./NotificationBell";
 
 function getInitials(name: string): string {
@@ -74,6 +75,7 @@ export function AppHeader({ onMenuToggle, showMenuButton, onFocusSession, onView
             }}
           />
           <ProjectSwitcher />
+          <TeamSwitcher />
           <Breadcrumbs />
         </Box>
 
