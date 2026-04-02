@@ -49,8 +49,11 @@ async function saveTokensToEngine(s: Session): Promise<boolean> {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(profile),
       });
+      console.log("[useAuth] saveTokensToEngine attempt", attempt, "status:", res.status, "ok:", res.ok);
       if (res.ok) return true;
-    } catch { /* retry */ }
+    } catch (err) {
+      console.error("[useAuth] saveTokensToEngine attempt", attempt, "error:", err);
+    }
     if (attempt < 2) await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
   }
   console.error("[useAuth] failed to sync auth to Engine after 3 attempts");
@@ -101,6 +104,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Try local Supabase session first (works in the browser that did the auth)
       const { data } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
       if (data.session) {
+        // Guard against stale sessions where JWT expired and auto-refresh failed --
+        // the SDK can return a session with user metadata but empty tokens.
+        // Writing those to the engine breaks all authenticated sync/RLS calls.
+        if (!data.session.access_token || !data.session.refresh_token) {
+          await supabase.auth.signOut();
+          setLoading(false);
+          return;
+        }
         setSession(data.session);
         syncToEngine(data.session);
         setLoading(false);
@@ -151,23 +162,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     );
 
-    // Poll engine for tokens set by the browser (e.g. after magic link in system browser).
-    // Stops once a session is established.
+    // Poll engine for auth state reconciliation.
+    // - No browser session: check if engine has tokens (e.g. magic link in system browser).
+    // - Has browser session: verify engine tokens are present, re-push if missing (e.g. engine restart).
     const poll = setInterval(async () => {
-      if (sessionRef.current) return;
+      const current = sessionRef.current;
       try {
         const settings = await fetchSettings();
         const access = settings["auth.access_token"];
         const refresh = settings["auth.refresh_token"];
-        if (!access || !refresh) return;
-        const { data: restored, error } = await supabase.auth.setSession({
-          access_token: access,
-          refresh_token: refresh,
-        });
-        if (!error && restored.session) {
-          setSession(restored.session);
+
+        if (!current) {
+          // No browser session -- try to restore from engine tokens
+          if (!access || !refresh) return;
+          const { data: restored, error } = await supabase.auth.setSession({
+            access_token: access,
+            refresh_token: refresh,
+          });
+          if (!error && restored.session) {
+            setSession(restored.session);
+          }
+        } else if (!access || !refresh) {
+          // Browser has session but engine lost tokens (restart, etc.) -- re-sync
+          syncToEngine(current);
         }
-      } catch { /* ignore */ }
+      } catch { /* engine unavailable, skip */ }
     }, 3000);
 
     return () => {

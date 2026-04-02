@@ -1845,6 +1845,8 @@ export interface SessionLogProfile {
   doing?: string;
   lastDid?: string;
   profiledAt?: string;
+  tools?: Record<string, number>;
+  skills?: Array<{ name: string }>;
 }
 
 export interface SessionLogMeta {

@@ -128,6 +128,9 @@ export const EVENTS = {
   roots: {
     matches: "roots:matches",
   },
+  auth: {
+    signout: "auth:signout",
+  },
   toast: {
     show: "toast:show",
   },

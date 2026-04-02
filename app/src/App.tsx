@@ -476,6 +476,17 @@ function OnboardingShell({ onComplete, onBrandingChange }: { onComplete: (sessio
 }
 
 /** Handles auto-pull on login and debounced auto-push on branding/settings change. */
+function AuthSignoutBridge() {
+  const { signOut } = useAuth();
+  const { channel } = useDashboardChannel();
+  const signoutEvent = useChannelEvent<{ reason: string }>(channel, EVENTS.auth.signout);
+  useEffect(() => {
+    if (!signoutEvent) return;
+    signOut();
+  }, [signoutEvent]); // eslint-disable-line react-hooks/exhaustive-deps
+  return null;
+}
+
 function CloudSyncBridge() {
   const { user } = useAuth();
   const { pushToCloud, pullFromCloud } = useCloudSync();
@@ -608,6 +619,7 @@ export function App() {
             <TunnelAuthProvider>
             <AuthProvider>
             <CloudSyncBridge />
+            <AuthSignoutBridge />
             <LoginGate>
             <ActiveProjectProvider>
               <ProjectThemeBridge />

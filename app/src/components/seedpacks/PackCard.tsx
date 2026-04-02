@@ -10,6 +10,8 @@ import {
   Typography,
 } from "@mui/material";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import PsychologyIcon from "@mui/icons-material/Psychology";
+import StorageIcon from "@mui/icons-material/Storage";
 
 export interface PackCardData {
   id: string;
@@ -21,6 +23,14 @@ export interface PackCardData {
   version: number;
   category?: string;
   techStack?: string[];
+  /** Number of trained neural models bundled with this pack. */
+  modelCount?: number;
+  /** Total size of all bundled models in megabytes. */
+  modelSizeMb?: number;
+  /** Router accuracy percentage (0-100). */
+  routerAccuracy?: number;
+  /** True when pack rules have changed since the models were last trained. */
+  modelsStale?: boolean;
 }
 
 interface Props {
@@ -83,6 +93,32 @@ export function PackCard({
           {(pack.techStack || []).map((tech) => (
             <Chip key={tech} label={tech} size="small" color="secondary" variant="outlined" />
           ))}
+          {!!pack.modelCount && pack.modelCount > 0 && (
+            <Tooltip title={pack.modelsStale ? "Models may be outdated -- rules have changed since training" : ""}>
+              <Chip
+                icon={<PsychologyIcon fontSize="small" />}
+                label={`${pack.modelCount} model${pack.modelCount === 1 ? "" : "s"}`}
+                size="small"
+                color={pack.modelsStale ? "warning" : "default"}
+                variant="outlined"
+              />
+            </Tooltip>
+          )}
+          {pack.modelSizeMb != null && (
+            <Chip
+              icon={<StorageIcon fontSize="small" />}
+              label={`${pack.modelSizeMb} MB`}
+              size="small"
+              variant="outlined"
+            />
+          )}
+          {pack.routerAccuracy != null && (
+            <Chip
+              label={`${Math.round(pack.routerAccuracy)}% accuracy`}
+              size="small"
+              variant="outlined"
+            />
+          )}
           {onDelete && (
             <Tooltip title="Delete">
               <IconButton

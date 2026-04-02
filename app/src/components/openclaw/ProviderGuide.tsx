@@ -380,14 +380,14 @@ export function SetupWizard({ provider, initialWelcomeMessage = "", onComplete, 
       if (!payload.ok) setLoginError(payload.error || "Login failed");
     };
 
-    channel.on(EVENTS.openclaw.loginOutput, handleOutput);
-    channel.on(EVENTS.openclaw.loginDone, handleDone);
+    const outputRef = channel.on(EVENTS.openclaw.loginOutput, handleOutput);
+    const doneRef = channel.on(EVENTS.openclaw.loginDone, handleDone);
 
     const timeout = setTimeout(() => setQrTimedOut(true), 70_000);
 
     return () => {
-      channel.off(EVENTS.openclaw.loginOutput, handleOutput);
-      channel.off(EVENTS.openclaw.loginDone, handleDone);
+      channel.off(EVENTS.openclaw.loginOutput, outputRef);
+      channel.off(EVENTS.openclaw.loginDone, doneRef);
       clearTimeout(timeout);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
