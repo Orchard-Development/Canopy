@@ -653,8 +653,13 @@ export const api = {
     ),
 
   getSeedPack: (id: string) =>
-    get<{ id: string; name: string; slug: string; description: string; source: string; files: Array<{ path: string; content: string; sha256: string }>; version: number; created_at: string; updated_at: string; category?: string; tags?: string[]; requires?: string[]; techStack?: string[] }>(
+    get<{ id: string; name: string; slug: string; description: string; source: string; files: Array<{ path: string; content?: string; sha256: string; storage_key?: string }>; version: number; created_at: string; updated_at: string; category?: string; tags?: string[]; requires?: string[]; techStack?: string[] }>(
       `/api/seed-packs/${id}`,
+    ),
+
+  fetchFileContent: (id: string, path: string) =>
+    get<{ content: string; sha256: string; path: string }>(
+      `/api/seed-packs/${id}/file-content?path=${encodeURIComponent(path)}`,
     ),
 
   generateSeedPack: (body: { prompt: string }) =>
@@ -663,17 +668,17 @@ export const api = {
     ),
 
   createSeedPack: (body: { name: string; description?: string; files?: Array<{ path: string; content: string }> }) =>
-    postJson<{ id: string; name: string; slug: string; description: string; source: string; files: Array<{ path: string; content: string; sha256: string }>; version: number; created_at: string; updated_at: string }>(
+    postJson<{ id: string; name: string; slug: string; description: string; source: string; files: Array<{ path: string; content?: string; sha256: string; storage_key?: string }>; version: number; created_at: string; updated_at: string }>(
       "/api/seed-packs", body,
     ),
 
   updateSeedPack: (id: string, body: { name?: string; description?: string; files?: Array<{ path: string; content: string }> }) =>
-    patchJson<{ id: string; name: string; slug: string; description: string; source: string; files?: Array<{ path: string; content: string; sha256: string }>; version: number; created_at: string; updated_at: string }>(
+    patchJson<{ id: string; name: string; slug: string; description: string; source: string; files?: Array<{ path: string; content?: string; sha256: string; storage_key?: string }>; version: number; created_at: string; updated_at: string }>(
       `/api/seed-packs/${id}`, body,
     ),
 
   upsertSeedPackFile: (id: string, body: { path: string; content: string }) =>
-    putJson<{ ok: boolean; file: { path: string; content: string; sha256: string } }>(
+    putJson<{ ok: boolean; file: { path: string; content?: string; sha256: string; storage_key?: string } }>(
       `/api/seed-packs/${id}/files`, body,
     ),
 
@@ -683,7 +688,7 @@ export const api = {
     ),
 
   rewriteSeedPackFile: (id: string, body: { path: string; instruction: string }) =>
-    postJson<{ ok: boolean; file: { path: string; content: string; sha256: string }; model: string }>(
+    postJson<{ ok: boolean; file: { path: string; content?: string; sha256: string; storage_key?: string }; model: string }>(
       `/api/seed-packs/${id}/files/rewrite`, body,
     ),
 

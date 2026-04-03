@@ -13,7 +13,7 @@ interface AddContentDialogProps {
   type: ContentType;
   packId: string;
   onClose: () => void;
-  onCreated: (file: { path: string; content: string; sha256: string }) => void;
+  onCreated: (file: { path: string; content?: string; sha256: string; storage_key?: string }) => void;
 }
 
 const TYPE_LABELS: Record<ContentType, string> = { rule: "Rule", skill: "Skill", file: "File" };

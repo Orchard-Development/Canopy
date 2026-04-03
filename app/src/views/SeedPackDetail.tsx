@@ -21,7 +21,7 @@ import { api } from "../lib/api";
 
 type AddType = "rule" | "skill" | "file";
 
-interface PackFile { path: string; content: string; sha256: string }
+interface PackFile { path: string; content?: string; sha256: string; storage_key?: string }
 interface PackData {
   id: string; name: string; slug: string; description: string;
   source: string; files: PackFile[]; version: number;
@@ -45,6 +45,8 @@ export default function SeedPackDetail() {
   const [addOpen, setAddOpen] = useState(false);
   const [addType, setAddType] = useState<AddType>("rule");
   const [allPacks, setAllPacks] = useState<Array<{ id: string; slug: string }>>([]);
+  const [fileContentCache, setFileContentCache] = useState<Record<string, string>>({});
+  const [fileContentLoading, setFileContentLoading] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!id) return;
@@ -58,10 +60,36 @@ export default function SeedPackDetail() {
       .catch(() => {});
   }, [id]);
 
+  async function fetchContent(path: string) {
+    if (!pack || fileContentCache[path] !== undefined) return;
+    setFileContentLoading((prev) => new Set([...prev, path]));
+    try {
+      const result = await api.fetchFileContent(pack.id, path);
+      setFileContentCache((prev) => ({ ...prev, [path]: result.content }));
+    } catch { /* ignore -- user sees no content */ }
+    setFileContentLoading((prev) => {
+      const next = new Set(prev);
+      next.delete(path);
+      return next;
+    });
+  }
+
+  function resolveContent(file: PackFile): string | undefined {
+    return file.content ?? fileContentCache[file.path];
+  }
+
   function toggleFile(path: string) {
     setExpanded((prev) => {
       const next = new Set(prev);
-      next.has(path) ? next.delete(path) : next.add(path);
+      if (next.has(path)) {
+        next.delete(path);
+      } else {
+        next.add(path);
+        const file = pack?.files.find((f) => f.path === path);
+        if (file && !file.content && fileContentCache[path] === undefined) {
+          fetchContent(path);
+        }
+      }
       return next;
     });
   }
@@ -81,6 +109,7 @@ export default function SeedPackDetail() {
       const files = p.files.map((f) => f.path === path ? { ...f, content: newContent } : f);
       return { ...p, files };
     });
+    setFileContentCache((prev) => ({ ...prev, [path]: newContent }));
   }
 
   async function handleDeleteFile(path: string) {
@@ -93,9 +122,12 @@ export default function SeedPackDetail() {
 
   function openAdd(type: AddType) { setAddType(type); setAddOpen(true); }
 
-  function handleFileCreated(file: { path: string; content: string; sha256: string }) {
+  function handleFileCreated(file: { path: string; content?: string; sha256: string; storage_key?: string }) {
     setPack((p) => p ? { ...p, files: [...p.files, file] } : p);
     setExpanded((prev) => new Set([...prev, file.path]));
+    if (file.content) {
+      setFileContentCache((prev) => ({ ...prev, [file.path]: file.content! }));
+    }
   }
 
   if (loading) return <CircularProgress size={24} sx={{ mt: 4 }} />;
@@ -174,7 +206,14 @@ export default function SeedPackDetail() {
 
       <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.5 }}>
         <Typography variant="subtitle2" fontWeight={700}>Files</Typography>
-        <Button size="small" onClick={() => setExpanded(new Set(pack.files.map((f) => f.path)))}>Expand All</Button>
+        <Button size="small" onClick={() => {
+          setExpanded(new Set(pack.files.map((f) => f.path)));
+          pack.files.forEach((f) => {
+            if (!f.content && fileContentCache[f.path] === undefined) {
+              fetchContent(f.path);
+            }
+          });
+        }}>Expand All</Button>
         <Button size="small" onClick={() => setExpanded(new Set())}>Collapse All</Button>
         <Box sx={{ flex: 1 }} />
         <Button size="small" variant="contained" startIcon={<AddIcon />} onClick={() => openAdd("rule")}>Rule</Button>
@@ -191,6 +230,8 @@ export default function SeedPackDetail() {
                 key={file.path}
                 file={file}
                 expanded={expanded.has(file.path)}
+                resolvedContent={resolveContent(file)}
+                loading={fileContentLoading.has(file.path)}
                 onToggle={() => toggleFile(file.path)}
                 onEdit={() => { setEditTab("edit"); setEditingFile(file); }}
                 onRewrite={() => { setEditTab("ai"); setEditingFile(file); }}
@@ -235,8 +276,9 @@ export default function SeedPackDetail() {
   );
 }
 
-function FileEntry({ file, expanded, onToggle, onEdit, onRewrite, onDelete }: {
-  file: PackFile; expanded: boolean; onToggle: () => void;
+function FileEntry({ file, expanded, resolvedContent, loading, onToggle, onEdit, onRewrite, onDelete }: {
+  file: PackFile; expanded: boolean; resolvedContent: string | undefined;
+  loading: boolean; onToggle: () => void;
   onEdit: () => void; onRewrite: () => void; onDelete: () => void;
 }) {
   const fileName = file.path.split("/").pop() || file.path;
@@ -249,15 +291,25 @@ function FileEntry({ file, expanded, onToggle, onEdit, onRewrite, onDelete }: {
         <Box sx={{ flex: 1 }} />
         <Tooltip title="Edit"><IconButton size="small" onClick={(e) => { e.stopPropagation(); onEdit(); }}><EditIcon fontSize="small" /></IconButton></Tooltip>
         <Tooltip title="AI Rewrite"><IconButton size="small" onClick={(e) => { e.stopPropagation(); onRewrite(); }}><AutoFixHighIcon fontSize="small" color="secondary" /></IconButton></Tooltip>
-        <Tooltip title="Copy"><IconButton size="small" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(file.content); }}><ContentCopyIcon fontSize="small" /></IconButton></Tooltip>
+        <Tooltip title="Copy"><IconButton size="small" onClick={(e) => { e.stopPropagation(); if (resolvedContent) navigator.clipboard.writeText(resolvedContent); }}><ContentCopyIcon fontSize="small" /></IconButton></Tooltip>
         <Tooltip title="Delete"><IconButton size="small" color="error" onClick={(e) => { e.stopPropagation(); onDelete(); }}><DeleteOutlineIcon fontSize="small" /></IconButton></Tooltip>
       </Box>
       <Collapse in={expanded}>
         <Divider />
         <Box sx={{ p: 1.5, bgcolor: "action.hover", overflow: "auto", maxHeight: 500 }}>
-          <Typography component="pre" variant="body2" fontFamily="monospace" sx={{ fontSize: 12, lineHeight: 1.6, whiteSpace: "pre-wrap", wordBreak: "break-word", m: 0 }}>
-            {file.content}
-          </Typography>
+          {loading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+              <CircularProgress size={20} />
+            </Box>
+          ) : resolvedContent ? (
+            <Typography component="pre" variant="body2" fontFamily="monospace" sx={{ fontSize: 12, lineHeight: 1.6, whiteSpace: "pre-wrap", wordBreak: "break-word", m: 0 }}>
+              {resolvedContent}
+            </Typography>
+          ) : (
+            <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
+              Content not available
+            </Typography>
+          )}
         </Box>
       </Collapse>
     </Paper>

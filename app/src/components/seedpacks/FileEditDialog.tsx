@@ -10,7 +10,7 @@ import { api } from "../../lib/api";
 interface FileEditDialogProps {
   open: boolean;
   packId: string;
-  file: { path: string; content: string } | null;
+  file: { path: string; content?: string; storage_key?: string } | null;
   initialTab?: "edit" | "ai";
   onClose: () => void;
   onSaved: (path: string, newContent: string) => void;
@@ -23,13 +23,27 @@ export function FileEditDialog({ open, packId, file, initialTab = "edit", onClos
   const [saving, setSaving] = useState(false);
   const [rewriting, setRewriting] = useState(false);
   const [rewriteError, setRewriteError] = useState<string | null>(null);
+  const [contentLoading, setContentLoading] = useState(false);
 
   useEffect(() => {
-    if (file) {
+    if (!file) return;
+    setInstruction("");
+    setRewriteError(null);
+    setTab(initialTab);
+    if (file.content !== undefined) {
       setContent(file.content);
-      setInstruction("");
-      setRewriteError(null);
-      setTab(initialTab);
+      setContentLoading(false);
+    } else {
+      setContent("");
+      setContentLoading(true);
+      api.fetchFileContent(packId, file.path)
+        .then((result) => {
+          setContent(result.content);
+        })
+        .catch(() => {
+          setContent("// Failed to load file content");
+        })
+        .finally(() => setContentLoading(false));
     }
   }, [file]);
 
@@ -50,7 +64,7 @@ export function FileEditDialog({ open, packId, file, initialTab = "edit", onClos
     setRewriteError(null);
     try {
       const result = await api.rewriteSeedPackFile(packId, { path: file.path, instruction });
-      setContent(result.file.content);
+      setContent(result.file.content ?? "");
       setTab("edit");
     } catch (e) {
       setRewriteError(e instanceof Error ? e.message : "Rewrite failed");
@@ -70,15 +84,21 @@ export function FileEditDialog({ open, packId, file, initialTab = "edit", onClos
         </Tabs>
 
         {tab === "edit" && (
-          <TextField
-            fullWidth
-            multiline
-            minRows={16}
-            maxRows={32}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            slotProps={{ input: { sx: { fontFamily: "monospace", fontSize: 12, lineHeight: 1.6 } } }}
-          />
+          contentLoading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : (
+            <TextField
+              fullWidth
+              multiline
+              minRows={16}
+              maxRows={32}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              slotProps={{ input: { sx: { fontFamily: "monospace", fontSize: 12, lineHeight: 1.6 } } }}
+            />
+          )
         )}
 
         {tab === "ai" && (
@@ -101,7 +121,7 @@ export function FileEditDialog({ open, packId, file, initialTab = "edit", onClos
                 variant="contained"
                 startIcon={rewriting ? <CircularProgress size={16} /> : <AutoFixHighIcon />}
                 onClick={handleRewrite}
-                disabled={rewriting || !instruction.trim()}
+                disabled={rewriting || !instruction.trim() || contentLoading}
               >
                 {rewriting ? "Rewriting..." : "Rewrite with AI"}
               </Button>
@@ -114,7 +134,7 @@ export function FileEditDialog({ open, packId, file, initialTab = "edit", onClos
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
-        <Button variant="contained" onClick={handleSave} disabled={saving || !content}>
+        <Button variant="contained" onClick={handleSave} disabled={saving || !content || contentLoading}>
           {saving ? "Saving..." : "Save"}
         </Button>
       </DialogActions>
