@@ -30,6 +30,7 @@ import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import HistoryIcon from "@mui/icons-material/History";
 import ListAltIcon from "@mui/icons-material/ListAlt";
+import KeyboardIcon from "@mui/icons-material/Keyboard";
 import { SessionHistoryDialog } from "./SessionHistoryDialog";
 import { SessionSummaryList } from "./SessionSummaryList";
 import { LinkedKnowledgeBanner } from "./LinkedKnowledgeBanner";
@@ -319,6 +320,7 @@ export function TerminalDrawerContent({
   const activeSessionId = tabs[activeTab]?.id ?? "";
   const { matches: linkedMatches } = useLinkedKnowledge(activeSessionId);
   const [summaryMode, setSummaryMode] = useState(false);
+  const [showDock, setShowDock] = useState(false);
   const [refreshKeys, setRefreshKeys] = useState<Record<string, number>>({});
   const [globalRefreshKey, setGlobalRefreshKey] = useState(0);
   const handleRefresh = () => {
@@ -563,6 +565,18 @@ export function TerminalDrawerContent({
             <Tooltip title="Refresh terminal">
               <IconButton size="small" onClick={handleRefresh} sx={{ mr: 0.5 }}>
                 <RefreshIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+          {!gridMode && !summaryMode && (
+            <Tooltip title={showDock ? "Hide input dock" : "Show input dock"}>
+              <IconButton
+                size="small"
+                onClick={() => setShowDock((d) => !d)}
+                color={showDock ? "primary" : "default"}
+                sx={{ mr: 0.5 }}
+              >
+                <KeyboardIcon fontSize="small" />
               </IconButton>
             </Tooltip>
           )}
@@ -837,6 +851,7 @@ export function TerminalDrawerContent({
                   sessionId={tab.id}
                   active={open && index === activeTab}
                   suspendResize={drawerDragging}
+                  showDock={showDock}
                   onExit={(code) => onExit(index, code)}
                 />
               </Box>

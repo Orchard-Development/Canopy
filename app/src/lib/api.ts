@@ -286,6 +286,9 @@ export interface ProjectFileEntry {
   path: string;
   isDir: boolean;
   size: number;
+  isSymlink?: boolean;
+  realPath?: string | null;
+  cycleDetected?: boolean;
 }
 
 export interface ProjectBrowseResult {
@@ -304,6 +307,19 @@ export interface FileReadResult {
   binary: boolean;
   truncated?: boolean;
   content: string | null;
+}
+
+export interface SearchResult {
+  file: string;
+  line: string;
+  content: string;
+}
+
+export interface SearchResponse {
+  matches: SearchResult[];
+  count: number;
+  pattern: string;
+  path: string;
 }
 
 export interface SessionMapNode {
@@ -1035,7 +1051,7 @@ export const api = {
   },
 
   browseDir: async (dirPath: string): Promise<ProjectFileEntry[]> => {
-    const items = await get<{ name: string; type: string; size: number }[]>(
+    const items = await get<{ name: string; type: string; size: number; isSymlink?: boolean; realPath?: string | null; cycleDetected?: boolean }[]>(
       `/api/fs/browse?path=${encodeURIComponent(dirPath)}`,
     );
     return items.map((item) => ({
@@ -1043,6 +1059,9 @@ export const api = {
       path: dirPath + "/" + item.name,
       isDir: item.type === "directory",
       size: item.size,
+      isSymlink: item.isSymlink,
+      realPath: item.realPath,
+      cycleDetected: item.cycleDetected,
     }));
   },
 
@@ -1054,6 +1073,33 @@ export const api = {
 
   writeFile: (filePath: string, content: string) =>
     postJson<{ ok: boolean }>("/api/fs/write", { path: filePath, content }),
+
+  deleteFile: (filePath: string, force = false) => {
+    const params = new URLSearchParams({ path: filePath });
+    if (force) params.set("force", "true");
+    return fetch(resolveUrl(`/api/fs/delete?${params}`), { method: "DELETE", headers: authHeaders() })
+      .then(async (r) => {
+        if (!r.ok) throw new Error(await r.text());
+        return r.json() as Promise<{ ok: boolean; path: string }>;
+      });
+  },
+
+  renameFile: (source: string, destination: string) =>
+    postJson<{ ok: boolean; source: string; destination: string }>("/api/fs/rename", { source, destination }),
+
+  searchFiles: (root: string, pattern: string, opts?: { glob?: string; maxResults?: number }) => {
+    const params = new URLSearchParams({ root, pattern });
+    if (opts?.glob) params.set("glob", opts.glob);
+    if (opts?.maxResults) params.set("max_results", String(opts.maxResults));
+    return get<SearchResponse>(`/api/fs/search?${params}`);
+  },
+
+  readFileRaw: (filePath: string): string => {
+    return `${resolveUrl("/api/fs/read")}?path=${encodeURIComponent(filePath)}&raw=true`;
+  },
+
+  mkdir: (dirPath: string) =>
+    postJson<{ ok: boolean; path: string }>("/api/fs/mkdir", { path: dirPath }),
 
   skillGraph: (projectId?: string) => {
     const qs = projectId ? `?projectId=${projectId}` : "";
