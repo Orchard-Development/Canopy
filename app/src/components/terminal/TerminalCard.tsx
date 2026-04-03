@@ -12,6 +12,7 @@ import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 import TerminalIcon from "@mui/icons-material/Terminal";
+import KeyboardIcon from "@mui/icons-material/Keyboard";
 import { api } from "../../lib/api";
 import { requestTerminalOpen } from "../../hooks/useDispatch";
 import { useLinkedKnowledge } from "../../hooks/useLinkedKnowledge";
@@ -45,6 +46,7 @@ export const TerminalCard = forwardRef(function TerminalCard(
 ) {
   const [refreshKey, setRefreshKey] = useState(0);
   const [renderMode, setRenderMode] = useState<RenderMode>("terminal");
+  const [showDock, setShowDock] = useState(false);
   const cardRef = useRef<HTMLDivElement | null>(null);
   const mergedRef = useCallback((el: HTMLDivElement | null) => {
     cardRef.current = el;
@@ -217,6 +219,22 @@ export const TerminalCard = forwardRef(function TerminalCard(
             </Tooltip>
           );
         })()}
+        {(() => {
+          const cmd = tab.command.toLowerCase();
+          const isAgent = cmd.includes("claude") || cmd.includes("codex");
+          if (!isAgent) return null;
+          return (
+            <Tooltip title={showDock ? "Hide input dock" : "Show input dock"}>
+              <IconButton
+                size="small"
+                onClick={() => setShowDock((d) => !d)}
+                sx={{ p: 0.5, color: showDock ? "primary.main" : "action.active" }}
+              >
+                <KeyboardIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          );
+        })()}
         <Tooltip title="Refresh terminal">
           <IconButton size="small" onClick={() => setRefreshKey((k) => k + 1)} sx={{ p: 0.5 }}>
             <RefreshIcon fontSize="small" />
@@ -368,7 +386,7 @@ export const TerminalCard = forwardRef(function TerminalCard(
       )}
       <LinkedKnowledgeBanner matches={linkedMatches} />
       <CardContent sx={{ flex: 1, p: 0, "&:last-child": { pb: 0 }, overflow: "hidden", position: "relative" }}>
-        <TerminalPanel key={`${tab.id}-${refreshKey}-${externalRefreshKey || 0}`} sessionId={tab.id} active renderMode={renderMode} onExit={onExit} />
+        <TerminalPanel key={`${tab.id}-${refreshKey}-${externalRefreshKey || 0}`} sessionId={tab.id} active renderMode={renderMode} showDock={showDock} onExit={onExit} />
         {isExited && (
           <Box
             onClick={handleResume}
