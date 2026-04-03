@@ -27,20 +27,30 @@ export function useEditorTabs(rootPath?: string) {
     });
   }, [activeTabPath]);
 
-  const openFile = useCallback(async (path: string) => {
-    if (tabs.some((t) => t.path === path)) { setActiveTabPath(path); return; }
+  const openFile = useCallback(async (filePath: string) => {
+    const existing = tabs.find((t) => t.path === filePath);
+    if (existing) { setActiveTabPath(existing.path); return; }
     try {
-      const r = await api.readFile(path, rootPath);
-      if (r.binary) { setError(`Cannot open binary file: ${r.name}`); return; }
-      if (r.content == null) { setError(`No content: ${r.name}`); return; }
+      const r = await api.readFile(filePath, rootPath);
+      if (r.binary) {
+        setError(`Cannot open binary file: ${r.name ?? filePath.split("/").pop()}`);
+        return;
+      }
+      if (r.content == null) {
+        setError(`No content: ${r.name ?? filePath.split("/").pop()}`);
+        return;
+      }
+      const resolvedPath = r.path ?? filePath;
+      const fileName = r.name || resolvedPath.split("/").pop() || "untitled";
       setTabs((prev) => [...prev, {
-        path: r.path, name: r.name, content: r.content!, originalContent: r.content!,
-        language: getLanguageForFile(r.name), isDirty: false,
+        path: resolvedPath, name: fileName, content: r.content!,
+        originalContent: r.content!,
+        language: getLanguageForFile(fileName), isDirty: false,
       }]);
-      setActiveTabPath(path);
+      setActiveTabPath(resolvedPath);
       setError(null);
     } catch (err) {
-      setError(`Failed to open: ${path}`);
+      setError(`Failed to open: ${filePath}`);
       console.error("openFile error:", err);
     }
   }, [tabs, rootPath]);

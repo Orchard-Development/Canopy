@@ -1030,10 +1030,10 @@ export const api = {
   },
 
   browseDir: async (dirPath: string): Promise<ProjectFileEntry[]> => {
-    const result = await get<{
-      entries: { name: string; type: string; size: number }[];
-    }>(`/api/fs/browse?path=${encodeURIComponent(dirPath)}`);
-    return (result.entries ?? []).map((item) => ({
+    const items = await get<{ name: string; type: string; size: number }[]>(
+      `/api/fs/browse?path=${encodeURIComponent(dirPath)}`,
+    );
+    return items.map((item) => ({
       name: item.name,
       path: dirPath + "/" + item.name,
       isDir: item.type === "directory",

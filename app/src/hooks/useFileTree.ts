@@ -7,6 +7,37 @@ export interface FlatTreeEntry {
   depth: number;
 }
 
+/** Directories that are always hidden in the file tree. */
+const HIDDEN_DIRS = new Set([
+  ".git",
+  "node_modules",
+  "_build",
+  "deps",
+  ".elixir_ls",
+]);
+
+/** Individual file names that are always hidden. */
+const HIDDEN_FILES = new Set([".DS_Store"]);
+
+/** Dotfile entries that should remain visible despite the blanket dot-filter. */
+const ALLOWED_DOTFILES = new Set([".env", ".gitignore", ".claude"]);
+
+function isHiddenEntry(entry: ProjectFileEntry): boolean {
+  if (entry.isDir && HIDDEN_DIRS.has(entry.name)) return true;
+  if (!entry.isDir && HIDDEN_FILES.has(entry.name)) return true;
+  if (
+    entry.name.startsWith(".") &&
+    !ALLOWED_DOTFILES.has(entry.name)
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function filterEntries(entries: ProjectFileEntry[]): ProjectFileEntry[] {
+  return entries.filter((e) => !isHiddenEntry(e));
+}
+
 function sortEntries(entries: ProjectFileEntry[]): ProjectFileEntry[] {
   return [...entries].sort((a, b) => {
     if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
@@ -42,7 +73,7 @@ export function useFileTree(rootPath: string | null) {
       .browseDir(rootPath)
       .then((entries) => {
         if (cancelled) return;
-        const sorted = sortEntries(entries);
+        const sorted = sortEntries(filterEntries(entries));
         setChildren(new Map([[rootPath, sorted]]));
         setError(null);
         initialFetchDone.current = true;
@@ -81,7 +112,7 @@ export function useFileTree(rootPath: string | null) {
       addLoading(path);
       try {
         const entries = await api.browseDir(path);
-        const sorted = sortEntries(entries);
+        const sorted = sortEntries(filterEntries(entries));
         setChildren((prev) => new Map(prev).set(path, sorted));
         setError(null);
         return sorted;
