@@ -1029,6 +1029,18 @@ export const api = {
     return get<ProjectBrowseResult>(`/api/fs/project-browse?${params}`);
   },
 
+  browseDir: async (dirPath: string): Promise<ProjectFileEntry[]> => {
+    const items = await get<{ name: string; type: string; size: number }[]>(
+      `/api/fs/browse?path=${encodeURIComponent(dirPath)}`,
+    );
+    return items.map((item) => ({
+      name: item.name,
+      path: dirPath + "/" + item.name,
+      isDir: item.type === "directory",
+      size: item.size,
+    }));
+  },
+
   readFile: (filePath: string, root?: string) => {
     const params = new URLSearchParams({ path: filePath });
     if (root) params.set("root", root);

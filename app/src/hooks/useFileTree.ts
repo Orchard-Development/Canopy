@@ -39,10 +39,10 @@ export function useFileTree(rootPath: string | null) {
     let cancelled = false;
 
     api
-      .projectBrowse(rootPath)
-      .then((result) => {
+      .browseDir(rootPath)
+      .then((entries) => {
         if (cancelled) return;
-        const sorted = sortEntries(result.entries);
+        const sorted = sortEntries(entries);
         setChildren(new Map([[rootPath, sorted]]));
         setError(null);
         initialFetchDone.current = true;
@@ -80,8 +80,8 @@ export function useFileTree(rootPath: string | null) {
       if (!rootPath) return [];
       addLoading(path);
       try {
-        const result = await api.projectBrowse(rootPath, path);
-        const sorted = sortEntries(result.entries);
+        const entries = await api.browseDir(path);
+        const sorted = sortEntries(entries);
         setChildren((prev) => new Map(prev).set(path, sorted));
         setError(null);
         return sorted;

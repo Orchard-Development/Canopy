@@ -37,7 +37,8 @@ export const EXT_TO_LANG: Record<string, string> = {
   php: "php",
 };
 
-export function getLanguageForFile(filename: string): string {
+export function getLanguageForFile(filename: string | undefined): string {
+  if (!filename) return "plaintext";
   const ext = filename.split(".").pop()?.toLowerCase() ?? "";
   return EXT_TO_LANG[ext] ?? "plaintext";
 }
