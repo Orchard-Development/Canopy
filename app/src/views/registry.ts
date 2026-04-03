@@ -31,6 +31,7 @@ export const COMPONENT_MAP: Record<string, LazyExoticComponent<ComponentType>> =
   "bundled:MessagingGateway": lazy(() => import("./MessagingGateway")),
   "bundled:KanbanBoard": lazy(() => import("./KanbanBoard")),
   "bundled:Judgment": lazy(() => import("./Judgment")),
+  "bundled:FileBrowser": lazy(() => import("./FileBrowser")),
 };
 
 /**

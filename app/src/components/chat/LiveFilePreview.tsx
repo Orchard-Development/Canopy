@@ -18,54 +18,12 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DifferenceIcon from "@mui/icons-material/Difference";
 import Editor, { DiffEditor } from "@monaco-editor/react";
+import { getLanguageForFile } from "../../lib/languageMap";
+import { api } from "../../lib/api";
 
 interface Props {
   path: string;
   initialPreview?: string;
-}
-
-const EXT_TO_LANG: Record<string, string> = {
-  ts: "typescript",
-  tsx: "typescript",
-  js: "javascript",
-  jsx: "javascript",
-  ex: "elixir",
-  exs: "elixir",
-  py: "python",
-  rb: "ruby",
-  rs: "rust",
-  go: "go",
-  java: "java",
-  kt: "kotlin",
-  swift: "swift",
-  c: "c",
-  cpp: "cpp",
-  h: "c",
-  cs: "csharp",
-  css: "css",
-  scss: "scss",
-  html: "html",
-  xml: "xml",
-  json: "json",
-  yaml: "yaml",
-  yml: "yaml",
-  md: "markdown",
-  sql: "sql",
-  sh: "shell",
-  bash: "shell",
-  zsh: "shell",
-  toml: "ini",
-  cfg: "ini",
-  dockerfile: "dockerfile",
-  graphql: "graphql",
-  lua: "lua",
-  r: "r",
-  php: "php",
-};
-
-function detectLanguage(filename: string): string {
-  const ext = filename.split(".").pop()?.toLowerCase() ?? "";
-  return EXT_TO_LANG[ext] ?? "plaintext";
 }
 
 export function LiveFilePreview({ path, initialPreview }: Props) {
@@ -85,7 +43,7 @@ export function LiveFilePreview({ path, initialPreview }: Props) {
 
   const filename = path.split("/").pop() ?? path;
   const ext = filename.split(".").pop() ?? "";
-  const language = detectLanguage(filename);
+  const language = getLanguageForFile(filename);
   const lineCount = (editing ? draft : content).split("\n").length;
 
   const fetchContent = useCallback(async () => {
@@ -138,22 +96,13 @@ export function LiveFilePreview({ path, initialPreview }: Props) {
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch("/api/fs/write", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path, content: draft }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setError(data.error ?? `Save failed (${res.status})`);
-      } else {
-        setContent(draft);
-        setEditing(false);
-        setShowDiff(false);
-        setOriginalContent(null);
-      }
-    } catch {
-      setError("Save failed");
+      await api.writeFile(path, draft);
+      setContent(draft);
+      setEditing(false);
+      setShowDiff(false);
+      setOriginalContent(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Save failed");
     } finally {
       setSaving(false);
     }

@@ -52,6 +52,7 @@ import SmartToyIcon from "@mui/icons-material/SmartToy";
 import SendIcon from "@mui/icons-material/Send";
 import ScheduleIcon from "@mui/icons-material/Schedule";
 import PsychologyIcon from "@mui/icons-material/Psychology";
+import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 import { useViewRegistry } from "../hooks/useViewRegistry";
 import type { ViewEntry } from "../hooks/useViewRegistry";
 import { useActiveProject } from "../hooks/useActiveProject";
@@ -96,6 +97,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   Send: <SendIcon />,
   Schedule: <ScheduleIcon />,
   Psychology: <PsychologyIcon />,
+  FolderOpen: <FolderOpenIcon />,
 };
 
 function resolveIcon(name: string): React.ReactNode {

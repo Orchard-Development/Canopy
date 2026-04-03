@@ -24,6 +24,7 @@ import TerminalIcon from "@mui/icons-material/Terminal";
 import HistoryIcon from "@mui/icons-material/History";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import HubIcon from "@mui/icons-material/Hub";
+import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 import { api } from "../lib/api";
 import type { OrchardViewRecord } from "../lib/api";
 
@@ -40,6 +41,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   History: <HistoryIcon />,
   AccountTree: <AccountTreeIcon />,
   Hub: <HubIcon />,
+  FolderOpen: <FolderOpenIcon />,
 };
 
 function resolveIcon(name: string): React.ReactNode {

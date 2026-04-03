@@ -1035,6 +1035,9 @@ export const api = {
     return get<FileReadResult>(`/api/fs/read?${params}`);
   },
 
+  writeFile: (filePath: string, content: string) =>
+    postJson<{ ok: boolean }>("/api/fs/write", { path: filePath, content }),
+
   skillGraph: (projectId?: string) => {
     const qs = projectId ? `?projectId=${projectId}` : "";
     return get<SkillGraph>(`/api/skills/graph${qs}`);

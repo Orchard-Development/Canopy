@@ -24,6 +24,7 @@ import TerminalIcon from "@mui/icons-material/Terminal";
 import HistoryIcon from "@mui/icons-material/History";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import HubIcon from "@mui/icons-material/Hub";
+import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 import { useViewRegistry } from "../../hooks/useViewRegistry";
 
 const VIEW_ICON_MAP: Record<string, React.ReactNode> = {
@@ -42,6 +43,7 @@ const VIEW_ICON_MAP: Record<string, React.ReactNode> = {
   History: <HistoryIcon fontSize="small" />,
   AccountTree: <AccountTreeIcon fontSize="small" />,
   Hub: <HubIcon fontSize="small" />,
+  FolderOpen: <FolderOpenIcon fontSize="small" />,
 };
 
 const REQUIRED_VIEW_IDS = new Set(["default-orchard", "default-chat", "default-settings"]);
