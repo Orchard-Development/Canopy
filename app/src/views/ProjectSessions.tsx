@@ -14,7 +14,7 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutlined";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { api, type SessionLogMeta } from "../lib/api";
 import { PageLayout } from "../components/PageLayout";
 import { useActiveProject } from "../hooks/useActiveProject";
@@ -281,6 +281,7 @@ async function fetchEnrichment(id: string): Promise<SessionEnrichment> {
 export default function ProjectSessions() {
   const { project } = useActiveProject();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const projectCwd = project?.root_path;
   const [all, setAll] = useState<SessionLogMeta[]>([]);
   const [enrichments, setEnrichments] = useState<Record<string, SessionEnrichment>>({});
@@ -303,6 +304,17 @@ export default function ProjectSessions() {
   }, []);
 
   useEffect(() => { load(); }, [load, generation]);
+
+  // Auto-open session from ?open=<id> query param (e.g. from dashboard click)
+  useEffect(() => {
+    const openId = searchParams.get("open");
+    if (!openId || loading || all.length === 0) return;
+    const session = all.find((s) => s.id === openId);
+    if (session) {
+      setViewing(session);
+    }
+    setSearchParams({}, { replace: true });
+  }, [searchParams, loading, all]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Enrich visible sessions
   useEffect(() => {

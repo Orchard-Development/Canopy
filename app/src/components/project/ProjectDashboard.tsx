@@ -250,7 +250,7 @@ function SessionsStrip({ sessions, navigate }: {
                 sx={{ borderColor: "divider" }}
               >
                 <CardActionArea
-                  onClick={() => navigate(`/terminal?session=${s.id}&label=${encodeURIComponent(s.label ?? s.command)}`)}
+                  onClick={() => navigate(`/sessions?open=${s.id}`)}
                   sx={{ px: 1.5, py: 0.75 }}
                 >
                   <Stack direction="row" alignItems="center" spacing={1}>

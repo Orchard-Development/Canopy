@@ -49,7 +49,7 @@ export function SessionsCard({ projectId: _projectId }: Props) {
             {active.map((s) => (
               <ListItemButton
                 key={s.id}
-                onClick={() => navigate(`/terminal?session=${s.id}&label=${encodeURIComponent(s.label ?? s.command)}`)}
+                onClick={() => navigate(`/sessions?open=${s.id}`)}
                 sx={{ borderRadius: 1, py: 0.5 }}
               >
                 <ListItemText
