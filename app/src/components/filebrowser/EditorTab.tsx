@@ -16,7 +16,7 @@ export function EditorTab({ filename, isActive, isDirty, onActivate, onClose }: 
       onMouseDown={(e) => { if (e.button === 1) { e.preventDefault(); onClose(); } }}
       sx={{
         display: "flex", alignItems: "center", gap: 0.5,
-        px: 1.5, py: 0.5, cursor: "pointer", userSelect: "none",
+        px: 1, py: 0.25, cursor: "pointer", userSelect: "none",
         borderBottom: 2,
         borderColor: isActive ? "primary.main" : "transparent",
         bgcolor: isActive ? "action.selected" : "transparent",

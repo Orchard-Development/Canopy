@@ -49,6 +49,7 @@ export function FileTree({ rootPath, onFileSelect, activeFile }: FileTreeProps) 
       <Box sx={{ p: 1 }}>
         <TextField
           size="small"
+          margin="dense"
           fullWidth
           placeholder="Filter files..."
           value={filter}

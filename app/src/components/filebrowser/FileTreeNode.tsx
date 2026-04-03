@@ -34,12 +34,12 @@ export function FileTreeNode({
 
   const icon = entry.isDir ? (
     expanded ? (
-      <FolderOpenIcon sx={{ color: "primary.main" }} />
+      <FolderOpenIcon fontSize="small" sx={{ color: "primary.main" }} />
     ) : (
-      <FolderIcon sx={{ color: "primary.main" }} />
+      <FolderIcon fontSize="small" sx={{ color: "primary.main" }} />
     )
   ) : (
-    <InsertDriveFileIcon sx={{ color: "text.secondary" }} />
+    <InsertDriveFileIcon fontSize="small" sx={{ color: "text.secondary" }} />
   );
 
   return (
@@ -47,9 +47,9 @@ export function FileTreeNode({
       dense
       selected={selected}
       onClick={handleClick}
-      sx={{ pl: 2 + depth * 2 }}
+      sx={{ pl: 1 + depth * 1.5, py: 0.25 }}
     >
-      <ListItemIcon sx={{ minWidth: 32 }}>{icon}</ListItemIcon>
+      <ListItemIcon sx={{ minWidth: 28 }}>{icon}</ListItemIcon>
       <ListItemText
         primary={entry.name}
         primaryTypographyProps={{ variant: "body2", noWrap: true }}

@@ -7,7 +7,7 @@ import { EditorPanel } from "@/components/filebrowser/EditorPanel";
 
 const MIN_SIDEBAR = 150;
 const MAX_SIDEBAR = 600;
-const DEFAULT_SIDEBAR = 250;
+const DEFAULT_SIDEBAR = 220;
 
 export default function FileBrowser() {
   const { project } = useActiveProject();
