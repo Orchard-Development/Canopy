@@ -3,6 +3,7 @@ import { alpha, darken, useTheme } from "@mui/material/styles";
 import { useTerminal } from "../../hooks/useTerminal";
 import { api } from "../../lib/api";
 import { PrettyTerminal } from "./PrettyTerminal";
+import { TerminalInputDock } from "./TerminalInputDock";
 
 export type RenderMode = "terminal" | "pretty";
 
@@ -11,10 +12,11 @@ interface Props {
   active?: boolean;
   suspendResize?: boolean;
   renderMode?: RenderMode;
+  showDock?: boolean;
   onExit?: (code: number) => void;
 }
 
-export function TerminalPanel({ sessionId, active = true, suspendResize, renderMode = "terminal", onExit }: Props) {
+export function TerminalPanel({ sessionId, active = true, suspendResize, renderMode = "terminal", showDock = false, onExit }: Props) {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
   const { containerRef, dropZoneRef, termRef, focused, setFocused, dragOver, bufferText, sendInput } = useTerminal({
@@ -34,22 +36,25 @@ export function TerminalPanel({ sessionId, active = true, suspendResize, renderM
     : theme.palette.background.paper;
 
   const isPretty = renderMode === "pretty";
+  const effectiveFocus = focused || showDock;
 
   return (
     <Box
       ref={dropZoneRef}
       sx={{
         position: "relative",
+        display: "flex",
+        flexDirection: "column",
         width: "100%",
         height: "100%",
         bgcolor: termBg,
-        border: focused
+        border: effectiveFocus
           ? `1px solid ${alpha(theme.palette.primary.main, 0.5)}`
           : `1px solid ${alpha(theme.palette.divider, isDark ? 0.15 : 0.2)}`,
         borderRadius: 1.5,
         overflow: "hidden",
         transition: "border-color 120ms ease, box-shadow 120ms ease",
-        boxShadow: focused
+        boxShadow: effectiveFocus
           ? `0 0 0 2px ${alpha(theme.palette.primary.main, 0.12)}, inset 0 1px 2px ${alpha("#000", 0.15)}`
           : `inset 0 1px 2px ${alpha("#000", isDark ? 0.15 : 0.05)}`,
       }}
@@ -58,8 +63,9 @@ export function TerminalPanel({ sessionId, active = true, suspendResize, renderM
       <Box
         ref={containerRef}
         sx={{
+          flex: 1,
+          minHeight: 0,
           width: "100%",
-          height: "100%",
           display: "block",
           "& .xterm": { height: "100%", p: 1 },
           "& .xterm-screen": { height: "100% !important", width: "100% !important" },
@@ -81,8 +87,10 @@ export function TerminalPanel({ sessionId, active = true, suspendResize, renderM
           />
         </Box>
       )}
+      {/* Input dock — raw terminal only */}
+      {showDock && !isPretty && <TerminalInputDock onSend={sendInput} />}
       {/* Click-to-focus overlay for raw terminal when not focused */}
-      {!focused && !isPretty && (
+      {!focused && !isPretty && !showDock && (
         <Box
           sx={{
             position: "absolute",
