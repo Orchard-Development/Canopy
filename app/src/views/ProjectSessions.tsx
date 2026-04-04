@@ -350,7 +350,14 @@ export default function ProjectSessions() {
   }, [search]);
 
   const sessions = useMemo(() => {
-    let list = projectCwd && projectFilter ? all.filter((s) => s.cwd === projectCwd) : all;
+    // Claude Code encodes cwd by replacing non-alphanumeric chars with "-"
+    const encodedCwd = projectCwd?.replace(/[^a-zA-Z0-9]/g, "-");
+    let list = projectCwd && projectFilter
+      ? all.filter((s) =>
+          s.cwd === projectCwd ||
+          (s.claudeProjectDir && encodedCwd && s.claudeProjectDir === encodedCwd)
+        )
+      : all;
     if (search) {
       const q = search.toLowerCase();
       list = list.filter((s) => {

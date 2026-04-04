@@ -1934,6 +1934,8 @@ export interface SessionLogMeta {
   resumedFrom?: string | null;
   resumeCount?: number;
   profile?: SessionLogProfile | null;
+  claudeProjectDir?: string;
+  source?: string;
 }
 
 export interface SessionLogEntry {
