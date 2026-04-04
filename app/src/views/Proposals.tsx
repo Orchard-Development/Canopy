@@ -18,6 +18,8 @@ import {
   DialogActions,
   TextField,
   InputAdornment,
+  FormControlLabel,
+  Switch,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
@@ -175,6 +177,7 @@ export default function Proposals() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteSlug, setDeleteSlug] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [showAll, setShowAll] = useState(false);
 
   const { channel } = useDashboardChannel();
   const changedEvent = useChannelEvent(channel, EVENTS.proposals.changed);
@@ -182,11 +185,11 @@ export default function Proposals() {
 
   const load = useCallback(() => {
     setLoading(true);
-    api.listProposals(projectId ?? undefined)
+    api.listProposals(showAll ? undefined : (projectId ?? undefined))
       .then(setProposals)
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => setLoading(false));
-  }, [projectId]);
+  }, [projectId, showAll]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -235,30 +238,6 @@ export default function Proposals() {
 
   if (error) return <Alert severity="error" sx={{ mt: 3 }}>{error}</Alert>;
 
-  if (proposals.length === 0) {
-    return (
-      <>
-        <EmptyState />
-        <Box sx={{ textAlign: "center" }}>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setDialogOpen(true)}
-            disableElevation
-          >
-            New Proposal
-          </Button>
-        </Box>
-        <NewProposalDialog
-          open={dialogOpen}
-          onClose={() => setDialogOpen(false)}
-          onCreated={handleCreated}
-          projectId={projectId}
-        />
-      </>
-    );
-  }
-
   const lowerSearch = search.toLowerCase();
   const filtered = lowerSearch
     ? proposals.filter(
@@ -284,20 +263,35 @@ export default function Proposals() {
   return (
     <Box sx={{ pt: 1 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-        <TextField
-          size="small"
-          placeholder="Search proposals..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon fontSize="small" />
-              </InputAdornment>
-            ),
-          }}
-          sx={{ width: 280 }}
-        />
+        <Stack direction="row" spacing={1} alignItems="center">
+          <TextField
+            size="small"
+            placeholder="Search proposals..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ width: 280 }}
+          />
+          {projectId && (
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={showAll}
+                  onChange={(e) => setShowAll(e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">All projects</Typography>}
+              sx={{ ml: 0.5, mr: 0 }}
+            />
+          )}
+        </Stack>
         <Button
           variant="contained"
           size="small"
@@ -317,20 +311,24 @@ export default function Proposals() {
         {filtered.filter((p) => p.status === "draft").length} draft
       </Typography>
 
-      {sections.map((status) => (
-        <Box key={status} sx={{ mb: 4 }}>
-          <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5, textTransform: "capitalize" }}>
-            {status.replace("-", " ")} ({byStatus[status].length})
-          </Typography>
-          <CardGrid>
-            {byStatus[status].map((p) => (
-              <Box key={p.slug}>
-                <ProposalCard proposal={p} onBuild={handleBuild} onDelete={setDeleteSlug} />
-              </Box>
-            ))}
-          </CardGrid>
-        </Box>
-      ))}
+      {proposals.length === 0 ? (
+        <EmptyState />
+      ) : (
+        sections.map((status) => (
+          <Box key={status} sx={{ mb: 4 }}>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5, textTransform: "capitalize" }}>
+              {status.replace("-", " ")} ({byStatus[status].length})
+            </Typography>
+            <CardGrid>
+              {byStatus[status].map((p) => (
+                <Box key={p.slug}>
+                  <ProposalCard proposal={p} onBuild={handleBuild} onDelete={setDeleteSlug} />
+                </Box>
+              ))}
+            </CardGrid>
+          </Box>
+        ))
+      )}
 
       <NewProposalDialog
         open={dialogOpen}
