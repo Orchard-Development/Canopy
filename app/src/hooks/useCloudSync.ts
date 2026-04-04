@@ -12,6 +12,8 @@ const EXCLUDED_KEYS = new Set([
   "terminal.gridSpans",
   "terminal.drawerWidth",
   "_branding", // reserved key; written to /api/branding separately, never to flat settings
+  // Machine-local identity; each device has its own nickname
+  "machine.nickname",
   // Auth tokens are machine-local; never sync to Supabase
   "auth.access_token",
   "auth.refresh_token",
@@ -148,10 +150,11 @@ export function useCloudSync(): CloudSync {
         delete settings["_branding"];
       }
 
+      const syncable = filterSyncable(settings);
       const res = await fetch("/api/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settings),
+        body: JSON.stringify(syncable),
       });
       if (!res.ok) throw new Error("Failed to write settings locally");
 
