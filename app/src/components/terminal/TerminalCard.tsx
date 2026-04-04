@@ -48,6 +48,7 @@ export const TerminalCard = forwardRef(function TerminalCard(
   const [refreshKey, setRefreshKey] = useState(0);
   const [renderMode, setRenderMode] = useState<RenderMode>("terminal");
   const [showDock, setShowDock] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const cardRef = useRef<HTMLDivElement | null>(null);
   const mergedRef = useCallback((el: HTMLDivElement | null) => {
     cardRef.current = el;
@@ -88,6 +89,8 @@ export const TerminalCard = forwardRef(function TerminalCard(
       ref={mergedRef}
       variant="outlined"
       onClick={onCardClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       sx={{
         display: "flex",
         flexDirection: "column",
@@ -165,86 +168,89 @@ export const TerminalCard = forwardRef(function TerminalCard(
             }}
           />
         )}
-        {(() => {
+        {/* Secondary actions -- only visible on hover */}
+        {hovered && (() => {
           const cmd = tab.command.toLowerCase();
           const isAgent = cmd.includes("claude") || cmd.includes("codex");
-          if (!isAgent) return null;
           return (
-            <Tooltip title={tab.poker ? "Disable poker" : "Enable poker -- AI auto-continues after inactivity"}>
-              <IconButton
-                size="small"
-                onClick={() => api.setPoker(tab.id, !tab.poker).catch(() => {})}
-                sx={{
-                  p: 0.5,
-                  color: tab.poker ? "warning.main" : "action.disabled",
-                  animation: tab.lastPokerFired && Date.now() - tab.lastPokerFired < 2000
-                    ? "poker-pulse 1s ease-in-out"
-                    : "none",
-                  "@keyframes poker-pulse": {
-                    "0%, 100%": { opacity: 1 },
-                    "50%": { opacity: 0.3 },
-                  },
-                }}
-              >
-                <AutoFixHighIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
+            <>
+              {isAgent && (
+                <Tooltip title={tab.poker ? "Disable poker" : "Enable poker -- AI auto-continues after inactivity"}>
+                  <IconButton
+                    size="small"
+                    onClick={() => api.setPoker(tab.id, !tab.poker).catch(() => {})}
+                    sx={{
+                      p: 0.5,
+                      color: tab.poker ? "warning.main" : "action.disabled",
+                      animation: tab.lastPokerFired && Date.now() - tab.lastPokerFired < 2000
+                        ? "poker-pulse 1s ease-in-out"
+                        : "none",
+                      "@keyframes poker-pulse": {
+                        "0%, 100%": { opacity: 1 },
+                        "50%": { opacity: 0.3 },
+                      },
+                    }}
+                  >
+                    <AutoFixHighIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              )}
+              {isAgent && (
+                <Tooltip title="Fork -- summarize and spawn a new agent">
+                  <IconButton
+                    size="small"
+                    onClick={handleFork}
+                    disabled={forking}
+                    sx={{ p: 0.5, opacity: forking ? 0.4 : 1 }}
+                  >
+                    <CallSplitIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              )}
+              {isAgent && (
+                <Tooltip title={renderMode === "pretty" ? "Switch to terminal" : "Switch to chat view"}>
+                  <IconButton
+                    size="small"
+                    onClick={() => setRenderMode((m) => m === "pretty" ? "terminal" : "pretty")}
+                    sx={{ p: 0.5, color: renderMode === "pretty" ? "primary.main" : "action.active" }}
+                  >
+                    {renderMode === "pretty" ? <TerminalIcon fontSize="small" /> : <ChatBubbleOutlineIcon fontSize="small" />}
+                  </IconButton>
+                </Tooltip>
+              )}
+              {isAgent && (
+                <Tooltip title={showDock ? "Hide input dock" : "Show input dock"}>
+                  <IconButton
+                    size="small"
+                    onClick={() => setShowDock((d) => !d)}
+                    sx={{ p: 0.5, color: showDock ? "primary.main" : "action.active" }}
+                  >
+                    <KeyboardIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              )}
+              <Tooltip title="Refresh terminal">
+                <IconButton size="small" onClick={() => setRefreshKey((k) => k + 1)} sx={{ p: 0.5 }}>
+                  <RefreshIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              {onViewLog && (
+                <Tooltip title="View session transcript">
+                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); onViewLog(); }} sx={{ p: 0.5 }}>
+                    <ArticleOutlinedIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              )}
+              {onOpenLogFile && (
+                <Tooltip title="Open log file">
+                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); onOpenLogFile(); }} sx={{ p: 0.5 }}>
+                    <FolderOpenIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              )}
+            </>
           );
         })()}
-        {(() => {
-          const cmd = tab.command.toLowerCase();
-          const isAgent = cmd.includes("claude") || cmd.includes("codex");
-          if (!isAgent) return null;
-          return (
-            <Tooltip title="Fork -- summarize and spawn a new agent">
-              <IconButton
-                size="small"
-                onClick={handleFork}
-                disabled={forking}
-                sx={{ p: 0.5, opacity: forking ? 0.4 : 1 }}
-              >
-                <CallSplitIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          );
-        })()}
-        {(() => {
-          const cmd = tab.command.toLowerCase();
-          const isAgent = cmd.includes("claude") || cmd.includes("codex");
-          if (!isAgent) return null;
-          return (
-            <Tooltip title={renderMode === "pretty" ? "Switch to terminal" : "Switch to chat view"}>
-              <IconButton
-                size="small"
-                onClick={() => setRenderMode((m) => m === "pretty" ? "terminal" : "pretty")}
-                sx={{ p: 0.5, color: renderMode === "pretty" ? "primary.main" : "action.active" }}
-              >
-                {renderMode === "pretty" ? <TerminalIcon fontSize="small" /> : <ChatBubbleOutlineIcon fontSize="small" />}
-              </IconButton>
-            </Tooltip>
-          );
-        })()}
-        {(() => {
-          const cmd = tab.command.toLowerCase();
-          const isAgent = cmd.includes("claude") || cmd.includes("codex");
-          if (!isAgent) return null;
-          return (
-            <Tooltip title={showDock ? "Hide input dock" : "Show input dock"}>
-              <IconButton
-                size="small"
-                onClick={() => setShowDock((d) => !d)}
-                sx={{ p: 0.5, color: showDock ? "primary.main" : "action.active" }}
-              >
-                <KeyboardIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          );
-        })()}
-        <Tooltip title="Refresh terminal">
-          <IconButton size="small" onClick={() => setRefreshKey((k) => k + 1)} sx={{ p: 0.5 }}>
-            <RefreshIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
         <IconButton size="small" onClick={onExpand} sx={{ p: 0.5 }}>
           <OpenInFullIcon fontSize="small" />
         </IconButton>
@@ -348,20 +354,6 @@ export const TerminalCard = forwardRef(function TerminalCard(
                   bgcolor: "action.selected",
                 }}
               />
-            )}
-            {onViewLog && (
-              <Tooltip title="View session transcript">
-                <IconButton size="small" onClick={(e) => { e.stopPropagation(); onViewLog(); }} sx={{ p: 0.25, flexShrink: 0 }}>
-                  <ArticleOutlinedIcon sx={{ fontSize: 14 }} />
-                </IconButton>
-              </Tooltip>
-            )}
-            {onOpenLogFile && (
-              <Tooltip title="Open log file">
-                <IconButton size="small" onClick={(e) => { e.stopPropagation(); onOpenLogFile(); }} sx={{ p: 0.25, flexShrink: 0 }}>
-                  <FolderOpenIcon sx={{ fontSize: 14 }} />
-                </IconButton>
-              </Tooltip>
             )}
           </Box>
           {tab.lastPrompt && (
