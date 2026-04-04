@@ -498,7 +498,7 @@ export interface MeshStatus {
   node_name: string;
   node?: string;
   local_sessions: number;
-  connected_nodes: Array<{ name: string; session_count: number; token?: string; http_url?: string; role?: string; type?: string }>;
+  connected_nodes: Array<{ name: string; display_name?: string; machine_name?: string; session_count: number; token?: string; http_url?: string; role?: string; type?: string }>;
   peers: MeshNode[];
   mesh_active: boolean;
   wg_public_key?: string | null;
@@ -514,6 +514,8 @@ export interface TunnelStatus {
 
 export interface MeshNode {
   name: string;
+  display_name?: string;
+  machine_name?: string;
   sessions: number;
   role?: "admin" | "operator" | "viewer";
   type?: "beam" | "remote";

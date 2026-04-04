@@ -58,14 +58,27 @@ function NodeRow({ peer, onDisconnect, onRoleChange }: {
       }}
     >
       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0, flex: 1 }}>
-        <Typography
-          variant="body2"
-          fontFamily="monospace"
-          fontWeight={500}
-          sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-        >
-          {peer.name}
-        </Typography>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography
+            variant="body2"
+            fontWeight={600}
+            sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+          >
+            {peer.display_name
+              ? `${peer.display_name}${peer.machine_name ? ` (${peer.machine_name})` : ""}`
+              : peer.name}
+          </Typography>
+          {peer.display_name && (
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              fontFamily="monospace"
+              sx={{ fontSize: 11 }}
+            >
+              {peer.name}
+            </Typography>
+          )}
+        </Box>
         <Chip
           label={`${peer.sessions} session${peer.sessions === 1 ? "" : "s"}`}
           size="small"

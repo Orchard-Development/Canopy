@@ -54,6 +54,8 @@ export default function MeshView() {
       setNodeName(st.node_name);
       setPeers(st.connected_nodes.map((n) => ({
         name: n.name,
+        display_name: n.display_name,
+        machine_name: n.machine_name,
         sessions: n.session_count ?? 0,
         type: (n.type ?? "beam") as MeshNode["type"],
         role: ((n.role ?? "operator") as string as MeshNode["role"]),
@@ -79,6 +81,8 @@ export default function MeshView() {
       setNodeName(st.node_name);
       setPeers(st.connected_nodes.map((n) => ({
         name: n.name,
+        display_name: n.display_name,
+        machine_name: n.machine_name,
         sessions: n.session_count ?? 0,
         type: (n.type ?? "beam") as MeshNode["type"],
         role: ((n.role ?? "operator") as string as MeshNode["role"]),
