@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import {
   Avatar,
   Alert,
@@ -65,6 +65,8 @@ export function IdentityCard({ displayName, avatarBase64, machineName, onUpdate 
   const [compressing, setCompressing] = useState(false);
   const [localName, setLocalName] = useState(displayName);
   const [localMachine, setLocalMachine] = useState(machineName ?? "");
+  useEffect(() => { setLocalName(displayName); }, [displayName]);
+  useEffect(() => { setLocalMachine(machineName ?? ""); }, [machineName]);
   const branding = useBranding();
   const { mode } = useColorMode();
   const primaryColor = branding[mode].primary;
