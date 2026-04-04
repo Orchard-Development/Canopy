@@ -18,7 +18,7 @@ export interface PackCardData {
   name: string;
   slug: string;
   description: string;
-  source: "shipped" | "user" | string;
+  source: "public" | "user" | string;
   fileCount: number;
   version: number;
   category?: string;
