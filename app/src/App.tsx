@@ -49,7 +49,24 @@ import { useUserActivity } from "./hooks/useUserActivity";
 import { ProjectThemeBridge } from "./components/ProjectThemeBridge";
 import { ToastHost } from "./components/ToastHost";
 
-const Onboarding = lazy(() => import("./views/Onboarding"));
+/**
+ * Wraps React.lazy with automatic retry on chunk-load failure.
+ * Handles Vite HMR chunk invalidation and network errors gracefully.
+ */
+function lazyWithRetry(
+  factory: () => Promise<{ default: React.ComponentType<any> }>
+) {
+  return lazy(() =>
+    factory().catch((error) => {
+      console.warn("[lazyWithRetry] Chunk load failed, retrying:", error);
+      return new Promise<{ default: React.ComponentType<any> }>((resolve) =>
+        setTimeout(() => resolve(factory()), 1500)
+      );
+    })
+  );
+}
+
+const Onboarding = lazyWithRetry(() => import("./views/Onboarding"));
 
 /**
  * Bridge: wraps children in ToastProvider, consuming events from EventBus.
@@ -70,16 +87,16 @@ function ToastHostBridge() {
   return null;
 }
 import type { PendingSession } from "./views/Onboarding";
-const CreateProject = lazy(() => import("./views/CreateProject"));
-const Feed = lazy(() => import("./views/Feed"));
-const ProjectApprovals = lazy(() => import("./views/Approvals"));
-const ProposalDetail = lazy(() => import("./views/ProposalDetail"));
-const TerminalFocus = lazy(() => import("./views/TerminalFocus"));
-const SessionLogDetail = lazy(() => import("./views/SessionLogDetail"));
-const SeedPackDetail = lazy(() => import("./views/SeedPackDetail"));
-const ProjectDetail = lazy(() => import("./views/ProjectDetail"));
-const Settings = lazy(() => import("./views/Settings"));
-const Mesh = lazy(() => import("./views/Mesh"));
+const CreateProject = lazyWithRetry(() => import("./views/CreateProject"));
+const Feed = lazyWithRetry(() => import("./views/Feed"));
+const ProjectApprovals = lazyWithRetry(() => import("./views/Approvals"));
+const ProposalDetail = lazyWithRetry(() => import("./views/ProposalDetail"));
+const TerminalFocus = lazyWithRetry(() => import("./views/TerminalFocus"));
+const SessionLogDetail = lazyWithRetry(() => import("./views/SessionLogDetail"));
+const SeedPackDetail = lazyWithRetry(() => import("./views/SeedPackDetail"));
+const ProjectDetail = lazyWithRetry(() => import("./views/ProjectDetail"));
+const Settings = lazyWithRetry(() => import("./views/Settings"));
+const Mesh = lazyWithRetry(() => import("./views/Mesh"));
 
 function ViewFallback() {
   return (
