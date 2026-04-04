@@ -385,9 +385,9 @@ export function useTerminal({
         ? undefined
         : (
             window as unknown as {
-              ctx?: { getPathForFile?: (f: File) => string };
+              orchard?: { getPathForFile?: (f: File) => string };
             }
-          ).ctx;
+          ).orchard;
       const resolved: string[] = [];
       const unresolved: File[] = [];
       for (const file of Array.from(e.dataTransfer.files)) {
