@@ -567,10 +567,10 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
     }).catch(() => {});
   }, []);
 
-  // Auto-refresh every 1s when no sessions are visible
+  // Auto-refresh every 5s when no sessions are visible (WebSocket handles real-time updates)
   useEffect(() => {
     if (tabs.length > 0) return;
-    const interval = setInterval(handleRefresh, 1000);
+    const interval = setInterval(handleRefresh, 5000);
     return () => clearInterval(interval);
   }, [tabs.length, handleRefresh]);
 
