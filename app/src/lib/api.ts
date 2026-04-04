@@ -518,7 +518,7 @@ export interface MeshNode {
   machine_name?: string;
   sessions: number;
   role?: "admin" | "operator" | "viewer";
-  type?: "beam" | "remote";
+  type?: "local" | "beam" | "remote";
 }
 
 export interface MeshSession {

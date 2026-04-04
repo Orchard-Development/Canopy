@@ -47,6 +47,8 @@ function NodeRow({ peer, onDisconnect, onRoleChange }: {
     setSaving(false);
   }
 
+  const isLocal = peer.type === "local";
+
   return (
     <Box
       sx={{
@@ -59,15 +61,20 @@ function NodeRow({ peer, onDisconnect, onRoleChange }: {
     >
       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0, flex: 1 }}>
         <Box sx={{ minWidth: 0 }}>
-          <Typography
-            variant="body2"
-            fontWeight={600}
-            sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-          >
-            {peer.display_name
-              ? `${peer.display_name}${peer.machine_name ? ` (${peer.machine_name})` : ""}`
-              : peer.name}
-          </Typography>
+          <Stack direction="row" alignItems="center" spacing={0.75}>
+            <Typography
+              variant="body2"
+              fontWeight={600}
+              sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+            >
+              {peer.display_name
+                ? `${peer.display_name}${peer.machine_name ? ` (${peer.machine_name})` : ""}`
+                : peer.name}
+            </Typography>
+            {isLocal && (
+              <Chip label="You" size="small" color="primary" sx={{ fontSize: 10, height: 18 }} />
+            )}
+          </Stack>
           {peer.display_name && (
             <Typography
               variant="caption"
@@ -86,28 +93,34 @@ function NodeRow({ peer, onDisconnect, onRoleChange }: {
           sx={{ fontSize: 11, height: 20 }}
         />
       </Stack>
-      <Select
-        size="small"
-        value={role}
-        onChange={(e) => handleRoleChange(e.target.value as Role)}
-        disabled={saving}
-        sx={{ minWidth: 110, fontSize: 13 }}
-      >
-        <MenuItem value="admin">Admin</MenuItem>
-        <MenuItem value="operator">Operator</MenuItem>
-        <MenuItem value="viewer">Viewer</MenuItem>
-      </Select>
-      <Button
-        size="small"
-        color="error"
-        variant="outlined"
-        startIcon={<LinkOffIcon />}
-        onClick={handleDisconnect}
-        disabled={disconnecting}
-        sx={{ whiteSpace: "nowrap" }}
-      >
-        {disconnecting ? "..." : "Disconnect"}
-      </Button>
+      {isLocal ? (
+        <Chip label="Admin" size="small" variant="outlined" sx={{ fontSize: 12 }} />
+      ) : (
+        <>
+          <Select
+            size="small"
+            value={role}
+            onChange={(e) => handleRoleChange(e.target.value as Role)}
+            disabled={saving}
+            sx={{ minWidth: 110, fontSize: 13 }}
+          >
+            <MenuItem value="admin">Admin</MenuItem>
+            <MenuItem value="operator">Operator</MenuItem>
+            <MenuItem value="viewer">Viewer</MenuItem>
+          </Select>
+          <Button
+            size="small"
+            color="error"
+            variant="outlined"
+            startIcon={<LinkOffIcon />}
+            onClick={handleDisconnect}
+            disabled={disconnecting}
+            sx={{ whiteSpace: "nowrap" }}
+          >
+            {disconnecting ? "..." : "Disconnect"}
+          </Button>
+        </>
+      )}
     </Box>
   );
 }
