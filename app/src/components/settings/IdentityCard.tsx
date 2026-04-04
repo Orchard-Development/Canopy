@@ -63,6 +63,8 @@ export function IdentityCard({ displayName, avatarBase64, machineName, onUpdate 
   const fileRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [compressing, setCompressing] = useState(false);
+  const [localName, setLocalName] = useState(displayName);
+  const [localMachine, setLocalMachine] = useState(machineName ?? "");
   const branding = useBranding();
   const { mode } = useColorMode();
   const primaryColor = branding[mode].primary;
@@ -130,8 +132,9 @@ export function IdentityCard({ displayName, avatarBase64, machineName, onUpdate 
               fullWidth
               label="Display name"
               size="small"
-              value={displayName}
-              onChange={(e) => onUpdate("display_name", e.target.value)}
+              value={localName}
+              onChange={(e) => setLocalName(e.target.value)}
+              onBlur={() => { if (localName !== displayName) onUpdate("display_name", localName); }}
               placeholder="Your name"
               sx={{ mb: 1.5 }}
             />
@@ -139,8 +142,9 @@ export function IdentityCard({ displayName, avatarBase64, machineName, onUpdate 
               fullWidth
               label="Machine name"
               size="small"
-              value={machineName ?? ""}
-              onChange={(e) => onUpdate("machine.nickname", e.target.value)}
+              value={localMachine}
+              onChange={(e) => setLocalMachine(e.target.value)}
+              onBlur={() => { if (localMachine !== (machineName ?? "")) onUpdate("machine.nickname", localMachine); }}
               placeholder="e.g. Work Laptop, Home Desktop"
               helperText="Identifies this machine in Roots and team views"
             />
