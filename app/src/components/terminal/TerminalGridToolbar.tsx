@@ -7,12 +7,14 @@ import { OrchardIcon } from "./OrchardIcon";
 import { ClaudeIcon } from "./ClaudeIcon";
 import { OpenAIIcon } from "./OpenAIIcon";
 import { OpenCodeIcon } from "./OpenCodeIcon";
+import { ClawIcon } from "./ClawIcon";
 
 const PRESETS = [
   { label: "Claude Code", command: "claude", args: ["--dangerously-skip-permissions"], icon: <ClaudeIcon /> },
   { label: "Codex", command: "codex", args: ["--full-auto"], icon: <OpenAIIcon /> },
   { label: "OpenCode", command: "opencode", args: [] as string[], icon: <OpenCodeIcon /> },
   { label: "Orchard Code", command: "orchard-code", args: [] as string[], icon: <OrchardIcon /> },
+  { label: "Claw Code", command: "claw", args: [] as string[], icon: <ClawIcon /> },
   { label: "Shell", command: "", args: [] as string[], icon: <TerminalIcon /> },
 ];
 

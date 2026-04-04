@@ -103,7 +103,7 @@ function dayLabel(iso?: string): string {
 
 const AGENT_LABELS: Record<string, string> = {
   claude: "Claude", codex: "Codex", cursor: "Cursor",
-  gemini: "Gemini", aider: "Aider", opencode: "OpenCode",
+  gemini: "Gemini", aider: "Aider", opencode: "OpenCode", claw_code: "Claw Code",
 };
 
 /** Derive a meaningful title. Prefer AI label, fall back to first prompt snippet, then generic. */

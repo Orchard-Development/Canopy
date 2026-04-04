@@ -24,14 +24,8 @@ export const COMPONENT_MAP: Record<string, LazyExoticComponent<ComponentType>> =
   "bundled:ProjectSessions": lazy(() => import("./ProjectSessions")),
   "bundled:RootsView": lazy(() => import("./RootsView")),
   "bundled:ApplicationViewer": lazy(() => import("./ApplicationViewer")),
-  "bundled:Autoresearch": lazy(() => import("./Autoresearch")),
-  "bundled:Swarm": lazy(() => import("./Swarm")),
   "bundled:ScheduledTasks": lazy(() => import("./ScheduledTasks")),
   "bundled:DatabaseExplorer": lazy(() => import("./database-explorer/DatabaseExplorer")),
-  "bundled:MessagingGateway": lazy(() => import("./MessagingGateway")),
-  "bundled:KanbanBoard": lazy(() => import("./KanbanBoard")),
-  "bundled:Judgment": lazy(() => import("./Judgment")),
-  "bundled:FileBrowser": lazy(() => import("./FileBrowser")),
 };
 
 /**

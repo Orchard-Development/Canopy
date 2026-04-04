@@ -26,7 +26,7 @@ type EnrichmentMap = Record<string, SessionEnrichment>;
 function agentLabel(agentType?: string): string {
   const labels: Record<string, string> = {
     claude: "Claude", codex: "Codex", cursor: "Cursor",
-    gemini: "Gemini", aider: "Aider", opencode: "OpenCode",
+    gemini: "Gemini", aider: "Aider", opencode: "OpenCode", claw_code: "Claw Code",
   };
   return labels[agentType ?? ""] ?? agentType ?? "";
 }

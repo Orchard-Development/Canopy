@@ -23,20 +23,15 @@ import { ProjectDataProvider } from "../contexts/ProjectDataContext";
 import { ProjectDashboard } from "../components/project/ProjectDashboard";
 import { IntelligenceTab } from "../components/project/IntelligenceTab";
 import { SettingsTab } from "../components/project/SettingsTab";
+import { FilesTab } from "../components/project/FilesTab";
+import { TAB_KEYS, TAB_LABELS, resolveTab } from "./projectDetailTabs";
+import type { TabKey } from "./projectDetailTabs";
 
 const IDE_ICONS: Record<string, React.ReactElement> = {
   "claude-code": <SmartToyIcon fontSize="small" />,
   codex: <CodeIcon fontSize="small" />,
   cursor: <EditNoteIcon fontSize="small" />,
   windsurf: <AirIcon fontSize="small" />,
-};
-
-const TAB_KEYS = ["dashboard", "intelligence", "settings"] as const;
-type TabKey = (typeof TAB_KEYS)[number];
-const TAB_LABELS: Record<TabKey, string> = {
-  dashboard: "Dashboard",
-  intelligence: "Intelligence",
-  settings: "Settings",
 };
 
 export default function ProjectDetail({ embedded }: { embedded?: boolean }) {
@@ -120,6 +115,9 @@ export default function ProjectDetail({ embedded }: { embedded?: boolean }) {
         {resolvedTab === "intelligence" && (
           <IntelligenceTab projectId={project.id} projectName={project.name} />
         )}
+        {resolvedTab === "files" && (
+          <FilesTab rootPath={project.root_path ?? null} />
+        )}
         {resolvedTab === "settings" && (
           <SettingsTab project={project} projectId={project.id} onUpdate={reload} />
         )}
@@ -144,17 +142,3 @@ export default function ProjectDetail({ embedded }: { embedded?: boolean }) {
   );
 }
 
-/** Map old 9-tab names to new 3-tab names for bookmark/link compat */
-function resolveTab(raw: string): TabKey {
-  if (TAB_KEYS.includes(raw as TabKey)) return raw as TabKey;
-  const map: Record<string, TabKey> = {
-    overview: "dashboard",
-    seeds: "intelligence",
-    theme: "settings",
-    general: "settings",
-    secrets: "settings",
-    servers: "settings",
-    views: "settings",
-  };
-  return map[raw] ?? "dashboard";
-}

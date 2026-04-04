@@ -46,7 +46,12 @@ const VIEW_ICON_MAP: Record<string, React.ReactNode> = {
   FolderOpen: <FolderOpenIcon fontSize="small" />,
 };
 
-const REQUIRED_VIEW_IDS = new Set(["default-orchard", "default-chat", "default-settings"]);
+const REQUIRED_VIEW_IDS = new Set([
+  "default-orchard",
+  "default-chat",
+  "default-settings",
+  "default-seed-packs",
+]);
 
 export function ViewsCard() {
   const { views, allViews, setHidden } = useViewRegistry();

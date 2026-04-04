@@ -17,6 +17,7 @@ import { OrchardIcon } from "./OrchardIcon";
 import { ClaudeIcon } from "./ClaudeIcon";
 import { OpenAIIcon } from "./OpenAIIcon";
 import { OpenCodeIcon } from "./OpenCodeIcon";
+import { ClawIcon } from "./ClawIcon";
 import { OrchardModelPicker } from "./OrchardModelPicker";
 import { fetchSettings } from "../../lib/settingsCache";
 
@@ -28,6 +29,7 @@ const PRESETS = [
   { label: "Codex", command: "codex", args: ["--full-auto"], icon: <OpenAIIcon /> },
   { label: OPENCODE_PRESET, command: "opencode", args: [] as string[], icon: <OpenCodeIcon /> },
   { label: "Orchard Code", command: "orchard-code", args: [] as string[], icon: <OrchardIcon /> },
+  { label: "Claw Code", command: "claw", args: [] as string[], icon: <ClawIcon /> },
   { label: "Shell", command: "", args: [] as string[], icon: <TerminalIcon /> },
 ];
 
@@ -38,7 +40,7 @@ function defaultShell(): string {
 function labelForCommand(cmd: string): string {
   if (!cmd || cmd === defaultShell() || cmd.endsWith("/zsh") || cmd.endsWith("/bash")) return "Shell";
   const base = cmd.split("/").pop() ?? cmd;
-  const labels: Record<string, string> = { claude: "Claude Code", codex: "Codex", opencode: "OpenCode", "orchard-code": "Orchard Code" };
+  const labels: Record<string, string> = { claude: "Claude Code", codex: "Codex", opencode: "OpenCode", "orchard-code": "Orchard Code", claw: "Claw Code" };
   return labels[base] ?? base;
 }
 
