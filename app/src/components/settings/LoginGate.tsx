@@ -112,6 +112,7 @@ export function LoginForm() {
   const { signInWithGoogle, signInWithMagicLink, signUp, signInWithPassword } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [mode, setMode] = useState<AuthMode>("password");
   const [isSignUp, setIsSignUp] = useState(false);
   const [sent, setSent] = useState(false);
@@ -175,14 +176,35 @@ export function LoginForm() {
               onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
             />
             {mode === "password" && (
-              <input
-                style={inputStyle}
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-              />
+              <div style={{ position: "relative", width: "100%" }}>
+                <input
+                  style={inputStyle}
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: "absolute",
+                    right: 10,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "none",
+                    border: "none",
+                    color: "rgba(224,224,224,0.5)",
+                    cursor: "pointer",
+                    fontSize: "0.85rem",
+                    padding: 4,
+                  }}
+                  tabIndex={-1}
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
             )}
             {error && <div style={errBox}>{error}</div>}
             <button style={btnPrimary} onClick={handleSubmit} disabled={submitting}>
