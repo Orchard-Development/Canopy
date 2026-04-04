@@ -89,8 +89,9 @@ export function TerminalPanel({ sessionId, active = true, suspendResize, renderM
       )}
       {/* Input dock — raw terminal only */}
       {showDock && !isPretty && <TerminalInputDock onSend={sendInput} />}
-      {/* Click-to-focus overlay for raw terminal when not focused */}
-      {!focused && !isPretty && !showDock && (
+      {/* Click-to-focus overlay for raw terminal when not focused.
+          Removed during active drag so file drops reach the drop zone. */}
+      {!focused && !dragOver && !isPretty && !showDock && (
         <Box
           sx={{
             position: "absolute",

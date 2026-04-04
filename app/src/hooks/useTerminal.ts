@@ -339,16 +339,24 @@ export function useTerminal({
     const observer = new ResizeObserver(sendResize);
     observer.observe(el);
 
+    // Document-level: prevent browser from opening dropped files and detect
+    // drag-with-files anywhere in the window (removes the click-to-focus overlay
+    // so the drop zone underneath can receive the events).
+    const onDocDragOver = (e: DragEvent) => {
+      if (!e.dataTransfer?.types.includes("Files")) return;
+      e.preventDefault();
+      setDragOver(true);
+      if (dragTimerRef.current) clearTimeout(dragTimerRef.current);
+      dragTimerRef.current = setTimeout(() => setDragOver(false), 200);
+    };
+    const onDocDrop = (e: DragEvent) => { e.preventDefault(); };
+    document.addEventListener("dragover", onDocDragOver);
+    document.addEventListener("drop", onDocDrop);
+
     const onDragOver = (e: DragEvent) => {
       if (!e.dataTransfer?.types.includes("Files")) return;
       e.preventDefault();
       e.dataTransfer.dropEffect = "copy";
-      // dragover fires continuously while hovering. Show the overlay and
-      // reset a short timeout -- when the cursor leaves (or the window
-      // loses focus), dragover stops firing and the timeout dismisses it.
-      setDragOver(true);
-      if (dragTimerRef.current) clearTimeout(dragTimerRef.current);
-      dragTimerRef.current = setTimeout(() => setDragOver(false), 150);
     };
 
     const onDragEnter = (e: DragEvent) => {
@@ -356,10 +364,7 @@ export function useTerminal({
       e.preventDefault();
     };
 
-    const onDragLeave = () => {
-      // Intentionally empty -- timeout in onDragOver handles dismissal.
-      // Kept as a listener to satisfy browsers that expect it for drop zones.
-    };
+    const onDragLeave = () => {};
 
     const sendPaths = (paths: string[]) => {
       const ws = wsRef.current;
@@ -448,6 +453,8 @@ export function useTerminal({
       dropEl.removeEventListener("dragenter", onDragEnter);
       dropEl.removeEventListener("dragleave", onDragLeave);
       dropEl.removeEventListener("drop", onDrop);
+      document.removeEventListener("dragover", onDocDragOver);
+      document.removeEventListener("drop", onDocDrop);
 
       // 5. WebSocket — close before terminal so onmessage can't write to
       //    a disposed terminal
