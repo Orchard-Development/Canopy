@@ -133,14 +133,14 @@ export const TerminalCard = forwardRef(function TerminalCard(
           cursor: "grab",
         }}
       >
-        <SessionStateDot state={resolvedState} size={8} />
+        <SessionStateDot state={resolvedState} size={10} />
         <Tooltip title={<ProfileTooltip profile={profile} label={label} sessionId={tab.id} lastAiUpdate={tab.lastAiUpdate} summary={tab.summary} onSync={(u) => onAiSync?.(tab.id, u)} />} enterDelay={300} placement="bottom-start">
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="body2" fontWeight={600} noWrap>
+            <Typography noWrap sx={{ fontSize: 15, fontWeight: 700, lineHeight: 1.3 }}>
               {label}
             </Typography>
             {profile?.one_liner && (
-              <Typography variant="caption" noWrap sx={{ color: "text.secondary", lineHeight: 1.2, display: "block" }}>
+              <Typography variant="caption" noWrap sx={{ color: "text.disabled", lineHeight: 1.2, display: "block" }}>
                 {profile.one_liner}
               </Typography>
             )}
@@ -251,10 +251,10 @@ export const TerminalCard = forwardRef(function TerminalCard(
             </>
           );
         })()}
-        <IconButton size="small" onClick={onExpand} sx={{ p: 0.5 }}>
+        <IconButton size="small" onClick={onExpand} sx={{ p: 0.5, color: "text.disabled", "&:hover": { color: "text.primary" } }}>
           <OpenInFullIcon fontSize="small" />
         </IconButton>
-        <IconButton size="small" onClick={onKill} sx={{ p: 0.5 }}>
+        <IconButton size="small" onClick={onKill} sx={{ p: 0.5, color: "text.disabled", "&:hover": { color: "error.main" } }}>
           <CloseIcon fontSize="small" />
         </IconButton>
       </Box>

@@ -1002,10 +1002,11 @@ export const api = {
       claude: { installed: boolean; version: string | null };
       codex: { installed: boolean; version: string | null };
       opencode: { installed: boolean; version: string | null };
+      claw_code: { installed: boolean; version: string | null };
       cloudflared: { installed: boolean; version: string | null };
     }>("/api/cli-tools/status"),
 
-  cliToolsInstall: (tool: "claude" | "codex" | "opencode" | "cloudflared") =>
+  cliToolsInstall: (tool: "claude" | "codex" | "opencode" | "claw" | "cloudflared") =>
     postJson<{ success: boolean; error?: string; installed?: boolean; version?: string }>("/api/cli-tools/install", { tool }),
 
   reseedConfig: (projectId: string) =>

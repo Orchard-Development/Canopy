@@ -21,6 +21,7 @@ export function CliToolsCard() {
   const [claude, setClaude] = useState<ToolState | null>(null);
   const [codex, setCodex] = useState<ToolState | null>(null);
   const [opencode, setOpencode] = useState<ToolState | null>(null);
+  const [clawCode, setClawCode] = useState<ToolState | null>(null);
   const [cloudflared, setCloudflared] = useState<ToolState | null>(null);
   const [installing, setInstalling] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -31,13 +32,14 @@ export function CliToolsCard() {
       setClaude(s.claude);
       setCodex(s.codex);
       setOpencode(s.opencode);
+      setClawCode(s.claw_code);
       setCloudflared(s.cloudflared);
     } catch { /* ignore */ }
   }, []);
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  async function install(tool: "claude" | "codex" | "opencode" | "cloudflared") {
+  async function install(tool: "claude" | "codex" | "opencode" | "claw" | "cloudflared") {
     setInstalling(tool);
     setError(null);
     try {
@@ -84,6 +86,14 @@ export function CliToolsCard() {
             state={opencode}
             installing={installing === "opencode"}
             onInstall={() => install("opencode")}
+          />
+          <ToolLine
+            name="Claw Code"
+            bin="claw"
+            pkg="ultraworkers/claw-code"
+            state={clawCode}
+            installing={installing === "claw"}
+            onInstall={() => install("claw")}
           />
           <ToolLine
             name="Cloudflared"
