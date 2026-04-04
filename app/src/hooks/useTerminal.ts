@@ -426,8 +426,18 @@ export function useTerminal({
     dropEl.addEventListener("drop", onDrop);
 
     return () => {
+      // 1. Flag — prevents reconnect attempts and short-circuits safeFit()
       disposed = true;
+
+      // 2. Timers — cancel any pending callbacks that reference term/fit/ws
       if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (resizeTimer) clearTimeout(resizeTimer);
+
+      // 3. Observer — stop before removing listeners so no new resize
+      //    callbacks can fire and schedule timers against a disposed terminal
+      observer.disconnect();
+
+      // 4. Event listeners — nothing can re-trigger after this point
       el.removeEventListener("focusin", onFocusIn);
       el.removeEventListener("focusout", onFocusOut);
       el.removeEventListener("keydown", onKeyDown);
@@ -435,13 +445,19 @@ export function useTerminal({
       dropEl.removeEventListener("dragenter", onDragEnter);
       dropEl.removeEventListener("dragleave", onDragLeave);
       dropEl.removeEventListener("drop", onDrop);
-      observer.disconnect();
-      if (resizeTimer) clearTimeout(resizeTimer);
+
+      // 5. WebSocket — close before terminal so onmessage can't write to
+      //    a disposed terminal
       wsRef.current?.close();
+      wsRef.current = null;
+
+      // 6. FitAddon — dispose before terminal (it holds an internal ref)
+      fitRef.current?.dispose();
+      fitRef.current = null;
+
+      // 7. Terminal — dispose last, after all consumers are torn down
       term.dispose();
       termRef.current = null;
-      wsRef.current = null;
-      fitRef.current = null;
     };
   }, [sessionId]);
 
