@@ -353,9 +353,12 @@ export function useTerminal({
       if (dragCountRef.current === 1) setDragOver(true);
     };
 
-    const onDragLeave = () => {
-      dragCountRef.current--;
-      if (dragCountRef.current === 0) setDragOver(false);
+    const onDragLeave = (e: DragEvent) => {
+      const dropEl = dropZoneRef.current ?? el;
+      // Only count leaves that actually exit the drop zone, not child elements
+      if (e.relatedTarget && dropEl.contains(e.relatedTarget as Node)) return;
+      dragCountRef.current = 0;
+      setDragOver(false);
     };
 
     const sendPaths = (paths: string[]) => {
