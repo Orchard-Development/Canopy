@@ -102,7 +102,7 @@ export function useTerminal({
   const suspendResizeRef = useRef(suspendResize);
   suspendResizeRef.current = suspendResize;
   const [dragOver, setDragOver] = useState(false);
-  const dragCountRef = useRef(0);
+  const dragTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [focused, setFocused] = useState(false);
   const [bufferText, setBufferText] = useState("");
   const bufferTickRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -340,25 +340,25 @@ export function useTerminal({
     observer.observe(el);
 
     const onDragOver = (e: DragEvent) => {
-      if (e.dataTransfer?.types.includes("Files")) {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = "copy";
-      }
+      if (!e.dataTransfer?.types.includes("Files")) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+      // dragover fires continuously while hovering. Show the overlay and
+      // reset a short timeout -- when the cursor leaves (or the window
+      // loses focus), dragover stops firing and the timeout dismisses it.
+      setDragOver(true);
+      if (dragTimerRef.current) clearTimeout(dragTimerRef.current);
+      dragTimerRef.current = setTimeout(() => setDragOver(false), 150);
     };
 
     const onDragEnter = (e: DragEvent) => {
       if (!e.dataTransfer?.types.includes("Files")) return;
       e.preventDefault();
-      dragCountRef.current++;
-      if (dragCountRef.current === 1) setDragOver(true);
     };
 
-    const onDragLeave = (e: DragEvent) => {
-      const dropEl = dropZoneRef.current ?? el;
-      // Only count leaves that actually exit the drop zone, not child elements
-      if (e.relatedTarget && dropEl.contains(e.relatedTarget as Node)) return;
-      dragCountRef.current = 0;
-      setDragOver(false);
+    const onDragLeave = () => {
+      // Intentionally empty -- timeout in onDragOver handles dismissal.
+      // Kept as a listener to satisfy browsers that expect it for drop zones.
     };
 
     const sendPaths = (paths: string[]) => {
@@ -375,7 +375,7 @@ export function useTerminal({
 
     const onDrop = (e: DragEvent) => {
       e.preventDefault();
-      dragCountRef.current = 0;
+      if (dragTimerRef.current) clearTimeout(dragTimerRef.current);
       setDragOver(false);
       const ws = wsRef.current;
       if (!e.dataTransfer || !ws || ws.readyState !== WebSocket.OPEN) return;
