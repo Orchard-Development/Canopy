@@ -42,10 +42,9 @@ import { NotificationsCard } from "../components/settings/NotificationsCard";
 import { DesktopPermissionsCard } from "../components/settings/DesktopPermissionsCard";
 import { UsageStatsCard } from "../components/settings/UsageStatsCard";
 import { useSettingsContext } from "../contexts/SettingsContext";
-import DatabaseOverview from "./database-explorer/DatabaseOverview";
 import { TeamCard } from "../components/settings/TeamCard";
 
-const TAB_KEYS = ["providers", "secrets", "audio", "appearance", "views", "seedpacks", "automation", "stats", "notifications", "general", "database", "engine", "account"] as const;
+const TAB_KEYS = ["providers", "secrets", "audio", "appearance", "views", "seedpacks", "automation", "stats", "notifications", "general", "engine", "account"] as const;
 type TabKey = (typeof TAB_KEYS)[number];
 
 interface ModelOption {
@@ -514,7 +513,6 @@ function SettingsContent() {
     stats: "Stats",
     notifications: "Notifications",
     general: "General",
-    database: "Database",
     engine: "Engine",
     account: "Account",
   };
@@ -547,7 +545,6 @@ function SettingsContent() {
       {tab === "stats" && <Box sx={{ maxWidth: 720, mx: "auto" }}><UsageStatsCard /></Box>}
       {tab === "notifications" && <Box sx={{ maxWidth: 720, mx: "auto" }}><NotificationsCard /></Box>}
       {tab === "general" && <GeneralTab s={s} devMode={devMode} />}
-      {tab === "database" && <Box sx={{ height: "calc(100vh - 220px)", minHeight: 400 }}><DatabaseOverview /></Box>}
       {tab === "engine" && <EngineView />}
       {tab === "account" && <AccountTab s={s} />}
 

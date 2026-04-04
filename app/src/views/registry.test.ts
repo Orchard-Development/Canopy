@@ -26,20 +26,35 @@ describe("COMPONENT_MAP", () => {
     expect("bundled:Swarm" in COMPONENT_MAP).toBe(false);
   });
 
-  it("still includes all other bundled views", () => {
+  it("does not include Interfaces (culled, not a view)", () => {
+    expect("bundled:Interfaces" in COMPONENT_MAP).toBe(false);
+  });
+
+  it("does not include Capabilities (rewritten as plugins)", () => {
+    expect("bundled:Capabilities" in COMPONENT_MAP).toBe(false);
+  });
+
+  it("does not include ApplicationViewer (culled, not a view)", () => {
+    expect("bundled:ApplicationViewer" in COMPONENT_MAP).toBe(false);
+  });
+
+  it("does not include ScheduledTasks (culled, not a view)", () => {
+    expect("bundled:ScheduledTasks" in COMPONENT_MAP).toBe(false);
+  });
+
+  it("does not include DatabaseExplorer (culled, not a view)", () => {
+    expect("bundled:DatabaseExplorer" in COMPONENT_MAP).toBe(false);
+  });
+
+  it("still includes all core bundled views", () => {
     const expected = [
       "bundled:Chat",
       "bundled:Proposals",
-      "bundled:Capabilities",
-      "bundled:Interfaces",
       "bundled:SeedPacks",
       "bundled:Mesh",
       "bundled:Settings",
       "bundled:ProjectSessions",
       "bundled:RootsView",
-      "bundled:ApplicationViewer",
-      "bundled:ScheduledTasks",
-      "bundled:DatabaseExplorer",
     ];
     for (const key of expected) {
       expect(COMPONENT_MAP).toHaveProperty(key);

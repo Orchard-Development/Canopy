@@ -28,6 +28,7 @@ import FilterAltIcon from "@mui/icons-material/FilterAlt";
 import FilterAltOffIcon from "@mui/icons-material/FilterAltOff";
 import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import HistoryIcon from "@mui/icons-material/History";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import KeyboardIcon from "@mui/icons-material/Keyboard";
@@ -278,6 +279,7 @@ interface Props {
   isMobileScreen?: boolean;
   mobileFullscreen?: boolean;
   onEnterMobileFullscreen?: () => void;
+  onResume?: (tabId: string) => Promise<void>;
 }
 
 export function TerminalDrawerContent({
@@ -316,11 +318,13 @@ export function TerminalDrawerContent({
   isMobileScreen,
   mobileFullscreen,
   onEnterMobileFullscreen,
+  onResume,
 }: Props) {
   const activeSessionId = tabs[activeTab]?.id ?? "";
   const { matches: linkedMatches } = useLinkedKnowledge(activeSessionId);
   const [summaryMode, setSummaryMode] = useState(false);
   const [showDock, setShowDock] = useState(false);
+  const [tabResuming, setTabResuming] = useState(false);
   const [refreshKeys, setRefreshKeys] = useState<Record<string, number>>({});
   const [globalRefreshKey, setGlobalRefreshKey] = useState(0);
   const handleRefresh = () => {
@@ -767,6 +771,7 @@ export function TerminalDrawerContent({
             onOpenLogFile={onOpenLogFile}
             onAiSync={onAiSync}
             externalRefreshKey={globalRefreshKey}
+            onResume={onResume}
           />
         </Box>
       ) : (
@@ -856,6 +861,43 @@ export function TerminalDrawerContent({
                 />
               </Box>
             ))}
+            {tabs[activeTab]?.exitCode !== undefined && onResume && (
+              <Box
+                onClick={tabResuming ? undefined : async () => {
+                  setTabResuming(true);
+                  try { await onResume(tabs[activeTab].id); } catch { /* resume failed */ }
+                  setTabResuming(false);
+                }}
+                sx={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  bgcolor: "rgba(0, 0, 0, 0.45)",
+                  cursor: tabResuming ? "wait" : "pointer",
+                  zIndex: 5,
+                  "&:hover .resume-icon": { transform: "scale(1.1)" },
+                }}
+              >
+                <Box
+                  className="resume-icon"
+                  sx={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: "50%",
+                    bgcolor: "primary.main",
+                    color: "primary.contrastText",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "transform 0.15s",
+                  }}
+                >
+                  <PlayArrowIcon sx={{ fontSize: 36 }} />
+                </Box>
+              </Box>
+            )}
           </Box>
         </Box>
       )}

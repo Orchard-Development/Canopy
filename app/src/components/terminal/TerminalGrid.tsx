@@ -21,9 +21,10 @@ interface Props {
   onOpenLogFile?: (sessionId: string) => void;
   onAiSync?: (id: string, updates: { label?: string; summary?: string; lastAiUpdate?: number }) => void;
   externalRefreshKey?: number;
+  onResume?: (tabId: string) => void;
 }
 
-export function TerminalGrid({ tabs, profiles, columns, freeform, initialSpans, onSpansChange, onReorder, onCardFocus, onKill, onExit, scrollToId, onViewLog, onOpenLogFile, onAiSync, externalRefreshKey }: Props) {
+export function TerminalGrid({ tabs, profiles, columns, freeform, initialSpans, onSpansChange, onReorder, onCardFocus, onKill, onExit, scrollToId, onViewLog, onOpenLogFile, onAiSync, externalRefreshKey, onResume }: Props) {
   const navigate = useNavigate();
 
   return (
@@ -58,6 +59,7 @@ export function TerminalGrid({ tabs, profiles, columns, freeform, initialSpans, 
           onOpenLogFile={onOpenLogFile ? () => onOpenLogFile(tab.id) : undefined}
           onAiSync={onAiSync}
           externalRefreshKey={externalRefreshKey}
+          onResume={onResume ? () => onResume(tab.id) : undefined}
         />
       )}
     />

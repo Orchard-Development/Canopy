@@ -38,10 +38,11 @@ interface Props {
   onOpenLogFile?: () => void;
   onAiSync?: (id: string, updates: { label?: string; summary?: string; lastAiUpdate?: number }) => void;
   externalRefreshKey?: number;
+  onResume?: () => void;
 }
 
 export const TerminalCard = forwardRef(function TerminalCard(
-  { tab, profile, colSpan, rowSpan, isDragging, onResizeStart, onReorderStart, onExpand, onCardClick, onKill, onExit, onViewLog, onOpenLogFile, onAiSync, externalRefreshKey }: Props,
+  { tab, profile, colSpan, rowSpan, isDragging, onResizeStart, onReorderStart, onExpand, onCardClick, onKill, onExit, onViewLog, onOpenLogFile, onAiSync, externalRefreshKey, onResume }: Props,
   forwardedRef: React.ForwardedRef<HTMLElement>,
 ) {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -69,11 +70,15 @@ export const TerminalCard = forwardRef(function TerminalCard(
     if (resuming) return;
     setResuming(true);
     try {
-      const result = await api.resumeSession(tab.id);
-      requestTerminalOpen(result.id, `Resume: ${tab.label || "session"}`);
+      if (onResume) {
+        await onResume();
+      } else {
+        const result = await api.resumeSession(tab.id);
+        requestTerminalOpen(result.id, `Resume: ${tab.label || "session"}`);
+      }
     } catch { /* resume failed */ }
     setResuming(false);
-  }, [tab.id, tab.label, resuming]);
+  }, [tab.id, tab.label, resuming, onResume]);
   const label = tab.label || tab.command || "Terminal";
   const resolvedState = tab.exitCode !== undefined ? "idle" as const : (tab.state ?? "running" as const);
   const isExited = tab.exitCode !== undefined;

@@ -15,17 +15,11 @@ export interface ViewEntry {
 export const COMPONENT_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
   "bundled:Chat": lazy(() => import("./Chat")),
   "bundled:Proposals": lazy(() => import("./Proposals")),
-  "bundled:Capabilities": lazy(() => import("./Capabilities")),
-  "bundled:Interfaces": lazy(() => import("./Interfaces")),
-
   "bundled:SeedPacks": lazy(() => import("./SeedPacks")),
   "bundled:Mesh": lazy(() => import("./Mesh")),
   "bundled:Settings": lazy(() => import("./Settings")),
   "bundled:ProjectSessions": lazy(() => import("./ProjectSessions")),
   "bundled:RootsView": lazy(() => import("./RootsView")),
-  "bundled:ApplicationViewer": lazy(() => import("./ApplicationViewer")),
-  "bundled:ScheduledTasks": lazy(() => import("./ScheduledTasks")),
-  "bundled:DatabaseExplorer": lazy(() => import("./database-explorer/DatabaseExplorer")),
 };
 
 /**
@@ -51,24 +45,6 @@ export const views: ViewEntry[] = [
     label: "Proposals",
     icon: "Description",
     component: lazy(() => import("./Proposals")),
-  },
-  {
-    path: "/interfaces",
-    label: "Interfaces",
-    icon: "Devices",
-    component: lazy(() => import("./Interfaces")),
-  },
-  {
-    path: "/capabilities",
-    label: "Capabilities",
-    icon: "Extension",
-    component: lazy(() => import("./Capabilities")),
-  },
-  {
-    path: "/scheduled-tasks",
-    label: "Scheduled Tasks",
-    icon: "Schedule",
-    component: lazy(() => import("./ScheduledTasks")),
   },
   {
     path: "/settings",

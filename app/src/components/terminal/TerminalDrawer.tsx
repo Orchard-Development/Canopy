@@ -508,6 +508,31 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
     window.open(`/api/session-logs/${sessionId}/stream`, "_blank");
   }, []);
 
+  const handleResume = useCallback(async (tabId: string) => {
+    try {
+      const result = await api.resumeSession(tabId);
+      attachedSessions.current.delete(tabId);
+      attachedSessions.current.add(result.id);
+      setTabs((prev) => {
+        const idx = prev.findIndex((t) => t.id === tabId);
+        if (idx < 0) return prev;
+        const dead = prev[idx];
+        const next = [...prev];
+        next[idx] = {
+          id: result.id,
+          label: dead.label,
+          command: result.command || dead.command,
+          nickname: dead.nickname,
+          projectId: dead.projectId,
+          cwd: result.cwd || dead.cwd,
+          startedAt: result.startedAt,
+        };
+        return next;
+      });
+      persistFocusedId(result.id);
+    } catch { /* resume failed */ }
+  }, [persistFocusedId]);
+
   const handleAiSync = useCallback((id: string, updates: { label?: string; summary?: string; lastAiUpdate?: number }) => {
     if (Object.keys(updates).length === 0) return;
     setTabs((prev) => prev.map((t) => (t.id === id ? { ...t, ...updates } : t)));
@@ -598,6 +623,7 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
         onViewLog={handleViewLog}
         onOpenLogFile={handleOpenLogFile}
         onAiSync={handleAiSync}
+        onResume={handleResume}
         onRefresh={handleRefresh}
         projectCwd={defaultCwd}
         projectFilterEnabled={projectFilterEnabled}
