@@ -418,14 +418,18 @@ export const TerminalDrawer = forwardRef<TerminalDrawerHandle, Props>(function T
 
   const spawnAndAttach = useCallback(async (result: { id: string }, label: string, command: string) => {
     attachedSessions.current.add(result.id);
+    skipFocusSyncRef.current = true;
     const tab: TerminalTab = { id: result.id, label, command, nickname: randomWord(), projectId: activeProjectId };
+    setScrollToSessionId(result.id);
+    setTimeout(() => setScrollToSessionId(null), 100);
     setTabs((prev) => {
       const filtered = prev.filter((t) =>
         !t.projectId || !activeProjectId || t.projectId === activeProjectId,
       );
-      setActiveTab(filtered.length);
+      setActiveTabRaw(filtered.length);
       return [...prev, tab];
     });
+    persistFocusedId(result.id);
     setTimeout(() => {
       api.getTerminal(result.id).then((info) => {
         if (info.label) {
