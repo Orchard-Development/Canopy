@@ -133,11 +133,15 @@ export default function StatsBar({ data, onReprofile, filterUserId, onFilterUser
             }}
           >
             <MenuItem value="__all__" sx={{ fontSize: 12 }}>All users</MenuItem>
-            {users.map((u) => (
-              <MenuItem key={u.user_id} value={u.user_id} sx={{ fontSize: 12 }}>
-                {u.user_id.slice(0, 8)}... ({u.embedding_count})
-              </MenuItem>
-            ))}
+            {users.map((u) => {
+              const label = u.display_name || `${u.user_id.slice(0, 8)}...`;
+              const machines = u.machines?.length ? ` · ${u.machines.join(", ")}` : "";
+              return (
+                <MenuItem key={u.user_id} value={u.user_id} sx={{ fontSize: 12 }}>
+                  {label}{machines} ({u.embedding_count})
+                </MenuItem>
+              );
+            })}
           </Select>
         </>
       )}

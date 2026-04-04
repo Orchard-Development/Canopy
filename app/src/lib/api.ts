@@ -436,6 +436,8 @@ export interface OrchardSession {
 export interface RootsUser {
   user_id: string;
   embedding_count: number;
+  display_name?: string;
+  machines?: string[];
 }
 
 export interface SeedGrowthPoint {

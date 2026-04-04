@@ -20,6 +20,7 @@ const AVATAR_TARGET_BYTES = 100 * 1024;
 interface Props {
   displayName: string;
   avatarBase64: string;
+  machineName?: string;
   onUpdate: (key: string, value: string) => void;
 }
 
@@ -58,7 +59,7 @@ function compressImage(file: File): Promise<string> {
   });
 }
 
-export function IdentityCard({ displayName, avatarBase64, onUpdate }: Props) {
+export function IdentityCard({ displayName, avatarBase64, machineName, onUpdate }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [compressing, setCompressing] = useState(false);
@@ -132,6 +133,16 @@ export function IdentityCard({ displayName, avatarBase64, onUpdate }: Props) {
               value={displayName}
               onChange={(e) => onUpdate("display_name", e.target.value)}
               placeholder="Your name"
+              sx={{ mb: 1.5 }}
+            />
+            <TextField
+              fullWidth
+              label="Machine name"
+              size="small"
+              value={machineName ?? ""}
+              onChange={(e) => onUpdate("machine.nickname", e.target.value)}
+              placeholder="e.g. Work Laptop, Home Desktop"
+              helperText="Identifies this machine in Roots and team views"
             />
           </Box>
         </Stack>

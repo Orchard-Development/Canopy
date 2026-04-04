@@ -424,7 +424,9 @@ function AccountTab({ s }: { s: ReturnType<typeof useSettings> }) {
     return (
       <Box sx={{ maxWidth: 720, mx: "auto" }}>
         <IdentityCard displayName={s.settings.display_name ?? ""}
-          avatarBase64={s.settings.avatar_base64 ?? ""} onUpdate={s.update} />
+          avatarBase64={s.settings.avatar_base64 ?? ""}
+          machineName={(s.settings as Record<string, string>)["machine.nickname"] ?? ""}
+          onUpdate={s.update} />
         <Card><CardContent>
           <Typography variant="body2" color="text.secondary">
             Authentication is not configured.
@@ -438,7 +440,9 @@ function AccountTab({ s }: { s: ReturnType<typeof useSettings> }) {
     return (
       <Box sx={{ maxWidth: 720, mx: "auto" }}>
         <IdentityCard displayName={s.settings.display_name ?? ""}
-          avatarBase64={s.settings.avatar_base64 ?? ""} onUpdate={s.update} />
+          avatarBase64={s.settings.avatar_base64 ?? ""}
+          machineName={(s.settings as Record<string, string>)["machine.nickname"] ?? ""}
+          onUpdate={s.update} />
         <Card sx={{ mb: 3 }}><CardContent>
           <Typography variant="h6" gutterBottom>Account</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
