@@ -1,11 +1,12 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Box, Stack, Typography, Chip,
+  Box, Stack, Typography, Chip, Divider,
   CircularProgress, Button, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, Tabs, Tab,
 } from "@mui/material";
 import GrassIcon from "@mui/icons-material/Grass";
+import CloudIcon from "@mui/icons-material/Cloud";
 import AddIcon from "@mui/icons-material/Add";
 import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
 import GitHubIcon from "@mui/icons-material/GitHub";
@@ -80,8 +81,11 @@ export default function SeedPacks() {
     } catch { /* ignore */ }
   }
 
-  const filteredPacks = useMemo(() => {
-    let result = packs;
+  const publicPacks = useMemo(() => packs.filter((p) => p.source === "public"), [packs]);
+  const userPacks = useMemo(() => packs.filter((p) => p.source !== "public"), [packs]);
+
+  const filteredPublic = useMemo(() => {
+    let result = publicPacks;
     if (categoryTab !== "All") {
       const cat = categoryTab.toLowerCase();
       result = result.filter((p) => (p.category || "").toLowerCase() === cat);
@@ -95,16 +99,17 @@ export default function SeedPacks() {
       );
     }
     return result;
-  }, [packs, categoryTab, search]);
+  }, [publicPacks, categoryTab, search]);
 
-  const groupedByCategory = useMemo(() => {
-    const groups: Record<string, SeedPack[]> = {};
-    for (const p of filteredPacks) {
-      const cat = p.category || "Uncategorized";
-      (groups[cat] ??= []).push(p);
-    }
-    return groups;
-  }, [filteredPacks]);
+  const filteredUser = useMemo(() => {
+    if (!search.trim()) return userPacks;
+    const q = search.toLowerCase();
+    return userPacks.filter((p) =>
+      p.name.toLowerCase().includes(q) ||
+      p.description.toLowerCase().includes(q) ||
+      (p.tags || []).some((t) => t.toLowerCase().includes(q))
+    );
+  }, [userPacks, search]);
 
   return (
     <PageLayout
@@ -125,49 +130,91 @@ export default function SeedPacks() {
         </Stack>
       }
     >
-      <Tabs
-        value={categoryTab}
-        onChange={(_e, val) => setCategoryTab(val)}
-        variant="scrollable"
-        scrollButtons="auto"
-        sx={{ mb: 2 }}
-      >
-        {CATEGORY_TABS.map((tab) => (
-          <Tab key={tab} label={tab} value={tab} sx={{ textTransform: "none" }} />
-        ))}
-      </Tabs>
-
       <TextField
         size="small"
         placeholder="Search by name, description, or tags..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         fullWidth
-        sx={{ mb: 2 }}
+        sx={{ mb: 3 }}
       />
 
       {loading && <CircularProgress size={24} />}
 
       {!loading && (
-        <Stack spacing={3}>
-          {Object.entries(groupedByCategory).map(([category, categoryPacks]) => (
-            <Box key={category}>
-              <Typography variant="h6" sx={{ mb: 1 }}>{category}</Typography>
-              <Stack spacing={1}>
-                {categoryPacks.map((pack) => (
-                  <PackCard
-                    key={pack.id}
-                    pack={pack}
-                    onClick={() => navigate(`/seed-packs/${pack.id}`)}
-                    onDelete={pack.source !== "shipped" ? handleDelete : undefined}
-                  />
-                ))}
-              </Stack>
-            </Box>
-          ))}
-          {filteredPacks.length === 0 && (
-            <Typography variant="body2" color="text.secondary">No seed packs found.</Typography>
-          )}
+        <Stack spacing={4}>
+          {/* Public packs */}
+          <Box>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+              <CloudIcon fontSize="small" color="primary" />
+              <Typography variant="subtitle1" fontWeight={700}>Public Packs</Typography>
+              <Chip label={publicPacks.length} size="small" variant="outlined" />
+            </Stack>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+              Curated and hosted in the cloud. Applied to every orchard automatically.
+            </Typography>
+
+            <Tabs
+              value={categoryTab}
+              onChange={(_e, val) => setCategoryTab(val)}
+              variant="scrollable"
+              scrollButtons="auto"
+              sx={{ mb: 2, minHeight: 36, "& .MuiTab-root": { minHeight: 36 } }}
+            >
+              {CATEGORY_TABS.map((tab) => (
+                <Tab key={tab} label={tab} value={tab} sx={{ textTransform: "none", py: 0.5 }} />
+              ))}
+            </Tabs>
+
+            {filteredPublic.length === 0 && (
+              <Typography variant="body2" color="text.secondary">
+                {publicPacks.length === 0 ? "No public packs yet. Run mix orchard.publish_packs to publish." : "No packs match this filter."}
+              </Typography>
+            )}
+
+            <Stack spacing={1}>
+              {filteredPublic.map((pack) => (
+                <PackCard
+                  key={pack.id}
+                  pack={pack}
+                  onClick={() => navigate(`/seed-packs/${pack.id}`)}
+                />
+              ))}
+            </Stack>
+          </Box>
+
+          <Divider />
+
+          {/* User packs */}
+          <Box>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+              <GrassIcon fontSize="small" color="action" />
+              <Typography variant="subtitle1" fontWeight={700}>Your Packs</Typography>
+              <Chip label={userPacks.length} size="small" variant="outlined" />
+            </Stack>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+              Harvested from your projects or created manually. Plant on any orchard.
+            </Typography>
+
+            {filteredUser.length === 0 && (
+              <Typography variant="body2" color="text.secondary">
+                {userPacks.length === 0
+                  ? "No custom packs yet. Use New Pack, Generate with AI, or harvest from a project."
+                  : "No packs match this search."}
+              </Typography>
+            )}
+
+            <Stack spacing={1}>
+              {filteredUser.map((pack) => (
+                <PackCard
+                  key={pack.id}
+                  pack={pack}
+                  onClick={() => navigate(`/seed-packs/${pack.id}`)}
+                  onDelete={handleDelete}
+                />
+              ))}
+            </Stack>
+          </Box>
         </Stack>
       )}
 
@@ -192,7 +239,7 @@ export default function SeedPacks() {
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <Typography variant="body2" color="text.secondary">
-              Describe the seed pack you want. The AI will study all shipped core and orchard packs
+              Describe the seed pack you want. The AI will study all public packs
               to match their format and quality, then generate a complete pack with rules and skills.
             </Typography>
             <TextField

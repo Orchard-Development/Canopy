@@ -29,8 +29,8 @@ export function SeedPackField({ value, onChange, disabled }: FieldRendererProps)
 
   useEffect(() => {
     api.listSeedPacks().then((list) => {
-      const shipped = list.filter((p) => p.source === "shipped");
-      setPacks(shipped.map((p) => ({
+      const publicPacks = list.filter((p) => p.source === "public");
+      setPacks(publicPacks.map((p) => ({
         id: p.id,
         name: p.name,
         slug: p.slug,
@@ -42,7 +42,7 @@ export function SeedPackField({ value, onChange, disabled }: FieldRendererProps)
         techStack: p.techStack,
       })));
       if (!value || value === "[]") {
-        onChange(JSON.stringify(shipped.map((p) => p.slug)));
+        onChange(JSON.stringify(publicPacks.map((p) => p.slug)));
       }
     }).catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

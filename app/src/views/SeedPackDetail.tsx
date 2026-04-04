@@ -147,7 +147,7 @@ export default function SeedPackDetail() {
       badge={
         <Stack direction="row" spacing={0.5}>
           <Chip label={`v${pack.version}`} size="small" variant="outlined" />
-          <Chip label={pack.source} size="small" color={pack.source === "shipped" ? "primary" : "default"} variant="outlined" />
+          <Chip label={pack.source} size="small" color={pack.source === "public" ? "primary" : "default"} variant="outlined" />
           <Chip label={`${pack.files.length} files`} size="small" variant="outlined" />
           {pack.category && (
             <Chip label={pack.category} size="small" color="primary" variant="outlined" />

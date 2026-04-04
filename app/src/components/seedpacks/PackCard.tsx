@@ -58,7 +58,7 @@ export function PackCard({
   onDelete,
   compact,
 }: Props) {
-  const isShipped = pack.source === "shipped";
+  const isPublic = pack.source === "public";
   const hasCheckbox = typeof selected === "boolean";
   const handleClick = hasCheckbox ? onToggle : onClick;
 
@@ -66,7 +66,7 @@ export function PackCard({
     <Card
       variant="outlined"
       sx={{
-        borderColor: hasCheckbox && selected ? "primary.main" : isShipped ? "primary.dark" : undefined,
+        borderColor: hasCheckbox && selected ? "primary.main" : isPublic ? "primary.dark" : undefined,
         borderWidth: hasCheckbox && selected ? 2 : 1,
         transition: "border-color 0.15s",
       }}
@@ -84,8 +84,8 @@ export function PackCard({
           <Typography variant="body2" fontWeight={600}>{pack.name}</Typography>
           <Chip label={`v${pack.version}`} size="small" variant="outlined" />
           <Chip label={`${pack.fileCount} files`} size="small" variant="outlined" />
-          {isShipped && (
-            <Chip label="shipped" size="small" color="primary" variant="outlined" />
+          {isPublic && (
+            <Chip label="public" size="small" color="primary" variant="outlined" />
           )}
           {pack.category && (
             <Chip label={pack.category} size="small" color="primary" variant="outlined" />

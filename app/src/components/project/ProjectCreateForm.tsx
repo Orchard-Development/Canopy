@@ -93,13 +93,13 @@ export function ProjectCreateForm({ prefill, onSubmitted, embedded }: FormCompon
 
   useEffect(() => {
     api.listSeedPacks().then((list) => {
-      const shipped = list.filter((p) => p.source === "shipped");
-      setPacks(shipped.map((p) => ({
+      const publicPacks = list.filter((p) => p.source === "public");
+      setPacks(publicPacks.map((p) => ({
         id: p.id, name: p.name, slug: p.slug, description: p.description,
         source: p.source, fileCount: p.fileCount, version: p.version,
         category: p.category, techStack: p.techStack,
       })));
-      setSelectedSlugs(new Set(shipped.map((p) => p.slug)));
+      setSelectedSlugs(new Set(publicPacks.map((p) => p.slug)));
     }).catch(() => {});
   }, []);
 

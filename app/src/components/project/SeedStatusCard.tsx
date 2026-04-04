@@ -156,7 +156,7 @@ function UnappliedPackRow({ name, projectId, onRefresh }: {
 
 export function SeedStatusCard({ projectId }: Props) {
   const [packs, setPacks] = useState<Record<string, PackState | null>>({});
-  const [shippedSlugs, setShippedSlugs] = useState<string[]>([]);
+  const [publicSlugs, setPublicSlugs] = useState<string[]>([]);
   const [fetching, setFetching] = useState(true);
 
   function load() {
@@ -167,9 +167,9 @@ export function SeedStatusCard({ projectId }: Props) {
     ])
       .then(([status, packList]) => {
         setPacks(status.packs as Record<string, PackState | null>);
-        setShippedSlugs(
+        setPublicSlugs(
           packList
-            .filter((p: { source: string }) => p.source === "shipped")
+            .filter((p: { source: string }) => p.source === "public")
             .map((p: { slug: string }) => p.slug)
         );
       })
@@ -179,8 +179,8 @@ export function SeedStatusCard({ projectId }: Props) {
 
   useEffect(() => { load(); }, [projectId]);
 
-  // All unique pack names: shipped packs always shown + any user packs from status
-  const allNames = Array.from(new Set([...shippedSlugs, ...Object.keys(packs)]));
+  // All unique pack names: public packs always shown + any user packs from status
+  const allNames = Array.from(new Set([...publicSlugs, ...Object.keys(packs)]));
 
   return (
     <Card variant="outlined">

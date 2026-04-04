@@ -32,7 +32,7 @@ interface SeedPack {
   source_project_id: string | null;
   fileCount: number;
   version: number;
-  source?: "shipped" | "user";
+  source?: "public" | "user";
   created_at: string;
   updated_at: string;
 }
@@ -164,7 +164,7 @@ export function SeedPacksCard() {
         </Stack>
 
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Shipped packs come with the platform. Custom packs are harvested from projects
+          Public packs are hosted in the cloud and applied to every orchard. Custom packs are harvested from projects
           and can be planted on any orchard.
         </Typography>
 
@@ -179,25 +179,25 @@ export function SeedPacksCard() {
         {!loading && packs.length > 0 && (
           <Stack spacing={1.5}>
             {packs.map((pack) => {
-              const isShipped = pack.source === "shipped";
+              const isPublic = pack.source === "public";
               return (
-              <Box key={pack.id} sx={{ p: 1.5, border: 1, borderColor: isShipped ? "primary.main" : "divider", borderRadius: 1, bgcolor: isShipped ? "action.hover" : undefined }}>
+              <Box key={pack.id} sx={{ p: 1.5, border: 1, borderColor: isPublic ? "primary.main" : "divider", borderRadius: 1, bgcolor: isPublic ? "action.hover" : undefined }}>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Typography variant="body2" fontWeight={600}>{pack.name}</Typography>
                   <Chip label={`v${pack.version}`} size="small" variant="outlined" />
                   <Chip label={`${pack.fileCount} files`} size="small" variant="outlined" />
-                  {isShipped && <Chip label="shipped" size="small" color="primary" variant="outlined" />}
-                  {!isShipped && <Chip label="custom" size="small" variant="outlined" />}
+                  {isPublic && <Chip label="public" size="small" color="primary" variant="outlined" />}
+                  {!isPublic && <Chip label="custom" size="small" variant="outlined" />}
                   <Stack direction="row" spacing={0} sx={{ ml: "auto !important" }}>
-                    {!isShipped && <FileList packId={pack.id} />}
-                    {!isShipped && (
+                    {!isPublic && <FileList packId={pack.id} />}
+                    {!isPublic && (
                       <Tooltip title="Edit">
                         <IconButton size="small" onClick={() => setEditing(pack)}>
                           <EditIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                     )}
-                    {!isShipped && (
+                    {!isPublic && (
                       <Tooltip title="Delete">
                         <IconButton size="small" onClick={() => handleDelete(pack.id)} color="error">
                           <DeleteOutlineIcon fontSize="small" />
@@ -211,7 +211,7 @@ export function SeedPacksCard() {
                     {pack.description}
                   </Typography>
                 )}
-                {!isShipped && (
+                {!isPublic && (
                   <Typography variant="caption" color="text.disabled" sx={{ display: "block", mt: 0.25 }}>
                     Updated {new Date(pack.updated_at).toLocaleDateString()}
                   </Typography>

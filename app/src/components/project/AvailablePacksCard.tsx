@@ -59,7 +59,7 @@ export function AvailablePacksCard({ projectId, refreshKey }: Props) {
       api.getSeedStatus(projectId),
     ])
       .then(([packList, status]) => {
-        setPacks(packList.filter((p: SeedPack) => p.source !== "shipped"));
+        setPacks(packList.filter((p: SeedPack) => p.source !== "public"));
         const planted = new Set<string>();
         for (const [slug, state] of Object.entries(status.packs)) {
           if (state) planted.add(slug);

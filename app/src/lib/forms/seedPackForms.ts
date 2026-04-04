@@ -46,7 +46,7 @@ registerForm({
       placeholder:
         "e.g. A Python data science pack with rules for notebook hygiene, pandas best practices, and a skill for generating EDA reports",
       helperText:
-        "The AI will study all shipped packs to match their format, then generate a complete pack with rules and skills",
+        "The AI will study all public packs to match their format, then generate a complete pack with rules and skills",
       showWhen: { field: "method", value: "ai" },
     },
     // -- GitHub harvest fields --

@@ -664,7 +664,7 @@ export const api = {
     ),
 
   listSeedPacks: () =>
-    get<Array<{ id: string; name: string; slug: string; description: string; source_project_id: string | null; fileCount: number; version: number; source: "shipped" | "user"; created_at: string; updated_at: string; category?: string; tags?: string[]; requires?: string[]; techStack?: string[] }>>(
+    get<Array<{ id: string; name: string; slug: string; description: string; source_project_id: string | null; fileCount: number; version: number; source: "public" | "user"; created_at: string; updated_at: string; category?: string; tags?: string[]; requires?: string[]; techStack?: string[] }>>(
       "/api/seed-packs",
     ),
 
