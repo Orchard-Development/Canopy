@@ -2,8 +2,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useToast } from "../hooks/useToast";
 import {
-  Box, Typography, Chip, IconButton, Tooltip, Paper, Stack, Button,
-  LinearProgress, Skeleton, Alert, CircularProgress, ButtonGroup,
+  Box, Typography, Chip, IconButton, Tooltip, Paper, Stack, Button, TextField,
+  LinearProgress, Skeleton, Alert, CircularProgress, ButtonGroup, InputAdornment,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -23,6 +23,7 @@ import LightbulbOutlinedIcon from "@mui/icons-material/LightbulbOutlined";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
+import SendIcon from "@mui/icons-material/Send";
 import { api, type SessionLogMeta, type SessionLogAnalysis } from "../lib/api";
 import { requestTerminalOpen } from "../hooks/useDispatch";
 import { terminalOptions } from "../lib/xterm-theme";
@@ -265,12 +266,29 @@ function DetailContent({
   const [streaming, setStreaming] = useState(true);
   const [resuming, setResuming] = useState(false);
   const [viewMode, setViewMode] = useState<"pretty" | "raw">("pretty");
+  const [messageText, setMessageText] = useState("");
+  const [sending, setSending] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const { messages, loading: messagesLoading } = useSessionMessages(
     viewMode === "pretty" && session.hasMessages !== false ? session.id : null,
     0,
     peerNode,
   );
+
+  const handleSendMessage = useCallback(async () => {
+    if (!messageText.trim() || !peerNode) return;
+    setSending(true);
+    try {
+      await api.collabSend(peerNode, "session.message", { text: messageText.trim() }, {
+        toSessionId: session.id,
+        requiresApproval: true,
+      });
+      setMessageText("");
+    } catch (e) {
+      console.error("Failed to send message:", e);
+    }
+    setSending(false);
+  }, [messageText, peerNode, session.id]);
 
   const handleResume = useCallback(async (fork: boolean) => {
     setResuming(true);
@@ -452,6 +470,46 @@ function DetailContent({
             <ChatMessages messages={sessionMessagesToChat(messages)} fontSize={13} />
           )}
         </Box>
+      )}
+
+      {/* Message input for remote sessions */}
+      {peerNode && (
+        <Paper
+          variant="outlined"
+          sx={{
+            mt: 1.5,
+            p: 1,
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            flexShrink: 0,
+          }}
+        >
+          <TextField
+            size="small"
+            fullWidth
+            placeholder="Send a message to this session..."
+            value={messageText}
+            onChange={(e) => setMessageText(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
+            disabled={sending}
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      size="small"
+                      onClick={handleSendMessage}
+                      disabled={!messageText.trim() || sending}
+                    >
+                      {sending ? <CircularProgress size={16} /> : <SendIcon sx={{ fontSize: 18 }} />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
+        </Paper>
       )}
     </PageLayout>
   );
