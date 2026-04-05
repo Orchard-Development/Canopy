@@ -44,6 +44,7 @@ import { useEventBusProvider, EventBusProvider, useEventBus } from "./hooks/useE
 import { SettingsProvider, useSettingsContext } from "./contexts/SettingsContext";
 import { fetchSettings } from "./lib/settingsCache";
 import { useEngineEvents } from "./hooks/useEngineEvents";
+import { useCollabApproval } from "./hooks/useCollabApproval";
 import { useNotificationHydration } from "./hooks/useNotificationHydration";
 import { useUserActivity } from "./hooks/useUserActivity";
 import { ProjectThemeBridge } from "./components/ProjectThemeBridge";
@@ -285,6 +286,8 @@ function AppLayout({ onResetOnboarding, onResetTour, showTour, onTourComplete, p
 
   // Engine channel events -> EventBus (feeds both toasts and notification bell)
   useEngineEvents(appDashChannel);
+  // Agent collaboration approval toasts (persistent, bypasses throttle)
+  useCollabApproval(appDashChannel);
 
   // Boot hydration: pre-populate EventBus with recent events once the engine exposes the endpoint
   useNotificationHydration();

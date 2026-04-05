@@ -199,8 +199,8 @@ function collabApprovalButtons(envelopeId: string): ReactNode {
   };
 
   return createElement("span", { style: { display: "flex", gap: 4 } },
-    createElement("button", { onClick: handleApprove, style: { ...btnStyle, color: "#4caf50" } }, "Accept"),
-    createElement("button", { onClick: handleReject, style: { ...btnStyle, color: "#f44336" } }, "Reject"),
-    createElement("button", { onClick: handleTrustAlways, style: { ...btnStyle, color: "#9c27b0" } }, "Trust Always"),
+    createElement("button", { onClick: handleApprove, style: { ...btnStyle, borderColor: "#aaa" } }, "Accept"),
+    createElement("button", { onClick: handleReject, style: { ...btnStyle, borderColor: "#aaa", opacity: 0.7 } }, "Reject"),
+    createElement("button", { onClick: handleTrustAlways, style: { ...btnStyle, borderColor: "#aaa", opacity: 0.7, fontSize: 11 } }, "Trust Always"),
   );
 }

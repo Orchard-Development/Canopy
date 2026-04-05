@@ -254,20 +254,9 @@ export function useEngineEvents(channel: Channel | null): void {
 
   // -- Agent collaboration events -------------------------------------------
 
-  useChannelSub(channel, EVENTS.collab.approvalNeeded, (payload: Record<string, unknown>) => {
-    const from = (payload.from_display_name as string) || (payload.from_machine_id as string) || "Someone";
-    const intent = (payload.intent as string) || "unknown";
-    const envelopeId = payload.envelope_id as string;
-    const intentLabel = intent.replace(".", " ").replace(/^\w/, (c: string) => c.toUpperCase());
-    emit({
-      category: "engine",
-      event: "collab:approval_needed",
-      message: `${from} wants to ${intentLabel}`,
-      severity: "warning",
-      data: payload,
-      actionMeta: { type: "collab-approve", envelopeId } as unknown as EventActionMeta,
-    });
-  });
+  // Collab approvals bypass the event bus throttle — they use manual toast API
+  // so they persist until the user acts (duration: 0).
+  // The collabToast callback is injected from useCollabApproval hook.
 
   useChannelSub(channel, EVENTS.collab.requestCompleted, (payload: Record<string, unknown>) => {
     const intent = (payload.intent as string) || "request";
