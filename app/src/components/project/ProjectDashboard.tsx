@@ -25,6 +25,7 @@ import Button from "@mui/material/Button";
 import { api, type ProjectRecord, type FeedEvent } from "../../lib/api";
 import { timeAgo } from "../../lib/time";
 import { ProjectLogo } from "./ProjectLogo";
+import { AppliedPacksSummary } from "./AppliedPacksSummary";
 import { useProjectData } from "../../hooks/useProjectData";
 
 interface Props {
@@ -83,13 +84,14 @@ export function ProjectDashboard({ project, projectId, onUpdate }: Props) {
         onUpdate={onUpdate}
       />
 
-      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: 2 }}>
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr 1fr" }, gap: 2 }}>
         <SessionsStrip sessions={activeSessions} navigate={navigate} />
         <QuickStats
           seedCount={seedCount}
           intelCount={intelCount}
           serverCount={serverCount}
         />
+        <AppliedPacksSummary />
       </Box>
 
       <ActivityFeed events={events.slice(0, 8)} projectId={projectId} navigate={navigate} />

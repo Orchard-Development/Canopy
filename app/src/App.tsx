@@ -382,6 +382,7 @@ function AppLayout({ onResetOnboarding, onResetTour, showTour, onTourComplete, p
         isMobile={isMobile}
         mobileOpen={mobileNavOpen}
         onMobileClose={() => setMobileNavOpen(false)}
+        onNavItemClick={() => { if (terminalExpanded && terminalOpen) setTerminalOpenPersist(false); }}
       />
       <Box
         component="main"

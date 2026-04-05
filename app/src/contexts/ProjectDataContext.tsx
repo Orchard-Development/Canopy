@@ -2,11 +2,22 @@ import { createContext, useCallback, useEffect, useRef, useState, type ReactNode
 import { useDashboardChannel } from "@/hooks/useDashboardChannel";
 import { api, type FeedEvent, type IntelItem, type ResolvedMcpServer, type ApprovalRecord } from "@/lib/api";
 
+export interface SeedPackInfo {
+  id: string;
+  slug: string;
+  name: string;
+  source: string;
+  auto_apply?: boolean;
+  fileCount: number;
+  version: number;
+}
+
 interface ProjectData {
   sessions: Array<{ id: string; command: string; label?: string; state?: string; startedAt: string; exitCode?: number; projectId?: string; [k: string]: unknown }>;
   feed: FeedEvent[];
   mcpServers: ResolvedMcpServer[];
   seedStatus: Record<string, unknown>;
+  packList: SeedPackInfo[];
   rules: IntelItem[];
   skills: IntelItem[];
   memory: IntelItem[];
@@ -20,6 +31,7 @@ const DEFAULT: ProjectData = {
   feed: [],
   mcpServers: [],
   seedStatus: {},
+  packList: [],
   rules: [],
   skills: [],
   memory: [],
@@ -43,12 +55,13 @@ export function ProjectDataProvider({ projectId, children }: Props) {
   const fetchAll = useCallback(async () => {
     setData((prev) => ({ ...prev, loading: true }));
     try {
-      const [sessions, feed, mcpServers, seedStatus, rules, skills, memory, approvals] =
+      const [sessions, feed, mcpServers, seedStatus, packList, rules, skills, memory, approvals] =
         await Promise.all([
           api.listTerminals(),
           api.listFeed(projectId, { limit: 50 }),
           api.projectMcpServers(projectId),
           api.getSeedStatus(projectId),
+          api.listSeedPacks(),
           api.listRules(projectId),
           api.listSkills(projectId),
           api.listMemory(projectId),
@@ -63,6 +76,7 @@ export function ProjectDataProvider({ projectId, children }: Props) {
         feed,
         mcpServers,
         seedStatus,
+        packList,
         rules,
         skills,
         memory,

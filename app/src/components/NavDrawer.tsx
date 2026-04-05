@@ -113,6 +113,7 @@ interface NavDrawerProps {
   mobileOpen?: boolean;
   onMobileClose?: () => void;
   isMobile?: boolean;
+  onNavItemClick?: () => void;
 }
 
 export function NavDrawer({
@@ -122,6 +123,7 @@ export function NavDrawer({
   mobileOpen,
   onMobileClose,
   isMobile,
+  onNavItemClick,
 }: NavDrawerProps) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -144,6 +146,7 @@ export function NavDrawer({
   const open = isMobile ? mobileOpen : true;
 
   function handleNav(path: string) {
+    onNavItemClick?.();
     navigate(path);
     if (isMobile) onMobileClose?.();
   }
