@@ -9,9 +9,6 @@ import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import CallSplitIcon from "@mui/icons-material/CallSplit";
 import HistoryIcon from "@mui/icons-material/History";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
-import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
-import RemoveCircleOutlineIcon from "@mui/icons-material/RemoveCircleOutline";
 import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutlined";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
@@ -50,35 +47,23 @@ function EmptyState() {
 
 function StatsBar({ sessions }: { sessions: SessionLogMeta[] }) {
   const running = sessions.filter((s) => s.exitCode === undefined).length;
-  const succeeded = sessions.filter((s) => s.exitCode === 0).length;
-  const closed = sessions.filter((s) => s.exitCode !== undefined && s.exitCode !== 0).length;
+  const ended = sessions.filter((s) => s.exitCode !== undefined).length;
   return (
-    <Card variant="outlined" sx={{ mb: 2, p: 2 }}>
-      <Stack direction="row" spacing={{ xs: 3, sm: 5 }}>
-        <Box>
-          <Typography variant="h5" fontWeight={700}>{sessions.length}</Typography>
-          <Typography variant="body2" color="text.secondary">Total</Typography>
-        </Box>
-        {running > 0 && (
-          <Box>
-            <Typography variant="h5" fontWeight={700} color="info.main">{running}</Typography>
-            <Typography variant="body2" color="text.secondary">Running</Typography>
-          </Box>
-        )}
-        {succeeded > 0 && (
-          <Box>
-            <Typography variant="h5" fontWeight={700} color="success.main">{succeeded}</Typography>
-            <Typography variant="body2" color="text.secondary">Succeeded</Typography>
-          </Box>
-        )}
-        {closed > 0 && (
-          <Box>
-            <Typography variant="h5" fontWeight={700} color="text.secondary">{closed}</Typography>
-            <Typography variant="body2" color="text.secondary">Closed</Typography>
-          </Box>
-        )}
-      </Stack>
-    </Card>
+    <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 0.5 }}>
+      <Typography variant="body2" color="text.secondary">
+        <strong>{sessions.length}</strong> total
+      </Typography>
+      {running > 0 && (
+        <Typography variant="body2" color="success.main">
+          <strong>{running}</strong> running
+        </Typography>
+      )}
+      {ended > 0 && (
+        <Typography variant="body2" color="text.disabled">
+          <strong>{ended}</strong> ended
+        </Typography>
+      )}
+    </Stack>
   );
 }
 
@@ -154,12 +139,9 @@ function sessionTitle(s: SessionLogMeta, enrichment?: SessionEnrichment, project
 
 function OutcomeBadge({ exitCode }: { exitCode?: number }) {
   if (exitCode === undefined) {
-    return <Chip label="running" size="small" color="info" variant="outlined" sx={{ height: 20, fontSize: 11 }} />;
+    return <Chip label="running" size="small" color="success" variant="outlined" sx={{ height: 20, fontSize: 11 }} />;
   }
-  if (exitCode === 0) {
-    return <Chip icon={<CheckCircleOutlineIcon sx={{ fontSize: "14px !important" }} />} label="done" size="small" color="success" sx={{ height: 20, fontSize: 11 }} />;
-  }
-  return <Chip icon={<RemoveCircleOutlineIcon sx={{ fontSize: "14px !important" }} />} label="closed" size="small" variant="outlined" sx={{ height: 20, fontSize: 11, color: "text.secondary", borderColor: "divider" }} />;
+  return <Chip label="ended" size="small" variant="outlined" sx={{ height: 20, fontSize: 11, color: "text.secondary", borderColor: "divider" }} />;
 }
 
 function SessionCard({
@@ -189,7 +171,7 @@ function SessionCard({
         flexDirection: "column",
         height: "100%",
         borderLeft: 3,
-        borderLeftColor: isRunning ? "info.main" : s.exitCode === 0 ? "success.main" : "divider",
+        borderLeftColor: isRunning ? "success.main" : "divider",
       }}
     >
       <CardActionArea onClick={onView} sx={{ p: 0, flex: 1 }}>

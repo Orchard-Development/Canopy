@@ -3,18 +3,10 @@ import type { SessionLogMeta } from "../../lib/api";
 
 export function StatusChip({ s }: { s: SessionLogMeta }) {
   if (s.exitCode === undefined) {
-    return <Chip label="running" size="small" color="info" variant="outlined" sx={{ height: 20, fontSize: 11 }} />;
+    return <Chip label="running" size="small" color="success" variant="outlined" sx={{ height: 20, fontSize: 11 }} />;
   }
   return (
-    <Chip
-      label={`exit ${s.exitCode}`}
-      size="small"
-      sx={(t) => ({
-        height: 20, fontSize: 11,
-        bgcolor: alpha(s.exitCode === 0 ? t.palette.success.main : t.palette.error.main, 0.12),
-        color: s.exitCode === 0 ? "success.main" : "error.main",
-      })}
-    />
+    <Chip label="ended" size="small" variant="outlined" sx={{ height: 20, fontSize: 11, color: "text.secondary", borderColor: "divider" }} />
   );
 }
 

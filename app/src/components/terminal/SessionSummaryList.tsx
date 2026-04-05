@@ -144,9 +144,9 @@ function SummaryCard({ tab, index, profile, onCardFocus, onKill, onViewLog, onOp
         {tab.exitCode !== undefined && (
           <Chip
             size="small"
-            label={tab.exitCode}
-            color={tab.exitCode === 0 ? "success" : "error"}
-            sx={{ height: 20, fontSize: 11, "& .MuiChip-label": { px: 0.75 } }}
+            label="ended"
+            variant="outlined"
+            sx={{ height: 20, fontSize: 11, color: "text.secondary", borderColor: "divider", "& .MuiChip-label": { px: 0.75 } }}
           />
         )}
         {tab.node && (

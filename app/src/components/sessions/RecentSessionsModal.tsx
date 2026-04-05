@@ -32,8 +32,8 @@ function agentLabel(agentType?: string): string {
 }
 
 function statusDotColor(s: SessionLogMeta): string {
-  if (s.exitCode === undefined) return "info.main";
-  return s.exitCode === 0 ? "success.main" : "error.main";
+  if (s.exitCode === undefined) return "success.main";
+  return "text.disabled";
 }
 
 function SessionCard({

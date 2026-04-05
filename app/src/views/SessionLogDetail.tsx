@@ -321,9 +321,12 @@ function DetailContent({
             <Chip label={`resumed ${session.resumeCount}x`} size="small" variant="outlined" />
           )}
           <Chip label={formatTime(session.startedAt)} size="small" variant="outlined" />
-          {session.exitCode !== undefined && (
-            <Chip label={`exit ${session.exitCode}`} size="small" color={session.exitCode === 0 ? "success" : "error"} />
-          )}
+          <Chip
+            label={session.exitCode === undefined ? "running" : "ended"}
+            size="small"
+            variant="outlined"
+            sx={session.exitCode === undefined ? { color: "success.main", borderColor: "success.main" } : { color: "text.secondary", borderColor: "divider" }}
+          />
         </>
       }
       actions={

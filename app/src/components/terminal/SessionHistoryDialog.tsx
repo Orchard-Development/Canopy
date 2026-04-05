@@ -184,17 +184,12 @@ export function SessionHistoryDialog({ open, onClose, projectCwd }: Props) {
                       {s.agentType && (
                         <Chip label={s.agentType} size="small" variant="outlined" sx={{ height: 16, fontSize: 10 }} />
                       )}
-                      {s.resumable && (
-                        <Chip label="resumable" size="small" color="success" variant="outlined" sx={{ height: 16, fontSize: 10 }} />
-                      )}
-                      {s.exitCode !== undefined && (
-                        <Chip
-                          label={`exit ${s.exitCode}`}
-                          size="small"
-                          color={s.exitCode === 0 ? "success" : "error"}
-                          sx={{ height: 16, fontSize: 10 }}
-                        />
-                      )}
+                      <Chip
+                        label={s.exitCode === undefined ? "running" : "ended"}
+                        size="small"
+                        variant="outlined"
+                        sx={{ height: 16, fontSize: 10, ...(s.exitCode === undefined ? { color: "success.main", borderColor: "success.main" } : { color: "text.secondary", borderColor: "divider" }) }}
+                      />
                     </Stack>
                   }
                   secondary={
