@@ -22,7 +22,7 @@ import { PageLayout } from "../components/PageLayout";
 import { ProjectDataProvider } from "../contexts/ProjectDataContext";
 import { ProjectDashboard } from "../components/project/ProjectDashboard";
 import { IntelligenceTab } from "../components/project/IntelligenceTab";
-import { PacksTab } from "../components/project/PacksTab";
+import { SeedsTab } from "../components/project/SeedsTab";
 import { SettingsTab } from "../components/project/SettingsTab";
 import { FilesTab } from "../components/project/FilesTab";
 import { TAB_KEYS, TAB_LABELS, resolveTab } from "./projectDetailTabs";
@@ -114,7 +114,7 @@ export default function ProjectDetail({ embedded }: { embedded?: boolean }) {
           <ProjectDashboard project={project} projectId={project.id} onUpdate={reload} />
         )}
         {resolvedTab === "packs" && (
-          <PacksTab projectId={project.id} projectName={project.name} />
+          <SeedsTab projectId={project.id} projectName={project.name} />
         )}
         {resolvedTab === "intelligence" && (
           <IntelligenceTab projectId={project.id} />

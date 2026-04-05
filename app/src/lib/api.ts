@@ -643,9 +643,10 @@ export const api = {
   deleteProjectWithData: (id: string) =>
     del<{ deleted: boolean; data_removed: boolean }>(`/api/projects/${id}/purge`),
 
-  seedProject: (id: string, slugs?: string[]) =>
+  seedProject: (id: string, slugs?: string[], opts?: { force?: boolean }) =>
     postJson<{ ok: boolean; results: Record<string, { applied: number; updated: number; current: number; skipped: number; drifted: number }> }>(
-      `/api/projects/${id}/seed`, slugs ? { slugs } : {},
+      `/api/projects/${id}/seed`,
+      { ...(slugs ? { slugs } : {}), ...(opts?.force ? { force: true } : {}) },
     ),
 
   aiRefreshProject: (id: string) =>
