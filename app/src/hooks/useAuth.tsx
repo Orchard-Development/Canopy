@@ -155,14 +155,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             access_token: access,
             refresh_token: refresh,
           });
-          if (!error && restored.session) {
+          if (!error && restored.session?.access_token && restored.session?.refresh_token) {
             setSession(restored.session);
             setEngineSynced(true);
             if (restored.session.user) fetchTeams(restored.session.user.id);
             setLoading(false);
             return;
           }
-          // Tokens were stale, clear them
+          // Tokens were stale or restored session has empty tokens, clear them
           clearTokensFromEngine();
         }
       } catch { /* engine unavailable, skip */ }
@@ -210,7 +210,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             access_token: access,
             refresh_token: refresh,
           });
-          if (!error && restored.session) {
+          if (!error && restored.session?.access_token && restored.session?.refresh_token) {
             setSession(restored.session);
           }
         } else if (!access || !refresh) {
