@@ -16,7 +16,7 @@ import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutl
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { api, type SessionLogMeta } from "../lib/api";
+import { api, type SessionLogMeta, type ProjectRecord } from "../lib/api";
 import { PageLayout } from "../components/PageLayout";
 import { useActiveProject } from "../hooks/useActiveProject";
 import { useRefetchOnDashboardEvent } from "../hooks/useRefetchOnDashboardEvent";
@@ -100,17 +100,40 @@ const AGENT_LABELS: Record<string, string> = {
   gemini: "Gemini", aider: "Aider", opencode: "OpenCode", claw_code: "Claw Code",
 };
 
-/** Derive the project name from cwd or claudeProjectDir. */
-function projectName(s: SessionLogMeta): string | null {
-  const path = s.cwd || s.claudeProjectDir;
+/** Build a lookup map from project cwds/encoded dirs to friendly project names. */
+function buildProjectNameMap(projects: ProjectRecord[]): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const p of projects) {
+    if (p.root_path) {
+      map.set(p.root_path, p.name);
+      // Also map the Claude-encoded version of the path
+      const encoded = p.root_path.replace(/[^a-zA-Z0-9]/g, "-");
+      map.set(encoded, p.name);
+    }
+  }
+  return map;
+}
+
+/** Resolve a session's project name using the lookup map. */
+function resolveProjectName(s: SessionLogMeta, nameMap: Map<string, string>): string | null {
+  // Try exact cwd match first
+  if (s.cwd && nameMap.has(s.cwd)) return nameMap.get(s.cwd)!;
+  // Try Claude-encoded dir
+  if (s.claudeProjectDir && nameMap.has(s.claudeProjectDir)) return nameMap.get(s.claudeProjectDir)!;
+  // Try encoding the cwd and matching
+  if (s.cwd) {
+    const encoded = s.cwd.replace(/[^a-zA-Z0-9]/g, "-");
+    if (nameMap.has(encoded)) return nameMap.get(encoded)!;
+  }
+  // Fallback: last directory component of cwd
+  const path = s.cwd;
   if (!path) return null;
-  // Get last directory component as project name
   const parts = path.replace(/\\/g, "/").replace(/\/+$/, "").split("/");
   return parts[parts.length - 1] || null;
 }
 
 /** Derive a meaningful title. Prefer AI label, fall back to first prompt snippet, then generic. */
-function sessionTitle(s: SessionLogMeta, enrichment?: SessionEnrichment): string {
+function sessionTitle(s: SessionLogMeta, enrichment?: SessionEnrichment, projectNameMap?: Map<string, string>): string {
   // AI-generated label is best -- but skip if it matches the generic command name
   if (s.label && s.label !== labelForCommand(s.command)) return s.label;
   if (s.label) return s.label;
@@ -126,7 +149,7 @@ function sessionTitle(s: SessionLogMeta, enrichment?: SessionEnrichment): string
   }
   // Better fallback than "Session"
   const agent = AGENT_LABELS[s.agentType ?? ""] ?? s.agentType;
-  const proj = projectName(s);
+  const proj = projectNameMap ? resolveProjectName(s, projectNameMap) : null;
   if (agent && proj) return `${agent} session in ${proj}`;
   if (agent) return `${agent} session`;
   return "Session";
@@ -143,7 +166,7 @@ function OutcomeBadge({ exitCode }: { exitCode?: number }) {
 }
 
 function SessionCard({
-  s, enrichment, onView, onResume, onDelete, onOpenDetail, showProject,
+  s, enrichment, onView, onResume, onDelete, onOpenDetail, showProject, projectNameMap,
 }: {
   s: SessionLogMeta;
   enrichment?: SessionEnrichment;
@@ -152,13 +175,14 @@ function SessionCard({
   onDelete: (id: string) => void;
   onOpenDetail: () => void;
   showProject?: boolean;
+  projectNameMap?: Map<string, string>;
 }) {
   const isRunning = s.exitCode === undefined;
   const summary = enrichment?.analysisSummary || s.summary;
-  const title = sessionTitle(s, enrichment);
+  const title = sessionTitle(s, enrichment, projectNameMap);
   const files = enrichment?.filesChanged ?? [];
   const agentName = AGENT_LABELS[s.agentType ?? ""] ?? s.agentType;
-  const proj = showProject ? projectName(s) : null;
+  const proj = showProject && projectNameMap ? resolveProjectName(s, projectNameMap) : null;
 
   return (
     <Card
@@ -301,6 +325,7 @@ export default function ProjectSessions() {
   const [searchParams, setSearchParams] = useSearchParams();
   const projectCwd = project?.root_path;
   const [all, setAll] = useState<SessionLogMeta[]>([]);
+  const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [enrichments, setEnrichments] = useState<Record<string, SessionEnrichment>>({});
   const [loading, setLoading] = useState(true);
   const [resuming, setResuming] = useState<string | null>(null);
@@ -315,8 +340,12 @@ export default function ProjectSessions() {
 
   const load = useCallback(() => {
     setLoading(true);
-    api.listSessionLogs().then(setAll).catch((err) => {
-      console.warn("Failed to load session logs:", err);
+    Promise.all([
+      api.listSessionLogs().catch(() => [] as SessionLogMeta[]),
+      api.listProjects().catch(() => [] as ProjectRecord[]),
+    ]).then(([sessions, projs]) => {
+      setAll(sessions);
+      setProjects(projs);
     }).finally(() => setLoading(false));
   }, []);
 
@@ -391,6 +420,8 @@ export default function ProjectSessions() {
     }
     return list;
   }, [all, projectCwd, projectFilter, search, enrichments, messageMatches]);
+
+  const projectNameMap = useMemo(() => buildProjectNameMap(projects), [projects]);
 
   // Auto-switch to all projects if "this project" yields zero results
   useEffect(() => {
@@ -516,6 +547,7 @@ export default function ProjectSessions() {
                         onDelete={handleDelete}
                         onOpenDetail={() => navigate(`/sessions/${s.id}`)}
                         showProject={showProject}
+                        projectNameMap={projectNameMap}
                       />
                     ))}
                   </CardGrid>
