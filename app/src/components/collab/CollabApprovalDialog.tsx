@@ -13,6 +13,7 @@ export interface CollabApprovalRequest {
   intent: string;
   fromDisplayName: string;
   fromMachineId: string;
+  fromMachineName?: string;
   toSessionId?: string;
   payload?: Record<string, unknown>;
 }
@@ -98,7 +99,7 @@ export function CollabApprovalDialog({ request, onClose }: Props) {
       }}
     >
       <Box sx={{ px: 3, pt: 2.5, pb: 1 }}>
-        <Typography variant="overline" sx={{ color: "#9c27b0", fontWeight: 700, letterSpacing: 1.5 }}>
+        <Typography variant="overline" sx={{ color: "text.secondary", fontWeight: 700, letterSpacing: 1.5 }}>
           Collaboration Request
         </Typography>
         <Typography variant="h6" sx={{ mt: 0.5, fontWeight: 600 }}>
@@ -115,33 +116,32 @@ export function CollabApprovalDialog({ request, onClose }: Props) {
           <Box sx={{
             display: "flex",
             alignItems: "center",
-            gap: 1.5,
-            p: 1.5,
+            justifyContent: "center",
+            gap: 3,
+            p: 2,
             borderRadius: 2,
             bgcolor: (t) => t.palette.action.hover,
           }}>
-            <Stack alignItems="center" spacing={0.5} sx={{ minWidth: 80 }}>
-              <PersonIcon sx={{ fontSize: 20, color: "text.secondary" }} />
+            <Stack alignItems="center" spacing={0.5}>
+              <PersonIcon sx={{ fontSize: 22, color: "text.secondary" }} />
               <Typography variant="caption" fontWeight={600} noWrap>
                 {request.fromDisplayName}
               </Typography>
-              {request.fromMachineId && (
-                <Chip
-                  icon={<ComputerIcon sx={{ fontSize: 10 }} />}
-                  label={request.fromMachineId}
-                  size="small"
-                  variant="outlined"
-                  sx={{ height: 18, fontSize: 10, "& .MuiChip-icon": { ml: 0.5 } }}
-                />
-              )}
+              <Chip
+                icon={<ComputerIcon sx={{ fontSize: 10 }} />}
+                label={request.fromMachineName || request.fromMachineId || "Remote"}
+                size="small"
+                variant="outlined"
+                sx={{ height: 18, fontSize: 10, "& .MuiChip-icon": { ml: 0.5 } }}
+              />
             </Stack>
             <ArrowForwardIcon sx={{ color: "text.disabled", fontSize: 18 }} />
-            <Stack alignItems="center" spacing={0.5} sx={{ minWidth: 80 }}>
-              <ComputerIcon sx={{ fontSize: 20, color: "#9c27b0" }} />
+            <Stack alignItems="center" spacing={0.5}>
+              <ComputerIcon sx={{ fontSize: 22, color: "text.secondary" }} />
               <Typography variant="caption" fontWeight={600}>
                 This machine
               </Typography>
-              {request.toSessionId && (
+              {request.toSessionId && request.toSessionId !== "test" && request.toSessionId !== "test-session" && (
                 <Chip
                   label={`Session ${request.toSessionId.slice(0, 8)}...`}
                   size="small"
@@ -152,33 +152,32 @@ export function CollabApprovalDialog({ request, onClose }: Props) {
             </Stack>
           </Box>
 
-          {/* Message preview if present */}
+          {/* Message preview */}
           {messageText && (
-            <>
-              <Divider />
-              <Box>
-                <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                  Message
+            <Box>
+              <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ mb: 0.5, display: "block" }}>
+                Message to inject
+              </Typography>
+              <Box sx={{
+                p: 1.5,
+                borderRadius: 1.5,
+                bgcolor: (t) => t.palette.action.hover,
+                border: 1,
+                borderColor: "divider",
+                maxHeight: 120,
+                overflow: "auto",
+              }}>
+                <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word", fontSize: 13, fontFamily: "monospace" }}>
+                  {messageText}
                 </Typography>
-                <Box sx={{
-                  mt: 0.5,
-                  p: 1.5,
-                  borderRadius: 1.5,
-                  bgcolor: (t) => t.palette.action.hover,
-                  maxHeight: 100,
-                  overflow: "auto",
-                }}>
-                  <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word", fontSize: 13 }}>
-                    {messageText}
-                  </Typography>
-                </Box>
               </Box>
-            </>
+            </Box>
           )}
         </Stack>
       </DialogContent>
 
-      <DialogActions sx={{ px: 3, pb: 2.5, pt: 1, gap: 1 }}>
+      <Divider />
+      <DialogActions sx={{ px: 3, py: 2, gap: 1 }}>
         <Button
           size="small"
           onClick={() => handleAction("trust")}
@@ -203,7 +202,6 @@ export function CollabApprovalDialog({ request, onClose }: Props) {
           size="small"
           onClick={() => handleAction("accept")}
           disabled={loading !== null}
-          sx={{ bgcolor: "#9c27b0", "&:hover": { bgcolor: "#7b1fa2" } }}
         >
           Accept
         </Button>
