@@ -45,6 +45,7 @@ import { SettingsProvider, useSettingsContext } from "./contexts/SettingsContext
 import { fetchSettings } from "./lib/settingsCache";
 import { useEngineEvents } from "./hooks/useEngineEvents";
 import { useCollabApproval } from "./hooks/useCollabApproval";
+import { CollabApprovalDialog } from "./components/collab/CollabApprovalDialog";
 import { useNotificationHydration } from "./hooks/useNotificationHydration";
 import { useUserActivity } from "./hooks/useUserActivity";
 import { ProjectThemeBridge } from "./components/ProjectThemeBridge";
@@ -286,8 +287,8 @@ function AppLayout({ onResetOnboarding, onResetTour, showTour, onTourComplete, p
 
   // Engine channel events -> EventBus (feeds both toasts and notification bell)
   useEngineEvents(appDashChannel);
-  // Agent collaboration approval toasts (persistent, bypasses throttle)
-  useCollabApproval(appDashChannel);
+  // Agent collaboration approval dialog
+  const { current: collabApproval, dismiss: dismissCollabApproval } = useCollabApproval(appDashChannel);
 
   // Boot hydration: pre-populate EventBus with recent events once the engine exposes the endpoint
   useNotificationHydration();
@@ -456,6 +457,10 @@ function AppLayout({ onResetOnboarding, onResetTour, showTour, onTourComplete, p
         open={accessRequestModalOpen}
         onClose={() => setAccessRequestModalOpen(false)}
         onDismiss={(email) => { dismissAccessRequest(email); if (accessRequests.length <= 1) setAccessRequestModalOpen(false); }}
+      />
+      <CollabApprovalDialog
+        request={collabApproval}
+        onClose={dismissCollabApproval}
       />
       <TerminalActionModal
         action={terminalActions[0] ?? null}

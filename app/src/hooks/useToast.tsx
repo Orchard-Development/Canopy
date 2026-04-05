@@ -133,11 +133,6 @@ function isToastWorthy(event: EngineEvent, categories: Set<string>): boolean {
 
 /** Convert actionMeta into a clickable CTA button for the toast. */
 function actionMetaToButton(meta: EventActionMeta): ReactNode {
-  if ((meta as Record<string, unknown>).type === "collab-approve") {
-    const envelopeId = (meta as Record<string, unknown>).envelopeId as string;
-    return collabApprovalButtons(envelopeId);
-  }
-
   const label = meta.type === "focus-session" ? "Focus" : "View";
   const handleClick = () => {
     if (meta.type === "focus-session") {
@@ -165,42 +160,3 @@ function actionMetaToButton(meta: EventActionMeta): ReactNode {
   );
 }
 
-function collabApprovalButtons(envelopeId: string): ReactNode {
-  const btnStyle = {
-    background: "none",
-    border: "1px solid currentColor",
-    borderRadius: 4,
-    color: "inherit",
-    fontWeight: 600,
-    fontSize: 12,
-    cursor: "pointer",
-    padding: "3px 10px",
-  };
-
-  const handleApprove = async () => {
-    try {
-      const { api } = await import("../lib/api");
-      await api.collabApprove(envelopeId);
-    } catch (e) { console.error("Failed to approve:", e); }
-  };
-
-  const handleReject = async () => {
-    try {
-      const { api } = await import("../lib/api");
-      await api.collabReject(envelopeId);
-    } catch (e) { console.error("Failed to reject:", e); }
-  };
-
-  const handleTrustAlways = async () => {
-    try {
-      const { api } = await import("../lib/api");
-      await api.collabApprove(envelopeId, true);
-    } catch (e) { console.error("Failed to trust:", e); }
-  };
-
-  return createElement("span", { style: { display: "flex", gap: 4 } },
-    createElement("button", { onClick: handleApprove, style: { ...btnStyle, borderColor: "#aaa" } }, "Accept"),
-    createElement("button", { onClick: handleReject, style: { ...btnStyle, borderColor: "#aaa", opacity: 0.7 } }, "Reject"),
-    createElement("button", { onClick: handleTrustAlways, style: { ...btnStyle, borderColor: "#aaa", opacity: 0.7, fontSize: 11 } }, "Trust Always"),
-  );
-}
