@@ -1018,7 +1018,9 @@ export const api = {
 
   // Session logs
   listSessionLogs: () =>
-    get<SessionLogMeta[]>("/api/session-logs"),
+    get<SessionLogMeta[]>("/api/session-logs").then((logs) =>
+      logs.map((s) => ({ ...s, exitCode: s.exitCode ?? undefined }))
+    ),
 
   getSessionLog: (id: string) =>
     get<{ entries: SessionLogEntry[] }>(`/api/session-logs/${id}`),
