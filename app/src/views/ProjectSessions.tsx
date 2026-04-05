@@ -158,6 +158,7 @@ function SessionCard({
   projectNameMap?: Map<string, string>;
 }) {
   const isRunning = s.exitCode === undefined;
+  const isRemote = !!s.peer_display_name;
   const summary = enrichment?.analysisSummary || s.summary;
   const title = sessionTitle(s, enrichment, projectNameMap);
   const files = enrichment?.filesChanged ?? [];
@@ -172,20 +173,20 @@ function SessionCard({
         flexDirection: "column",
         height: "100%",
         borderLeft: 3,
-        borderLeftColor: isRunning ? "success.main" : "divider",
+        borderLeftColor: isRemote ? "#9c27b0" : isRunning ? "success.main" : "divider",
       }}
     >
-      <CardActionArea onClick={onView} sx={{ p: 0, flex: 1 }}>
+      <CardActionArea onClick={isRemote ? undefined : onView} sx={{ p: 0, flex: 1, cursor: isRemote ? "default" : "pointer" }}>
         <CardContent sx={{ py: 1.5, px: 2, "&:last-child": { pb: 1.5 }, height: "100%", display: "flex", flexDirection: "column" }}>
           {/* Top badges row */}
           <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mb: 0.75 }}>
-            {s.peer_display_name && (
+            {isRemote && s.peer_machine_id && (
               <Chip
                 icon={<ComputerIcon sx={{ fontSize: 12 }} />}
-                label={s.peer_display_name}
+                label={s.peer_machine_id}
                 size="small"
                 variant="outlined"
-                sx={{ height: 20, fontSize: 11, fontWeight: 600, borderColor: "info.main", color: "info.main" }}
+                sx={{ height: 20, fontSize: 11, fontWeight: 600, borderColor: "#9c27b0", color: "#9c27b0" }}
               />
             )}
             {agentName && (
@@ -255,31 +256,39 @@ function SessionCard({
           borderColor: "divider",
         }}
       >
-        <Tooltip title="Open detail">
-          <IconButton size="small" onClick={onOpenDetail}>
-            <OpenInNewIcon sx={{ fontSize: 16 }} />
-          </IconButton>
-        </Tooltip>
-        {s.resumable && (
+        {isRemote ? (
+          <Typography variant="caption" color="text.disabled" sx={{ py: 0.5, px: 0.5, fontSize: 11 }}>
+            Remote session — watch coming soon
+          </Typography>
+        ) : (
           <>
-            <Tooltip title="Resume session">
-              <IconButton size="small" color="primary" onClick={() => onResume(s.id, false)}>
-                <PlayArrowIcon sx={{ fontSize: 18 }} />
+            <Tooltip title="Open detail">
+              <IconButton size="small" onClick={onOpenDetail}>
+                <OpenInNewIcon sx={{ fontSize: 16 }} />
               </IconButton>
             </Tooltip>
-            <Tooltip title="Fork as new session">
-              <IconButton size="small" onClick={() => onResume(s.id, true)}>
-                <CallSplitIcon sx={{ fontSize: 18 }} />
+            {s.resumable && (
+              <>
+                <Tooltip title="Resume session">
+                  <IconButton size="small" color="primary" onClick={() => onResume(s.id, false)}>
+                    <PlayArrowIcon sx={{ fontSize: 18 }} />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Fork as new session">
+                  <IconButton size="small" onClick={() => onResume(s.id, true)}>
+                    <CallSplitIcon sx={{ fontSize: 18 }} />
+                  </IconButton>
+                </Tooltip>
+              </>
+            )}
+            <Box sx={{ flex: 1 }} />
+            <Tooltip title="Delete session">
+              <IconButton size="small" sx={{ color: "text.disabled", "&:hover": { color: "error.main" } }} onClick={() => onDelete(s.id)}>
+                <DeleteOutlineIcon sx={{ fontSize: 16 }} />
               </IconButton>
             </Tooltip>
           </>
         )}
-        <Box sx={{ flex: 1 }} />
-        <Tooltip title="Delete session">
-          <IconButton size="small" sx={{ color: "text.disabled", "&:hover": { color: "error.main" } }} onClick={() => onDelete(s.id)}>
-            <DeleteOutlineIcon sx={{ fontSize: 16 }} />
-          </IconButton>
-        </Tooltip>
       </Stack>
     </Card>
   );
@@ -362,6 +371,8 @@ export default function ProjectSessions() {
         setRemoteSessions(res.sessions.map((s: SessionLogMeta) => ({
           ...s,
           id: s.id || s.agentSessionId || `remote-${Math.random().toString(36).slice(2)}`,
+          // Coerce null exitCode to undefined so "running" detection works
+          exitCode: s.exitCode === null ? undefined : s.exitCode,
           lineCount: s.lineCount || 0,
           sizeBytes: s.sizeBytes || 0,
         })));
@@ -432,9 +443,10 @@ export default function ProjectSessions() {
       list = [...list, ...remoteSessions];
     }
     // Hide sessions with no user interaction (enrichment loaded but no firstPrompt, no label, no summary)
-    // Always keep running sessions (exitCode undefined)
+    // Always keep running sessions (exitCode undefined) and remote sessions
     list = list.filter((s) => {
       if (s.exitCode === undefined) return true; // Running — always show
+      if (s.peer_display_name) return true; // Remote — always show
       const e = enrichments[s.id];
       if (!e) return true; // Not enriched yet — show it (benefit of the doubt)
       // Keep if it has any meaningful content
@@ -466,14 +478,29 @@ export default function ProjectSessions() {
 
   useEffect(() => { setPage(0); }, [search, projectFilter]);
 
-  const runningSessions = useMemo(
-    () => sessions.filter((s) => s.exitCode === undefined),
+  const localSessions = useMemo(
+    () => sessions.filter((s) => !s.peer_display_name),
     [sessions],
   );
 
+  const remoteSessionsByPeer = useMemo(() => {
+    const remote = sessions.filter((s) => !!s.peer_display_name);
+    const grouped: Record<string, SessionLogMeta[]> = {};
+    for (const s of remote) {
+      const key = s.peer_display_name || s.peer_node || "Unknown";
+      (grouped[key] ??= []).push(s);
+    }
+    return grouped;
+  }, [sessions]);
+
+  const runningSessions = useMemo(
+    () => localSessions.filter((s) => s.exitCode === undefined),
+    [localSessions],
+  );
+
   const endedSessions = useMemo(
-    () => sessions.filter((s) => s.exitCode !== undefined),
-    [sessions],
+    () => localSessions.filter((s) => s.exitCode !== undefined),
+    [localSessions],
   );
 
   const paged = useMemo(
@@ -598,6 +625,34 @@ export default function ProjectSessions() {
                   </CardGrid>
                 </Box>
               )}
+
+              {/* Remote sessions grouped by person/machine */}
+              {Object.entries(remoteSessionsByPeer).map(([peerName, peerSessions]) => (
+                <Box key={`remote-${peerName}`} sx={{ mb: 3 }}>
+                  <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                    <ComputerIcon sx={{ fontSize: 16, color: "success.main" }} />
+                    <Typography variant="overline" color="success.main" sx={{ display: "block", fontWeight: 700 }}>
+                      {peerName}
+                    </Typography>
+                    <Chip label={`${peerSessions.length} session${peerSessions.length === 1 ? "" : "s"}`} size="small" variant="outlined" sx={{ height: 18, fontSize: 10, color: "text.disabled" }} />
+                  </Stack>
+                  <CardGrid minWidth={300}>
+                    {peerSessions.map((s) => (
+                      <SessionCard
+                        key={s.id}
+                        s={s}
+                        enrichment={enrichments[s.id]}
+                        onView={() => {/* Watch remote session — coming in Phase 1 step 3 */}}
+                        onResume={() => {}}
+                        onDelete={() => {}}
+                        onOpenDetail={() => {/* Timeline viewer — coming in Phase 1 step 9 */}}
+                        showProject={showProject}
+                        projectNameMap={projectNameMap}
+                      />
+                    ))}
+                  </CardGrid>
+                </Box>
+              ))}
 
               {grouped.map((group) => (
                 <Box key={group.label} sx={{ mb: 3 }}>
