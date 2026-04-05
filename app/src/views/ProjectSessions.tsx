@@ -125,11 +125,8 @@ function resolveProjectName(s: SessionLogMeta, nameMap: Map<string, string>): st
     const encoded = s.cwd.replace(/[^a-zA-Z0-9]/g, "-");
     if (nameMap.has(encoded)) return nameMap.get(encoded)!;
   }
-  // Fallback: last directory component of cwd
-  const path = s.cwd;
-  if (!path) return null;
-  const parts = path.replace(/\\/g, "/").replace(/\/+$/, "").split("/");
-  return parts[parts.length - 1] || null;
+  // No matching project — show as Global
+  return "Global";
 }
 
 /** Derive a meaningful title. Prefer AI label, fall back to first prompt snippet, then generic. */
@@ -406,6 +403,13 @@ export default function ProjectSessions() {
           (s.claudeProjectDir && encodedCwd && s.claudeProjectDir === encodedCwd)
         )
       : all;
+    // Hide sessions with no user interaction (enrichment loaded but no firstPrompt, no label, no summary)
+    list = list.filter((s) => {
+      const e = enrichments[s.id];
+      if (!e) return true; // Not enriched yet — show it (benefit of the doubt)
+      // Keep if it has any meaningful content
+      return !!(e.firstPrompt || s.label || s.summary || e.analysisSummary);
+    });
     if (search) {
       const q = search.toLowerCase();
       list = list.filter((s) => {
