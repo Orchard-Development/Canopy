@@ -34,7 +34,9 @@ export function StorePackCard({ pack, entitled, onInstall, onRemove, onClick }: 
             <Stack direction="row" alignItems="center" spacing={1}>
               <Typography variant="subtitle2" noWrap>{pack.name}</Typography>
               <Chip label={`v${pack.version}`} size="small" variant="outlined" />
-              <Chip label={`${pack.fileCount} files`} size="small" variant="outlined" />
+              {pack.fileCount != null && (
+                <Chip label={`${pack.fileCount} files`} size="small" variant="outlined" />
+              )}
               {pack.category && (
                 <Chip label={pack.category} size="small" color="default" />
               )}

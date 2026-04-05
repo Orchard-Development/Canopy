@@ -161,7 +161,7 @@ export const DEFAULT_VIEWS: ViewEntry[] = [
     sourceId: null,
     position: 9,
     removable: true,
-    visible: true,
+    visible: false,
     placement: "main",
   },
   {
@@ -174,7 +174,7 @@ export const DEFAULT_VIEWS: ViewEntry[] = [
     sourceId: null,
     position: 9.5,
     removable: true,
-    visible: true,
+    visible: false,
     placement: "main",
   },
   {

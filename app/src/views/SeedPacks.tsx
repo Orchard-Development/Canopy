@@ -16,6 +16,7 @@ import { PageLayout } from "../components/PageLayout";
 import { api } from "../lib/api";
 import { GitHubHarvestDialog } from "../components/settings/GitHubHarvestDialog";
 import { PackCard, type PackCardData } from "../components/seedpacks/PackCard";
+import { PackStoreTab } from "../components/seedpacks/PackStoreTab";
 
 interface SeedPack extends PackCardData {
   created_at: string;
@@ -40,6 +41,7 @@ export default function SeedPacks() {
   const [genPrompt, setGenPrompt] = useState("");
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
+  const [mainTab, setMainTab] = useState<"my-packs" | "store">("my-packs");
   const [categoryTab, setCategoryTab] = useState("All");
   const [search, setSearch] = useState("");
 
@@ -121,11 +123,8 @@ export default function SeedPacks() {
       title="Seed Packs"
       icon={<GrassIcon color="primary" />}
       badge={<Chip label={`${packs.length}`} size="small" variant="outlined" />}
-      actions={
+      actions={mainTab === "my-packs" ? (
         <Stack direction="row" spacing={1}>
-          <Button size="small" variant="outlined" startIcon={<StoreIcon />} onClick={() => navigate("/pack-store")}>
-            Pack Store
-          </Button>
           <Button size="small" variant="outlined" startIcon={<GitHubIcon />} onClick={() => setGithubOpen(true)}>
             From GitHub
           </Button>
@@ -136,8 +135,21 @@ export default function SeedPacks() {
             New Pack
           </Button>
         </Stack>
-      }
+      ) : undefined}
     >
+      <Tabs
+        value={mainTab}
+        onChange={(_, v) => setMainTab(v)}
+        sx={{ mb: 3, borderBottom: 1, borderColor: "divider" }}
+      >
+        <Tab label="My Packs" value="my-packs" icon={<GrassIcon fontSize="small" />} iconPosition="start" />
+        <Tab label="Store" value="store" icon={<StoreIcon fontSize="small" />} iconPosition="start" />
+      </Tabs>
+
+      {mainTab === "store" && <PackStoreTab />}
+
+      {mainTab === "my-packs" && (
+        <>
       <TextField
         size="small"
         placeholder="Search by name, description, or tags..."
@@ -248,6 +260,8 @@ export default function SeedPacks() {
             </Stack>
           </Box>
         </Stack>
+      )}
+        </>
       )}
 
       <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="xs" fullWidth>

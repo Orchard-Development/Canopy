@@ -467,7 +467,7 @@ export interface DiscoverPack {
   description: string;
   category: string;
   version: number;
-  fileCount: number;
+  fileCount?: number;
   tags?: string[];
   techStack?: string[];
   price_cents: number;
@@ -779,12 +779,14 @@ export const api = {
     if (opts?.category) params.set("category", opts.category);
     if (opts?.search) params.set("search", opts.search);
     const qs = params.toString();
-    return get<DiscoverPack[]>(`/api/seed-packs/cloud/discover${qs ? `?${qs}` : ""}`);
+    return get<{ packs: DiscoverPack[] }>(`/api/seed-packs/cloud/discover${qs ? `?${qs}` : ""}`)
+      .then((d) => d.packs ?? []);
   },
 
   installPack: (packId: string, projectId?: string) =>
-    postJson<{ ok: boolean; entitlement: { pack_id: string; source: string } }>(
-      `/api/seed-packs/${packId}/install`, { project_id: projectId },
+    postJson<{ ok: boolean }>(
+      `/api/seed-packs/cloud/install`,
+      { cloudPackId: packId, ...(projectId ? { projectId } : {}) },
     ),
 
   removePack: (packId: string) =>
@@ -801,7 +803,8 @@ export const api = {
     ),
 
   myEntitlements: () =>
-    get<EntitlementRecord[]>("/api/seed-packs/cloud/mine"),
+    get<{ packs: EntitlementRecord[] }>("/api/seed-packs/cloud/mine")
+      .then((d) => d.packs ?? []),
 
   // Project MCP servers
   projectMcpServers: (projectId: string) =>

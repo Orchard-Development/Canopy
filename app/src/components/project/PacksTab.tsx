@@ -40,12 +40,14 @@ function PackCard({
   isCore,
   onUnplant,
   onReseed,
+  reseeding,
 }: {
   slug: string;
   state: PackState;
   isCore: boolean;
   onUnplant: (slug: string) => void;
   onReseed: () => void;
+  reseeding: boolean;
 }) {
   const files = state.files ?? {};
   const counts = summarizeFiles(files);
@@ -81,7 +83,8 @@ function PackCard({
               Unplant
             </Button>
           )}
-          <Button size="small" variant="outlined" onClick={onReseed}>
+          <Button size="small" variant="outlined" onClick={onReseed} disabled={reseeding}>
+            {reseeding ? <CircularProgress size={12} sx={{ mr: 0.5 }} /> : null}
             Re-seed
           </Button>
         </Stack>
@@ -111,6 +114,8 @@ export function PacksTab({ projectId, projectName }: Props) {
   const [deleteFiles, setDeleteFiles] = useState(true);
   const [unplanting, setUnplanting] = useState(false);
   const [unplantError, setUnplantError] = useState<string | null>(null);
+  const [reseeding, setReseeding] = useState(false);
+  const [reseedMsg, setReseedMsg] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
     setLoading(true);
@@ -152,14 +157,29 @@ export function PacksTab({ projectId, projectName }: Props) {
     }
   };
 
-  const handleReseed = () => {
-    api.seedProject(projectId).then(refresh).catch(() => {});
+  const handleReseed = async () => {
+    setReseeding(true);
+    setReseedMsg(null);
+    try {
+      await api.seedProject(projectId);
+      setReseedMsg("Re-seed complete");
+      refresh();
+    } catch {
+      setReseedMsg("Reseed failed");
+    } finally {
+      setReseeding(false);
+    }
   };
 
   if (loading) return <Box sx={{ p: 2 }}><CircularProgress size={24} /></Box>;
 
   return (
     <Stack spacing={2.5}>
+      {reseedMsg && (
+        <Typography variant="caption" color={reseedMsg.startsWith("Reseed failed") ? "error" : "success.main"}>
+          {reseedMsg}
+        </Typography>
+      )}
       {corePacks.length > 0 && (
         <Stack spacing={1}>
           <Typography variant="subtitle2" color="text.secondary">Core Packs</Typography>
@@ -171,6 +191,7 @@ export function PacksTab({ projectId, projectName }: Props) {
               isCore
               onUnplant={() => {}}
               onReseed={handleReseed}
+              reseeding={reseeding}
             />
           ))}
         </Stack>
@@ -187,6 +208,7 @@ export function PacksTab({ projectId, projectName }: Props) {
               isCore={false}
               onUnplant={setUnplantTarget}
               onReseed={handleReseed}
+              reseeding={reseeding}
             />
           ))}
         </Stack>
