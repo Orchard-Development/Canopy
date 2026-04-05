@@ -35,12 +35,17 @@ function NodeRow({ peer, onDisconnect, onRoleChange }: {
     setDisconnecting(false);
   }
 
+  const [saved, setSaved] = useState(false);
+
   async function handleRoleChange(newRole: Role) {
     setRole(newRole);
     setSaving(true);
+    setSaved(false);
     try {
       await api.meshUpdateRole(peer.name, newRole);
       onRoleChange?.(peer.name, newRole);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
     } catch {
       setRole(role); // revert on failure
     }
@@ -97,17 +102,22 @@ function NodeRow({ peer, onDisconnect, onRoleChange }: {
         <Chip label="Admin" size="small" variant="outlined" sx={{ fontSize: 12 }} />
       ) : (
         <>
-          <Select
-            size="small"
-            value={role}
-            onChange={(e) => handleRoleChange(e.target.value as Role)}
-            disabled={saving}
-            sx={{ minWidth: 110, fontSize: 13 }}
-          >
-            <MenuItem value="admin">Admin</MenuItem>
-            <MenuItem value="operator">Operator</MenuItem>
-            <MenuItem value="viewer">Viewer</MenuItem>
-          </Select>
+          <Stack direction="row" alignItems="center" spacing={0.5}>
+            <Select
+              size="small"
+              value={role}
+              onChange={(e) => handleRoleChange(e.target.value as Role)}
+              disabled={saving}
+              sx={{ minWidth: 110, fontSize: 13 }}
+            >
+              <MenuItem value="admin">Admin</MenuItem>
+              <MenuItem value="operator">Operator</MenuItem>
+              <MenuItem value="viewer">Viewer</MenuItem>
+            </Select>
+            {saved && (
+              <Typography sx={{ fontSize: 11, color: "success.main" }}>Saved</Typography>
+            )}
+          </Stack>
           <Button
             size="small"
             color="error"
