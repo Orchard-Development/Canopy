@@ -330,6 +330,16 @@ export default function ProjectSessions() {
 
   useEffect(() => { load(); }, [load, generation]);
 
+  // Auto-refresh to pick up external session changes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      api.listSessionLogs().then((sessions) => {
+        setAll(sessions);
+      }).catch(() => {});
+    }, 10_000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Auto-open session from ?open=<id> query param (e.g. from dashboard click)
   useEffect(() => {
     const openId = searchParams.get("open");
