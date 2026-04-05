@@ -540,7 +540,7 @@ export default function ProjectSessions() {
     setResuming(null);
   }, [all]);
 
-  const showProject = projectFilter === "all";
+  const showProject = projectFilter === "all" || projectFilter === "machines";
 
   if (loading) {
     return (
