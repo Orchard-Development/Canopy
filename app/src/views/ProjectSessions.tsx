@@ -6,6 +6,7 @@ import {
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
 import CallSplitIcon from "@mui/icons-material/CallSplit";
 import HistoryIcon from "@mui/icons-material/History";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
@@ -637,6 +638,28 @@ export default function ProjectSessions() {
                       {peerName}
                     </Typography>
                     <Chip label={`${peerSessions.length} session${peerSessions.length === 1 ? "" : "s"}`} size="small" variant="outlined" sx={{ height: 18, fontSize: 10, color: "text.disabled" }} />
+                    <Box sx={{ flex: 1 }} />
+                    <Tooltip title="Run a task on this machine">
+                      <Button
+                        size="small"
+                        startIcon={<RocketLaunchIcon sx={{ fontSize: 14 }} />}
+                        onClick={() => {
+                          const peerNode = peerSessions[0]?.peer_node;
+                          if (peerNode) {
+                            const task = prompt("What task should this machine run?");
+                            if (task) {
+                              api.collabSend(peerNode, "task.request", {
+                                command: "claude",
+                                args: ["--print", task],
+                              }).catch(console.error);
+                            }
+                          }
+                        }}
+                        sx={{ fontSize: 11, textTransform: "none" }}
+                      >
+                        Run task
+                      </Button>
+                    </Tooltip>
                   </Stack>
                   <CardGrid minWidth={300}>
                     {peerSessions.map((s) => (
