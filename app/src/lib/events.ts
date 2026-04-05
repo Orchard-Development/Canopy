@@ -122,6 +122,15 @@ export const EVENTS = {
     remotePeerAdded: "mesh:remote_peer_added",
     remotePeerRemoved: "mesh:remote_peer_removed",
   },
+  collab: {
+    approvalNeeded: "collab:approval_needed",
+    requestApproved: "collab:request_approved",
+    requestRejected: "collab:request_rejected",
+    requestCompleted: "collab:request_completed",
+    requestFailed: "collab:request_failed",
+    requestExpired: "collab:request_expired",
+    requestSent: "collab:request_sent",
+  },
   project: {
     created: "project:created",
   },

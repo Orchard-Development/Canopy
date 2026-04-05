@@ -251,4 +251,32 @@ export function useEngineEvents(channel: Channel | null): void {
     const node = (payload.node as string) || (payload.name as string) || "unknown";
     emit({ category: "engine", event: "mesh:node_down", message: `Mesh node disconnected: ${node}`, severity: "error", data: payload });
   });
+
+  // -- Agent collaboration events -------------------------------------------
+
+  useChannelSub(channel, EVENTS.collab.approvalNeeded, (payload: Record<string, unknown>) => {
+    const from = (payload.from_display_name as string) || (payload.from_machine_id as string) || "Someone";
+    const intent = (payload.intent as string) || "unknown";
+    const envelopeId = payload.envelope_id as string;
+    const intentLabel = intent.replace(".", " ").replace(/^\w/, (c: string) => c.toUpperCase());
+    emit({
+      category: "engine",
+      event: "collab:approval_needed",
+      message: `${from} wants to ${intentLabel}`,
+      severity: "warning",
+      data: payload,
+      actionMeta: { type: "collab-approve", envelopeId } as unknown as EventActionMeta,
+    });
+  });
+
+  useChannelSub(channel, EVENTS.collab.requestCompleted, (payload: Record<string, unknown>) => {
+    const intent = (payload.intent as string) || "request";
+    emit({
+      category: "engine",
+      event: "collab:completed",
+      message: `Collaboration ${intent} completed`,
+      severity: "success",
+      data: payload,
+    });
+  });
 }
