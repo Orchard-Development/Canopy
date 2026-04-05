@@ -1483,6 +1483,23 @@ export const api = {
   meshUpdateRole: (node: string, role: "admin" | "operator" | "viewer") =>
     putJson<{ ok: boolean; role: string }>("/api/mesh/peer/role", { node, role }),
 
+  // Agent collaboration
+  collabSessions: () =>
+    get<{ sessions: SessionLogMeta[]; grouped: Record<string, SessionLogMeta[]> }>("/api/mesh/collab/sessions"),
+  collabRequests: (filters?: { state?: string; direction?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.state) params.set("state", filters.state);
+    if (filters?.direction) params.set("direction", filters.direction);
+    const qs = params.toString();
+    return get<{ requests: CollabRequest[] }>(`/api/mesh/collab/requests${qs ? `?${qs}` : ""}`);
+  },
+  collabApprove: (id: string, trustAlways?: boolean) =>
+    postJson<{ ok: boolean }>(`/api/mesh/collab/requests/${id}/approve`, { trust_always: trustAlways }),
+  collabReject: (id: string, reason?: string) =>
+    postJson<{ ok: boolean }>(`/api/mesh/collab/requests/${id}/reject`, { reason }),
+  collabSend: (toNode: string, intent: string, payload?: Record<string, unknown>, opts?: { toSessionId?: string; requiresApproval?: boolean }) =>
+    postJson<{ ok: boolean; envelope_id: string }>("/api/mesh/collab/send", { to_node: toNode, intent, payload, to_session_id: opts?.toSessionId, requires_approval: opts?.requiresApproval }),
+
   meshTunnel: () => get<TunnelStatus>("/api/mesh/tunnel"),
 
   meshTunnelAddPeer: (public_key: string, endpoint: string, proxy_port: number) =>
@@ -1929,6 +1946,29 @@ export interface SessionLogProfile {
   skills?: Array<{ name: string }>;
 }
 
+export interface CollabRequest {
+  envelope_id: string;
+  direction: "inbound" | "outbound";
+  intent: string;
+  state: "created" | "pending" | "approved" | "executing" | "completed" | "rejected" | "failed" | "expired";
+  from_user_id?: string;
+  from_machine_id?: string;
+  from_session_id?: string;
+  from_display_name?: string;
+  to_user_id?: string;
+  to_machine_id?: string;
+  to_session_id?: string;
+  payload?: string;
+  result_payload?: string;
+  requires_approval: boolean;
+  approval_result?: string;
+  error_code?: string;
+  depth: number;
+  ttl_seconds: number;
+  created_at?: string;
+  completed_at?: string;
+}
+
 export interface SessionLogMeta {
   id: string;
   command?: string;
@@ -1949,6 +1989,11 @@ export interface SessionLogMeta {
   profile?: SessionLogProfile | null;
   claudeProjectDir?: string;
   source?: string;
+  // Remote peer info (populated for sessions from other machines)
+  peer_node?: string;
+  peer_display_name?: string;
+  peer_machine_id?: string;
+  projectId?: string;
 }
 
 export interface SessionLogEntry {

@@ -12,6 +12,7 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutlined";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
+import ComputerIcon from "@mui/icons-material/Computer";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api, type SessionLogMeta, type ProjectRecord } from "../lib/api";
 import { PageLayout } from "../components/PageLayout";
@@ -178,6 +179,15 @@ function SessionCard({
         <CardContent sx={{ py: 1.5, px: 2, "&:last-child": { pb: 1.5 }, height: "100%", display: "flex", flexDirection: "column" }}>
           {/* Top badges row */}
           <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mb: 0.75 }}>
+            {s.peer_display_name && (
+              <Chip
+                icon={<ComputerIcon sx={{ fontSize: 12 }} />}
+                label={s.peer_display_name}
+                size="small"
+                variant="outlined"
+                sx={{ height: 20, fontSize: 11, fontWeight: 600, borderColor: "info.main", color: "info.main" }}
+              />
+            )}
             {agentName && (
               <Chip label={agentName} size="small" variant="outlined" sx={{ height: 20, fontSize: 11, fontWeight: 600 }} />
             )}
@@ -312,7 +322,8 @@ export default function ProjectSessions() {
   const [search, setSearch] = useState("");
   const [messageMatches, setMessageMatches] = useState<Record<string, string>>({});
   const [searching, setSearching] = useState(false);
-  const [projectFilter, setProjectFilter] = useState<"this" | "all">("this");
+  const [projectFilter, setProjectFilter] = useState<"this" | "all" | "machines">("this");
+  const [remoteSessions, setRemoteSessions] = useState<SessionLogMeta[]>([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(50);
   const { generation } = useRefetchOnDashboardEvent(EVENTS.session.exited);
@@ -339,6 +350,27 @@ export default function ProjectSessions() {
     }, 5_000);
     return () => clearInterval(interval);
   }, []);
+
+  // Fetch remote sessions when "All machines" is selected
+  useEffect(() => {
+    if (projectFilter !== "machines") {
+      setRemoteSessions([]);
+      return;
+    }
+    const fetchRemote = () => {
+      api.collabSessions().then((res) => {
+        setRemoteSessions(res.sessions.map((s: SessionLogMeta) => ({
+          ...s,
+          id: s.id || s.agentSessionId || `remote-${Math.random().toString(36).slice(2)}`,
+          lineCount: s.lineCount || 0,
+          sizeBytes: s.sizeBytes || 0,
+        })));
+      }).catch(() => setRemoteSessions([]));
+    };
+    fetchRemote();
+    const interval = setInterval(fetchRemote, 10_000);
+    return () => clearInterval(interval);
+  }, [projectFilter]);
 
   // Auto-open session from ?open=<id> query param (e.g. from dashboard click)
   useEffect(() => {
@@ -395,6 +427,10 @@ export default function ProjectSessions() {
           (s.claudeProjectDir && encodedCwd && s.claudeProjectDir === encodedCwd)
         )
       : all;
+    // Merge remote sessions when viewing all machines
+    if (projectFilter === "machines") {
+      list = [...list, ...remoteSessions];
+    }
     // Hide sessions with no user interaction (enrichment loaded but no firstPrompt, no label, no summary)
     // Always keep running sessions (exitCode undefined)
     list = list.filter((s) => {
@@ -417,7 +453,7 @@ export default function ProjectSessions() {
       });
     }
     return list;
-  }, [all, projectCwd, projectFilter, search, enrichments, messageMatches]);
+  }, [all, projectCwd, projectFilter, search, enrichments, messageMatches, remoteSessions]);
 
   const projectNameMap = useMemo(() => buildProjectNameMap(projects), [projects]);
 
@@ -529,6 +565,7 @@ export default function ProjectSessions() {
               >
                 <ToggleButton value="this">This project</ToggleButton>
                 <ToggleButton value="all">All projects</ToggleButton>
+                <ToggleButton value="machines">All machines</ToggleButton>
               </ToggleButtonGroup>
             )}
           </Stack>
