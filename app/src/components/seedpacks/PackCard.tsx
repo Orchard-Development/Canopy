@@ -10,6 +10,7 @@ import {
   Typography,
 } from "@mui/material";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import LockIcon from "@mui/icons-material/Lock";
 import PsychologyIcon from "@mui/icons-material/Psychology";
 import StorageIcon from "@mui/icons-material/Storage";
 
@@ -31,6 +32,8 @@ export interface PackCardData {
   routerAccuracy?: number;
   /** True when pack rules have changed since the models were last trained. */
   modelsStale?: boolean;
+  /** True when this pack is automatically applied to all new projects. */
+  auto_apply?: boolean;
 }
 
 interface Props {
@@ -84,8 +87,13 @@ export function PackCard({
           <Typography variant="body2" fontWeight={600}>{pack.name}</Typography>
           <Chip label={`v${pack.version}`} size="small" variant="outlined" />
           <Chip label={`${pack.fileCount} files`} size="small" variant="outlined" />
-          {isPublic && (
-            <Chip label="public" size="small" color="primary" variant="outlined" />
+          {isPublic && !pack.auto_apply && (
+            <Chip label="optional" size="small" color="primary" variant="outlined" />
+          )}
+          {pack.auto_apply && (
+            <Tooltip title="Always applied to new projects">
+              <Chip icon={<LockIcon sx={{ fontSize: 14 }} />} label="required" size="small" color="success" variant="outlined" />
+            </Tooltip>
           )}
           {pack.category && (
             <Chip label={pack.category} size="small" color="primary" variant="outlined" />
