@@ -61,7 +61,10 @@ function toPackCard(slug: string, state: PackState | null, meta?: PackMeta): Pac
     slug,
     description: meta?.description ?? "",
     source: (meta?.source ?? "public") as PackCardData["source"],
-    fileCount: state ? Object.keys(state.files ?? {}).length : (meta?.fileCount ?? 0),
+    fileCount: (() => {
+      const provCount = state ? Object.keys(state.files ?? {}).length : 0;
+      return provCount > 0 ? provCount : (meta?.fileCount ?? 0);
+    })(),
     version: state?.version ?? meta?.version ?? 0,
     category: meta?.category,
     auto_apply: meta?.auto_apply ?? false,
