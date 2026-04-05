@@ -7,6 +7,7 @@ import {
 } from "@mui/material";
 import GrassIcon from "@mui/icons-material/Grass";
 import CloudIcon from "@mui/icons-material/Cloud";
+import StoreIcon from "@mui/icons-material/Store";
 import LockIcon from "@mui/icons-material/Lock";
 import AddIcon from "@mui/icons-material/Add";
 import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
@@ -122,6 +123,9 @@ export default function SeedPacks() {
       badge={<Chip label={`${packs.length}`} size="small" variant="outlined" />}
       actions={
         <Stack direction="row" spacing={1}>
+          <Button size="small" variant="outlined" startIcon={<StoreIcon />} onClick={() => navigate("/pack-store")}>
+            Pack Store
+          </Button>
           <Button size="small" variant="outlined" startIcon={<GitHubIcon />} onClick={() => setGithubOpen(true)}>
             From GitHub
           </Button>

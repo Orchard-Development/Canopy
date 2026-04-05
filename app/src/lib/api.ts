@@ -460,6 +460,33 @@ export interface OrchardConnection {
   seed_name: string;
 }
 
+export interface DiscoverPack {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  category: string;
+  version: number;
+  fileCount: number;
+  tags?: string[];
+  techStack?: string[];
+  price_cents: number;
+  visibility: string;
+  entitled: boolean;
+  entitlement_source: string | null;
+  status?: string;
+  auto_apply?: boolean;
+}
+
+export interface EntitlementRecord {
+  id: string;
+  pack_id: string;
+  source: string;
+  granted_at: string;
+  expires_at: string | null;
+  pack?: DiscoverPack;
+}
+
 export interface OrchardStats {
   session_count: number;
   seed_count: number;
@@ -746,6 +773,35 @@ export const api = {
       "/api/seed-packs/harvest-github", body,
     ),
 
+  // Pack Store -- discover, install, remove, publish
+  discoverPacks: (opts?: { category?: string; search?: string }) => {
+    const params = new URLSearchParams();
+    if (opts?.category) params.set("category", opts.category);
+    if (opts?.search) params.set("search", opts.search);
+    const qs = params.toString();
+    return get<DiscoverPack[]>(`/api/seed-packs/cloud/discover${qs ? `?${qs}` : ""}`);
+  },
+
+  installPack: (packId: string, projectId?: string) =>
+    postJson<{ ok: boolean; entitlement: { pack_id: string; source: string } }>(
+      `/api/seed-packs/${packId}/install`, { project_id: projectId },
+    ),
+
+  removePack: (packId: string) =>
+    del<{ ok: boolean }>(`/api/seed-packs/${packId}/entitlement`),
+
+  publishStagedPack: (packId: string) =>
+    postJson<{ ok: boolean; status: string }>(
+      `/api/seed-packs/${packId}/publish`, {},
+    ),
+
+  testApplyPack: (packId: string, projectId: string) =>
+    postJson<{ ok: boolean; files_applied: number }>(
+      `/api/seed-packs/${packId}/test-apply`, { project_id: projectId },
+    ),
+
+  myEntitlements: () =>
+    get<EntitlementRecord[]>("/api/seed-packs/cloud/mine"),
 
   // Project MCP servers
   projectMcpServers: (projectId: string) =>
