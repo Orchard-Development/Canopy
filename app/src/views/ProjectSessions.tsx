@@ -48,12 +48,14 @@ function EmptyState() {
 }
 
 function StatsBar({ sessions }: { sessions: SessionLogMeta[] }) {
-  const running = sessions.filter((s) => s.exitCode === undefined).length;
-  const ended = sessions.filter((s) => s.exitCode !== undefined).length;
+  const local = sessions.filter((s) => !s.peer_display_name);
+  const remote = sessions.filter((s) => !!s.peer_display_name);
+  const running = local.filter((s) => s.exitCode === undefined).length;
+  const ended = local.filter((s) => s.exitCode !== undefined).length;
   return (
     <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 0.5 }}>
       <Typography variant="body2" color="text.secondary">
-        <strong>{sessions.length}</strong> total
+        <strong>{local.length}</strong> total
       </Typography>
       {running > 0 && (
         <Typography variant="body2" color="success.main">
@@ -63,6 +65,11 @@ function StatsBar({ sessions }: { sessions: SessionLogMeta[] }) {
       {ended > 0 && (
         <Typography variant="body2" color="text.disabled">
           <strong>{ended}</strong> ended
+        </Typography>
+      )}
+      {remote.length > 0 && (
+        <Typography variant="body2" sx={{ color: "#9c27b0" }}>
+          <strong>{remote.length}</strong> remote
         </Typography>
       )}
     </Stack>
@@ -103,6 +110,8 @@ function buildProjectNameMap(projects: ProjectRecord[]): Map<string, string> {
 
 /** Resolve a session's project name using the lookup map. */
 function resolveProjectName(s: SessionLogMeta, nameMap: Map<string, string>): string | null {
+  // Remote sessions: use server-resolved project name
+  if ((s as unknown as Record<string, unknown>).projectName) return (s as unknown as Record<string, unknown>).projectName as string;
   // Try exact cwd match first
   if (s.cwd && nameMap.has(s.cwd)) return nameMap.get(s.cwd)!;
   // Try Claude-encoded dir
