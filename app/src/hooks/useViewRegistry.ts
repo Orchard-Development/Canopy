@@ -146,10 +146,10 @@ export const DEFAULT_VIEWS: ViewEntry[] = [
     component: COMPONENT_MAP["bundled:SeedPacks"],
     source: "default",
     sourceId: null,
-    position: 190,
+    position: 8,
     removable: false,
     visible: true,
-    placement: "bottom",
+    placement: "main",
   },
   {
     id: "default-settings",

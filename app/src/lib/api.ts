@@ -668,7 +668,7 @@ export const api = {
     ),
 
   listSeedPacks: () =>
-    get<Array<{ id: string; name: string; slug: string; description: string; source_project_id: string | null; fileCount: number; version: number; source: "public" | "user"; created_at: string; updated_at: string; category?: string; tags?: string[]; requires?: string[]; techStack?: string[] }>>(
+    get<Array<{ id: string; name: string; slug: string; description: string; source_project_id: string | null; fileCount: number; version: number; source: "public" | "user"; created_at: string; updated_at: string; category?: string; tags?: string[]; requires?: string[]; techStack?: string[]; auto_apply?: boolean }>>(
       "/api/seed-packs",
     ),
 
@@ -725,6 +725,12 @@ export const api = {
   plantSeedPack: (projectId: string, packId: string) =>
     postJson<{ ok: boolean; result: { applied: number; updated: number; current: number; skipped: number; drifted: number } }>(
       `/api/projects/${projectId}/plant`, { packId },
+    ),
+
+  unplantPack: (projectId: string, slug: string, opts?: { deleteFiles?: boolean; force?: boolean }) =>
+    postJson<{ ok: boolean; removed_files: number; kept_drifted: number }>(
+      `/api/projects/${projectId}/unplant`,
+      { slug, delete_files: opts?.deleteFiles ?? true, force: opts?.force ?? false },
     ),
 
   deleteSeedPack: (id: string) =>

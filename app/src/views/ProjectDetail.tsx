@@ -22,6 +22,7 @@ import { PageLayout } from "../components/PageLayout";
 import { ProjectDataProvider } from "../contexts/ProjectDataContext";
 import { ProjectDashboard } from "../components/project/ProjectDashboard";
 import { IntelligenceTab } from "../components/project/IntelligenceTab";
+import { PacksTab } from "../components/project/PacksTab";
 import { SettingsTab } from "../components/project/SettingsTab";
 import { FilesTab } from "../components/project/FilesTab";
 import { TAB_KEYS, TAB_LABELS, resolveTab } from "./projectDetailTabs";
@@ -112,8 +113,11 @@ export default function ProjectDetail({ embedded }: { embedded?: boolean }) {
         {resolvedTab === "dashboard" && (
           <ProjectDashboard project={project} projectId={project.id} onUpdate={reload} />
         )}
+        {resolvedTab === "packs" && (
+          <PacksTab projectId={project.id} projectName={project.name} />
+        )}
         {resolvedTab === "intelligence" && (
-          <IntelligenceTab projectId={project.id} projectName={project.name} />
+          <IntelligenceTab projectId={project.id} />
         )}
         {resolvedTab === "files" && (
           <FilesTab rootPath={project.root_path ?? null} />
