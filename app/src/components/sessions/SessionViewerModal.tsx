@@ -96,17 +96,20 @@ function MessageBubble({ message }: { message: { role: string; text: string } })
   );
 }
 
-function MessagesPanel({ sessionId }: { sessionId: string }) {
+function MessagesPanel({ sessionId, peerNode }: { sessionId: string; peerNode?: string }) {
   const [messages, setMessages] = useState<Array<{ role: string; text: string; ts?: string }>>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
-    api.getSessionMessages(sessionId)
+    const fetcher = peerNode
+      ? api.getRemoteSessionMessages(peerNode, sessionId)
+      : api.getSessionMessages(sessionId);
+    fetcher
       .then(setMessages)
       .catch(() => setMessages([]))
       .finally(() => setLoading(false));
-  }, [sessionId]);
+  }, [sessionId, peerNode]);
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
@@ -145,7 +148,7 @@ function MessagesPanel({ sessionId }: { sessionId: string }) {
   );
 }
 
-function TerminalPanel({ sessionId }: { sessionId: string }) {
+function TerminalPanel({ sessionId, peerNode }: { sessionId: string; peerNode?: string }) {
   const theme = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const [streaming, setStreaming] = useState(false);
@@ -166,11 +169,34 @@ function TerminalPanel({ sessionId }: { sessionId: string }) {
       observer.observe(el);
       const abort = new AbortController();
       setStreaming(true);
-      api.streamSessionLog(sessionId, (entry) => {
-        if (entry.type === "output" && entry.data) term.write(entry.data);
-        else if (entry.type === "exited") term.write(`\r\n\x1b[90m[exited ${entry.exitCode ?? "?"}]\x1b[0m\r\n`);
-      }, abort.signal)
-        .then(() => term.scrollToTop())
+      const streamUrl = peerNode
+        ? `/api/mesh/collab/relay/${encodeURIComponent(peerNode)}/${sessionId}/stream`
+        : `/api/session-logs/${sessionId}/stream`;
+      const streamFn = async (signal: AbortSignal) => {
+        const res = await fetch(streamUrl, { signal });
+        if (!res.ok) throw new Error(`Stream failed: ${res.status}`);
+        const reader = res.body?.getReader();
+        if (!reader) return;
+        const decoder = new TextDecoder();
+        let buf = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          const lines = buf.split("\n");
+          buf = lines.pop() || "";
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            try {
+              const entry = JSON.parse(line);
+              if (entry.type === "output" && entry.data) term.write(entry.data);
+              else if (entry.type === "exited") term.write(`\r\n\x1b[90m[exited ${entry.exitCode ?? "?"}]\x1b[0m\r\n`);
+            } catch { /* skip malformed lines */ }
+          }
+        }
+        term.scrollToTop();
+      };
+      streamFn(abort.signal)
         .catch(() => { if (!abort.signal.aborted) term.write("\x1b[31m[load failed]\x1b[0m\r\n"); })
         .finally(() => setStreaming(false));
       (el as any).__cleanup = () => { abort.abort(); observer.disconnect(); term.dispose(); };
@@ -369,9 +395,12 @@ export function SessionViewerModal({
         <Typography variant="caption" color="text.secondary">
           {currentIndex + 1} / {sessions.length}
         </Typography>
+        {session.peer_node && (
+          <Chip label={`Remote — ${session.peer_machine_id || session.peer_display_name || "peer"}`} size="small" variant="outlined" sx={{ height: 20, fontSize: 11, borderColor: "#9c27b0", color: "#9c27b0" }} />
+        )}
         <ProfileChip s={session} />
         <StatusChip s={session} />
-        {session.resumable && <Chip label="resumable" size="small" color="success" variant="outlined" sx={{ height: 20, fontSize: 11 }} />}
+        {!session.peer_node && session.resumable && <Chip label="resumable" size="small" color="success" variant="outlined" sx={{ height: 20, fontSize: 11 }} />}
         <Tooltip title="Open full detail page">
           <IconButton size="small" onClick={() => { onClose(); navigate(`/sessions/${session.id}`); }}>
             <OpenInNewIcon fontSize="small" />
@@ -403,13 +432,13 @@ export function SessionViewerModal({
           variant="outlined"
           sx={{ flex: 1, minWidth: 0, overflow: "hidden", borderColor: (t) => alpha(t.palette.primary.main, 0.2) }}
         >
-          <MessagesPanel sessionId={session.id} />
+          <MessagesPanel sessionId={session.id} peerNode={session.peer_node} />
         </Paper>
         <Paper
           variant="outlined"
           sx={{ flex: 1, minWidth: 0, overflow: "hidden", borderColor: (t) => alpha(t.palette.secondary.main, 0.2) }}
         >
-          <TerminalPanel sessionId={session.id} />
+          <TerminalPanel sessionId={session.id} peerNode={session.peer_node} />
         </Paper>
       </Box>
 

@@ -176,7 +176,7 @@ function SessionCard({
         borderLeftColor: isRemote ? "#9c27b0" : isRunning ? "success.main" : "divider",
       }}
     >
-      <CardActionArea onClick={isRemote ? undefined : onView} sx={{ p: 0, flex: 1, cursor: isRemote ? "default" : "pointer" }}>
+      <CardActionArea onClick={onView} sx={{ p: 0, flex: 1 }}>
         <CardContent sx={{ py: 1.5, px: 2, "&:last-child": { pb: 1.5 }, height: "100%", display: "flex", flexDirection: "column" }}>
           {/* Top badges row */}
           <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mb: 0.75 }}>
@@ -642,10 +642,10 @@ export default function ProjectSessions() {
                         key={s.id}
                         s={s}
                         enrichment={enrichments[s.id]}
-                        onView={() => {/* Watch remote session — coming in Phase 1 step 3 */}}
+                        onView={() => setViewing(s)}
                         onResume={() => {}}
                         onDelete={() => {}}
-                        onOpenDetail={() => {/* Timeline viewer — coming in Phase 1 step 9 */}}
+                        onOpenDetail={() => {}}
                         showProject={showProject}
                         projectNameMap={projectNameMap}
                       />

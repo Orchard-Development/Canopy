@@ -1043,6 +1043,12 @@ export const api = {
   getSessionMessages: (id: string) =>
     get<Array<{ role: string; text: string; ts?: string }>>(`/api/session-logs/${id}/messages`),
 
+  // Remote session relay (fetches from a peer via local Engine proxy)
+  getRemoteSessionMessages: (peerNode: string, sessionId: string) =>
+    get<Array<{ role: string; text: string; ts?: string }>>(`/api/mesh/collab/relay/${encodeURIComponent(peerNode)}/${sessionId}/messages`),
+  getRemoteSessionLog: (peerNode: string, sessionId: string) =>
+    get<{ entries: SessionLogEntry[] }>(`/api/mesh/collab/relay/${encodeURIComponent(peerNode)}/${sessionId}`),
+
   searchSessionLogs: (q: string) =>
     get<{ matches: Array<{ id: string; snippet: string }> }>(`/api/session-logs/search?q=${encodeURIComponent(q)}`),
 
