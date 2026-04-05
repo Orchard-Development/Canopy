@@ -416,13 +416,6 @@ export default function ProjectSessions() {
         return !!messageMatches[s.id];
       });
     }
-    // Pin running sessions to the top, then sort by time
-    list.sort((a, b) => {
-      const aRunning = a.exitCode === undefined ? 1 : 0;
-      const bRunning = b.exitCode === undefined ? 1 : 0;
-      if (aRunning !== bRunning) return bRunning - aRunning;
-      return 0; // preserve existing time sort from API
-    });
     return list;
   }, [all, projectCwd, projectFilter, search, enrichments, messageMatches]);
 
@@ -437,12 +430,22 @@ export default function ProjectSessions() {
 
   useEffect(() => { setPage(0); }, [search, projectFilter]);
 
-  const paged = useMemo(
-    () => sessions.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
-    [sessions, page, rowsPerPage],
+  const runningSessions = useMemo(
+    () => sessions.filter((s) => s.exitCode === undefined),
+    [sessions],
   );
 
-  // Group by day
+  const endedSessions = useMemo(
+    () => sessions.filter((s) => s.exitCode !== undefined),
+    [sessions],
+  );
+
+  const paged = useMemo(
+    () => endedSessions.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
+    [endedSessions, page, rowsPerPage],
+  );
+
+  // Group ended sessions by day
   const grouped = useMemo(() => {
     const groups: { label: string; sessions: SessionLogMeta[] }[] = [];
     let currentLabel = "";
@@ -536,6 +539,29 @@ export default function ProjectSessions() {
             </Typography>
           ) : (
             <>
+              {runningSessions.length > 0 && (
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="overline" color="success.main" sx={{ mb: 1, display: "block", fontWeight: 700 }}>
+                    Active
+                  </Typography>
+                  <CardGrid minWidth={300}>
+                    {runningSessions.map((s) => (
+                      <SessionCard
+                        key={s.id}
+                        s={s}
+                        enrichment={enrichments[s.id]}
+                        onView={() => setViewing(s)}
+                        onResume={handleResume}
+                        onDelete={handleDelete}
+                        onOpenDetail={() => navigate(`/sessions/${s.id}`)}
+                        showProject={showProject}
+                        projectNameMap={projectNameMap}
+                      />
+                    ))}
+                  </CardGrid>
+                </Box>
+              )}
+
               {grouped.map((group) => (
                 <Box key={group.label} sx={{ mb: 3 }}>
                   <Typography variant="overline" color="text.secondary" sx={{ mb: 1, display: "block" }}>
@@ -560,7 +586,7 @@ export default function ProjectSessions() {
               ))}
               <TablePagination
                 component="div"
-                count={sessions.length}
+                count={endedSessions.length}
                 page={page}
                 onPageChange={(_, p) => setPage(p)}
                 rowsPerPage={rowsPerPage}
