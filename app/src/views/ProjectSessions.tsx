@@ -386,7 +386,9 @@ export default function ProjectSessions() {
         )
       : all;
     // Hide sessions with no user interaction (enrichment loaded but no firstPrompt, no label, no summary)
+    // Always keep running sessions (exitCode undefined)
     list = list.filter((s) => {
+      if (s.exitCode === undefined) return true; // Running — always show
       const e = enrichments[s.id];
       if (!e) return true; // Not enriched yet — show it (benefit of the doubt)
       // Keep if it has any meaningful content
