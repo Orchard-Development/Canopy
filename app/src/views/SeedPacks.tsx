@@ -7,6 +7,7 @@ import {
 } from "@mui/material";
 import GrassIcon from "@mui/icons-material/Grass";
 import CloudIcon from "@mui/icons-material/Cloud";
+import LockIcon from "@mui/icons-material/Lock";
 import AddIcon from "@mui/icons-material/Add";
 import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
 import GitHubIcon from "@mui/icons-material/GitHub";
@@ -20,6 +21,7 @@ interface SeedPack extends PackCardData {
   updated_at: string;
   tags?: string[];
   requires?: string[];
+  auto_apply?: boolean;
 }
 
 const CATEGORY_TABS = ["All", "Discipline", "Workflow", "Tools", "Scaffold", "Platform", "Agents"];
@@ -81,6 +83,8 @@ export default function SeedPacks() {
     } catch { /* ignore */ }
   }
 
+  const corePacks = useMemo(() => packs.filter((p) => p.source === "public" && p.auto_apply), [packs]);
+  const optionalPacks = useMemo(() => packs.filter((p) => p.source === "public" && !p.auto_apply), [packs]);
   const publicPacks = useMemo(() => packs.filter((p) => p.source === "public"), [packs]);
   const userPacks = useMemo(() => packs.filter((p) => p.source !== "public"), [packs]);
 
@@ -143,15 +147,39 @@ export default function SeedPacks() {
 
       {!loading && (
         <Stack spacing={4}>
-          {/* Public packs */}
+          {/* Core packs (auto_apply) */}
+          <Box>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+              <LockIcon fontSize="small" color="success" />
+              <Typography variant="subtitle1" fontWeight={700}>Core Packs</Typography>
+              <Chip label={corePacks.length} size="small" color="success" variant="outlined" />
+            </Stack>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+              Always applied to new projects. These provide the foundational rules, skills, and workflows.
+            </Typography>
+
+            <Stack spacing={1}>
+              {corePacks.map((pack) => (
+                <PackCard
+                  key={pack.id}
+                  pack={pack}
+                  onClick={() => navigate(`/seed-packs/${pack.id}`)}
+                />
+              ))}
+            </Stack>
+          </Box>
+
+          <Divider />
+
+          {/* Optional public packs */}
           <Box>
             <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
               <CloudIcon fontSize="small" color="primary" />
-              <Typography variant="subtitle1" fontWeight={700}>Public Packs</Typography>
-              <Chip label={publicPacks.length} size="small" variant="outlined" />
+              <Typography variant="subtitle1" fontWeight={700}>Optional Packs</Typography>
+              <Chip label={optionalPacks.length} size="small" variant="outlined" />
             </Stack>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-              Curated and hosted in the cloud. Applied to every orchard automatically.
+              Public packs you can install per-project. Not applied automatically.
             </Typography>
 
             <Tabs
@@ -168,12 +196,12 @@ export default function SeedPacks() {
 
             {filteredPublic.length === 0 && (
               <Typography variant="body2" color="text.secondary">
-                {publicPacks.length === 0 ? "No public packs yet. Run mix orchard.publish_packs to publish." : "No packs match this filter."}
+                {optionalPacks.length === 0 ? "No optional packs available." : "No packs match this filter."}
               </Typography>
             )}
 
             <Stack spacing={1}>
-              {filteredPublic.map((pack) => (
+              {filteredPublic.filter((p) => !p.auto_apply).map((pack) => (
                 <PackCard
                   key={pack.id}
                   pack={pack}
