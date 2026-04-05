@@ -336,7 +336,7 @@ export default function ProjectSessions() {
       api.listSessionLogs().then((sessions) => {
         setAll(sessions);
       }).catch(() => {});
-    }, 10_000);
+    }, 5_000);
     return () => clearInterval(interval);
   }, []);
 
