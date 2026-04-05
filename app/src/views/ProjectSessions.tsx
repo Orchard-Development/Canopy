@@ -314,7 +314,7 @@ export default function ProjectSessions() {
   const [searching, setSearching] = useState(false);
   const [projectFilter, setProjectFilter] = useState<"this" | "all">("this");
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [rowsPerPage, setRowsPerPage] = useState(50);
   const { generation } = useRefetchOnDashboardEvent(EVENTS.session.exited);
 
   const load = useCallback(() => {
@@ -416,6 +416,13 @@ export default function ProjectSessions() {
         return !!messageMatches[s.id];
       });
     }
+    // Pin running sessions to the top, then sort by time
+    list.sort((a, b) => {
+      const aRunning = a.exitCode === undefined ? 1 : 0;
+      const bRunning = b.exitCode === undefined ? 1 : 0;
+      if (aRunning !== bRunning) return bRunning - aRunning;
+      return 0; // preserve existing time sort from API
+    });
     return list;
   }, [all, projectCwd, projectFilter, search, enrichments, messageMatches]);
 

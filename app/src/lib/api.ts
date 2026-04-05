@@ -1019,7 +1019,14 @@ export const api = {
   // Session logs
   listSessionLogs: () =>
     get<SessionLogMeta[]>("/api/session-logs").then((logs) =>
-      logs.map((s) => ({ ...s, exitCode: s.exitCode ?? undefined }))
+      logs.map((s) => ({
+        ...s,
+        // External active sessions have null exitCode from JSON — coerce to undefined
+        // Stale sessions with missing exitCode default to 0 (ended)
+        exitCode: s.exitCode == null
+          ? (s.source === "external" ? undefined : 0)
+          : s.exitCode,
+      }))
     ),
 
   getSessionLog: (id: string) =>
