@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useToast } from "../hooks/useToast";
 import {
   Box, Typography, Chip, IconButton, Tooltip, Paper, Stack, Button,
@@ -251,12 +251,14 @@ function DetailContent({
   richAnalysis,
   analyzing,
   onAnalyze,
+  peerNode,
 }: {
   session: SessionLogMeta;
   analysis: SessionLogAnalysis | null;
   richAnalysis: RichAnalysis | null;
   analyzing: boolean;
   onAnalyze: () => void;
+  peerNode?: string;
 }) {
   const theme = useTheme();
   const navigate = useNavigate();
@@ -266,6 +268,8 @@ function DetailContent({
   const containerRef = useRef<HTMLDivElement>(null);
   const { messages, loading: messagesLoading } = useSessionMessages(
     viewMode === "pretty" && session.hasMessages !== false ? session.id : null,
+    0,
+    peerNode,
   );
 
   const handleResume = useCallback(async (fork: boolean) => {
@@ -294,15 +298,43 @@ function DetailContent({
     observer.observe(el);
     const abort = new AbortController();
     setStreaming(true);
-    api.streamSessionLog(session.id, (entry) => {
-      if (entry.type === "output" && entry.data) term.write(entry.data);
-      else if (entry.type === "exited") term.write(`\r\n\x1b[90m[exited ${entry.exitCode ?? "?"}]\x1b[0m\r\n`);
-    }, abort.signal)
-      .then(() => term.scrollToTop())
+    const streamUrl = peerNode
+      ? `/api/mesh/collab/relay/${encodeURIComponent(peerNode)}/${session.id}/stream`
+      : undefined;
+    const doStream = streamUrl
+      ? async () => {
+          const res = await fetch(streamUrl, { signal: abort.signal });
+          if (!res.ok) throw new Error(`Stream failed: ${res.status}`);
+          const reader = res.body?.getReader();
+          if (!reader) return;
+          const decoder = new TextDecoder();
+          let buf = "";
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buf += decoder.decode(value, { stream: true });
+            const lines = buf.split("\n");
+            buf = lines.pop() || "";
+            for (const line of lines) {
+              if (!line.trim()) continue;
+              try {
+                const entry = JSON.parse(line);
+                if (entry.type === "output" && entry.data) term.write(entry.data);
+                else if (entry.type === "exited") term.write(`\r\n\x1b[90m[exited ${entry.exitCode ?? "?"}]\x1b[0m\r\n`);
+              } catch { /* skip */ }
+            }
+          }
+          term.scrollToTop();
+        }
+      : () => api.streamSessionLog(session.id, (entry) => {
+          if (entry.type === "output" && entry.data) term.write(entry.data);
+          else if (entry.type === "exited") term.write(`\r\n\x1b[90m[exited ${entry.exitCode ?? "?"}]\x1b[0m\r\n`);
+        }, abort.signal).then(() => term.scrollToTop());
+    doStream()
       .catch(() => { if (!abort.signal.aborted) term.write("\x1b[31m[load failed]\x1b[0m\r\n"); })
       .finally(() => setStreaming(false));
     return () => { abort.abort(); observer.disconnect(); term.dispose(); };
-  }, [session.id, theme]);
+  }, [session.id, theme, peerNode]);
 
   const agentLabel = session.agentType
     ? session.agentType.charAt(0).toUpperCase() + session.agentType.slice(1)
@@ -315,8 +347,9 @@ function DetailContent({
       icon={<IconButton onClick={() => navigate(-1)}><ArrowBackIcon /></IconButton>}
       badge={
         <>
+          {peerNode && <Chip label={`Remote — ${session.peer_machine_id || session.peer_display_name || "peer"}`} size="small" variant="outlined" sx={{ borderColor: "#9c27b0", color: "#9c27b0" }} />}
           {agentLabel && <Chip label={agentLabel} size="small" variant="outlined" color="primary" />}
-          {session.resumable && <Chip label="resumable" size="small" color="success" variant="outlined" />}
+          {!peerNode && session.resumable && <Chip label="resumable" size="small" color="success" variant="outlined" />}
           {(session.resumeCount ?? 0) > 0 && (
             <Chip label={`resumed ${session.resumeCount}x`} size="small" variant="outlined" />
           )}
@@ -426,7 +459,9 @@ function DetailContent({
 
 export default function SessionLogDetail({ sessionId: propId }: { sessionId?: string } = {}) {
   const { id: paramId } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const id = propId || paramId;
+  const peerNode = searchParams.get("peer") || undefined;
   const location = useLocation();
   const [session, setSession] = useState<SessionLogMeta | null>(null);
   const [analysis, setAnalysis] = useState<SessionLogAnalysis | null>(null);
@@ -471,6 +506,25 @@ export default function SessionLogDetail({ sessionId: propId }: { sessionId?: st
       setAnalysis(passed.analysis ?? null);
       setLoading(false);
       if (passed.hasMessages !== false) fetchRichAnalysis();
+    } else if (peerNode && id) {
+      // Remote session — fetch metadata via relay
+      setSession(null);
+      setAnalysis(null);
+      setRichAnalysis(null);
+      setLoading(true);
+      api.getRemoteSessionLog(peerNode, id).then((data) => {
+        const meta: SessionLogMeta = {
+          id: id!,
+          lineCount: 0,
+          sizeBytes: 0,
+          peer_node: peerNode,
+          ...data as Record<string, unknown>,
+        } as SessionLogMeta;
+        setSession(meta);
+      }).catch(() => {
+        // Fallback: create a minimal session object
+        setSession({ id: id!, lineCount: 0, sizeBytes: 0, peer_node: peerNode, command: "claude", agentType: "claude" });
+      }).finally(() => setLoading(false));
     } else {
       setSession(null);
       setAnalysis(null);
@@ -483,7 +537,7 @@ export default function SessionLogDetail({ sessionId: propId }: { sessionId?: st
         if (match?.hasMessages !== false) fetchRichAnalysis();
       }).catch(() => {}).finally(() => setLoading(false));
     }
-  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [id, peerNode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAnalyze = useCallback(async () => {
     if (!id) return;
@@ -526,6 +580,7 @@ export default function SessionLogDetail({ sessionId: propId }: { sessionId?: st
       richAnalysis={richAnalysis}
       analyzing={analyzing}
       onAnalyze={handleAnalyze}
+      peerNode={peerNode}
     />
   );
 }

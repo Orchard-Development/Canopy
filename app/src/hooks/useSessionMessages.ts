@@ -22,6 +22,7 @@ interface UseSessionMessagesResult {
 export function useSessionMessages(
   sessionId: string | null,
   refreshKey: number = 0,
+  peerNode?: string,
 ): UseSessionMessagesResult {
   const [messages, setMessages] = useState<SessionMessage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -38,7 +39,10 @@ export function useSessionMessages(
     setLoading(true);
     setError(null);
 
-    api.getSessionMessages(sessionId)
+    const fetcher = peerNode
+      ? api.getRemoteSessionMessages(peerNode, sessionId)
+      : api.getSessionMessages(sessionId);
+    fetcher
       .then((msgs) => {
         setMessages(msgs);
         setError(null);
@@ -50,7 +54,7 @@ export function useSessionMessages(
         }
       })
       .finally(() => setLoading(false));
-  }, [sessionId, refreshKey]);
+  }, [sessionId, refreshKey, peerNode]);
 
   return { messages, loading, error };
 }

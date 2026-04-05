@@ -257,9 +257,11 @@ function SessionCard({
         }}
       >
         {isRemote ? (
-          <Typography variant="caption" color="text.disabled" sx={{ py: 0.5, px: 0.5, fontSize: 11 }}>
-            Remote session — watch coming soon
-          </Typography>
+          <Tooltip title="View remote session">
+            <IconButton size="small" onClick={onView}>
+              <OpenInNewIcon sx={{ fontSize: 16 }} />
+            </IconButton>
+          </Tooltip>
         ) : (
           <>
             <Tooltip title="Open detail">
@@ -642,10 +644,10 @@ export default function ProjectSessions() {
                         key={s.id}
                         s={s}
                         enrichment={enrichments[s.id]}
-                        onView={() => setViewing(s)}
+                        onView={() => navigate(`/sessions/${s.id}?peer=${encodeURIComponent(s.peer_node || "")}`)}
                         onResume={() => {}}
                         onDelete={() => {}}
-                        onOpenDetail={() => {}}
+                        onOpenDetail={() => navigate(`/sessions/${s.id}?peer=${encodeURIComponent(s.peer_node || "")}`)}
                         showProject={showProject}
                         projectNameMap={projectNameMap}
                       />
