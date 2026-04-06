@@ -4,6 +4,7 @@ import {
   Stack, Button, CircularProgress, alpha, TextField, InputAdornment,
   Card, CardContent, CardActionArea, TablePagination, ToggleButtonGroup, ToggleButton,
   Dialog, DialogTitle, DialogContent, DialogActions,
+  Checkbox, FormControlLabel, FormGroup,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
@@ -348,7 +349,8 @@ export default function ProjectSessions() {
   const [remoteSessions, setRemoteSessions] = useState<SessionLogMeta[]>([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(50);
-  const [taskDialogPeer, setTaskDialogPeer] = useState<string | null>(null);
+  const [taskDialogOpen, setTaskDialogOpen] = useState(false);
+  const [taskSelectedPeers, setTaskSelectedPeers] = useState<Set<string>>(new Set());
   const [taskInput, setTaskInput] = useState("");
   const { generation } = useRefetchOnDashboardEvent(EVENTS.session.exited);
 
@@ -658,8 +660,9 @@ export default function ProjectSessions() {
                         onClick={() => {
                           const peerNode = peerSessions[0]?.peer_node;
                           if (peerNode) {
-                            setTaskDialogPeer(peerNode);
+                            setTaskSelectedPeers(new Set([peerNode]));
                             setTaskInput("");
+                            setTaskDialogOpen(true);
                           }
                         }}
                         sx={{ fontSize: 11, textTransform: "none" }}
@@ -732,13 +735,56 @@ export default function ProjectSessions() {
       />
     )}
     <Dialog
-      open={!!taskDialogPeer}
-      onClose={() => setTaskDialogPeer(null)}
+      open={taskDialogOpen}
+      onClose={() => setTaskDialogOpen(false)}
       maxWidth="sm"
       fullWidth
     >
-      <DialogTitle>Run Task on Remote Machine</DialogTitle>
+      <DialogTitle>Run Task on Remote Machine{taskSelectedPeers.size > 1 ? "s" : ""}</DialogTitle>
       <DialogContent>
+        {Object.keys(remoteSessionsByPeer).length > 1 && (
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: "block" }}>
+              Send to:
+            </Typography>
+            <FormGroup>
+              {Object.entries(remoteSessionsByPeer).map(([peerName, peerSessions]) => {
+                const peerNode = peerSessions[0]?.peer_node;
+                if (!peerNode) return null;
+                return (
+                  <FormControlLabel
+                    key={peerNode}
+                    control={
+                      <Checkbox
+                        size="small"
+                        checked={taskSelectedPeers.has(peerNode)}
+                        onChange={(e) => {
+                          setTaskSelectedPeers((prev) => {
+                            const next = new Set(prev);
+                            if (e.target.checked) next.add(peerNode);
+                            else next.delete(peerNode);
+                            return next;
+                          });
+                        }}
+                      />
+                    }
+                    label={
+                      <Stack direction="row" spacing={0.5} alignItems="center">
+                        <ComputerIcon sx={{ fontSize: 14, color: "text.secondary" }} />
+                        <Typography variant="body2">{peerName}</Typography>
+                      </Stack>
+                    }
+                  />
+                );
+              })}
+            </FormGroup>
+          </Box>
+        )}
+        {Object.keys(remoteSessionsByPeer).length <= 1 && taskSelectedPeers.size === 1 && (
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            Sending to: {Object.keys(remoteSessionsByPeer)[0] || "Remote"}
+          </Typography>
+        )}
         <TextField
           autoFocus
           fullWidth
@@ -748,25 +794,26 @@ export default function ProjectSessions() {
           placeholder="What should this machine do? e.g. 'Pull latest and run the test suite, report any failures'"
           value={taskInput}
           onChange={(e) => setTaskInput(e.target.value)}
-          sx={{ mt: 1 }}
         />
       </DialogContent>
       <DialogActions>
-        <Button onClick={() => setTaskDialogPeer(null)}>Cancel</Button>
+        <Button onClick={() => setTaskDialogOpen(false)}>Cancel</Button>
         <Button
           variant="contained"
-          disabled={!taskInput.trim()}
+          disabled={!taskInput.trim() || taskSelectedPeers.size === 0}
           onClick={() => {
-            if (taskDialogPeer && taskInput.trim()) {
-              api.collabSend(taskDialogPeer, "task.request", {
-                command: "claude",
-                args: ["-p", taskInput.trim()],
-              }).catch(console.error);
-              setTaskDialogPeer(null);
+            if (taskInput.trim() && taskSelectedPeers.size > 0) {
+              for (const peer of taskSelectedPeers) {
+                api.collabSend(peer, "task.request", {
+                  command: "claude",
+                  args: ["-p", taskInput.trim()],
+                }).catch(console.error);
+              }
+              setTaskDialogOpen(false);
             }
           }}
         >
-          Send Task
+          Send Task{taskSelectedPeers.size > 1 ? ` to ${taskSelectedPeers.size} machines` : ""}
         </Button>
       </DialogActions>
     </Dialog>
