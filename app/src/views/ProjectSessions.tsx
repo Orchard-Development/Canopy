@@ -742,49 +742,46 @@ export default function ProjectSessions() {
     >
       <DialogTitle>Run Task on Remote Machine{taskSelectedPeers.size > 1 ? "s" : ""}</DialogTitle>
       <DialogContent>
-        {Object.keys(remoteSessionsByPeer).length > 1 && (
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: "block" }}>
-              Send to:
-            </Typography>
-            <FormGroup>
-              {Object.entries(remoteSessionsByPeer).map(([peerName, peerSessions]) => {
-                const peerNode = peerSessions[0]?.peer_node;
-                if (!peerNode) return null;
-                return (
-                  <FormControlLabel
-                    key={peerNode}
-                    control={
-                      <Checkbox
-                        size="small"
-                        checked={taskSelectedPeers.has(peerNode)}
-                        onChange={(e) => {
-                          setTaskSelectedPeers((prev) => {
-                            const next = new Set(prev);
-                            if (e.target.checked) next.add(peerNode);
-                            else next.delete(peerNode);
-                            return next;
-                          });
-                        }}
-                      />
-                    }
-                    label={
-                      <Stack direction="row" spacing={0.5} alignItems="center">
-                        <ComputerIcon sx={{ fontSize: 14, color: "text.secondary" }} />
-                        <Typography variant="body2">{peerName}</Typography>
-                      </Stack>
-                    }
-                  />
-                );
-              })}
-            </FormGroup>
-          </Box>
-        )}
-        {Object.keys(remoteSessionsByPeer).length <= 1 && taskSelectedPeers.size === 1 && (
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-            Sending to: {Object.keys(remoteSessionsByPeer)[0] || "Remote"}
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: "block" }}>
+            Send to:
           </Typography>
-        )}
+          <FormGroup>
+            {Object.entries(remoteSessionsByPeer).map(([peerName, peerSessions]) => {
+              const peerNode = peerSessions[0]?.peer_node;
+              const machineId = peerSessions[0]?.peer_machine_id;
+              if (!peerNode) return null;
+              return (
+                <FormControlLabel
+                  key={peerNode}
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={taskSelectedPeers.has(peerNode)}
+                      onChange={(e) => {
+                        setTaskSelectedPeers((prev) => {
+                          const next = new Set(prev);
+                          if (e.target.checked) next.add(peerNode);
+                          else next.delete(peerNode);
+                          return next;
+                        });
+                      }}
+                    />
+                  }
+                  label={
+                    <Stack direction="row" spacing={0.5} alignItems="center">
+                      <ComputerIcon sx={{ fontSize: 14, color: "text.secondary" }} />
+                      <Typography variant="body2">{peerName}</Typography>
+                      {machineId && (
+                        <Chip label={machineId} size="small" variant="outlined" sx={{ height: 18, fontSize: 10 }} />
+                      )}
+                    </Stack>
+                  }
+                />
+              );
+            })}
+          </FormGroup>
+        </Box>
         <TextField
           autoFocus
           fullWidth
