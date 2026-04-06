@@ -127,6 +127,13 @@ function resolveProjectName(s: SessionLogMeta, nameMap: Map<string, string>): st
   return "Global";
 }
 
+/** Check if a local session was spawned as a remote task (label "Task from {name}"). */
+function parseTaskOrigin(s: SessionLogMeta): string | null {
+  if (!s.label) return null;
+  const match = s.label.match(/^Task from (.+)$/);
+  return match ? match[1] : null;
+}
+
 /** Derive a meaningful title. Prefer AI label, fall back to first prompt snippet, then generic. */
 function sessionTitle(s: SessionLogMeta, enrichment?: SessionEnrichment, projectNameMap?: Map<string, string>): string {
   // AI-generated label is best -- but skip if it matches the generic command name
@@ -171,6 +178,8 @@ function SessionCard({
 }) {
   const isRunning = s.exitCode === undefined;
   const isRemote = !!s.peer_display_name;
+  const taskOrigin = parseTaskOrigin(s);
+  const isTask = !!taskOrigin;
   const summary = enrichment?.analysisSummary || s.summary;
   const title = sessionTitle(s, enrichment, projectNameMap);
   const files = enrichment?.filesChanged ?? [];
@@ -185,7 +194,7 @@ function SessionCard({
         flexDirection: "column",
         height: "100%",
         borderLeft: 3,
-        borderLeftColor: isRemote ? "#9c27b0" : isRunning ? "success.main" : "divider",
+        borderLeftColor: isRemote ? "#9c27b0" : isTask ? "#9c27b0" : isRunning ? "success.main" : "divider",
       }}
     >
       <CardActionArea onClick={onView} sx={{ p: 0, flex: 1 }}>
@@ -196,6 +205,15 @@ function SessionCard({
               <Chip
                 icon={<ComputerIcon sx={{ fontSize: 12 }} />}
                 label={s.peer_machine_id}
+                size="small"
+                variant="outlined"
+                sx={{ height: 20, fontSize: 11, fontWeight: 600, borderColor: "#9c27b0", color: "#9c27b0" }}
+              />
+            )}
+            {isTask && (
+              <Chip
+                icon={<RocketLaunchIcon sx={{ fontSize: 12 }} />}
+                label="Task"
                 size="small"
                 variant="outlined"
                 sx={{ height: 20, fontSize: 11, fontWeight: 600, borderColor: "#9c27b0", color: "#9c27b0" }}
@@ -513,6 +531,12 @@ export default function ProjectSessions() {
     [sessions],
   );
 
+  // Separate local task sessions (spawned from remote requests) from regular local sessions
+  const localTaskSessions = useMemo(
+    () => localSessions.filter((s) => !!parseTaskOrigin(s)),
+    [localSessions],
+  );
+
   const remoteSessionsByPeer = useMemo(() => {
     const remote = sessions.filter((s) => !!s.peer_display_name);
     const grouped: Record<string, SessionLogMeta[]> = {};
@@ -520,16 +544,27 @@ export default function ProjectSessions() {
       const key = s.peer_display_name || s.peer_node || "Unknown";
       (grouped[key] ??= []).push(s);
     }
+    // Merge local task sessions into the peer group they originated from
+    for (const s of localTaskSessions) {
+      const origin = parseTaskOrigin(s);
+      if (!origin) continue;
+      // Match by peer display name (case-insensitive)
+      const existingKey = Object.keys(grouped).find(
+        (k) => k.toLowerCase() === origin.toLowerCase()
+      );
+      const key = existingKey || origin;
+      (grouped[key] ??= []).push(s);
+    }
     return grouped;
-  }, [sessions]);
+  }, [sessions, localTaskSessions]);
 
   const runningSessions = useMemo(
-    () => localSessions.filter((s) => s.exitCode === undefined),
+    () => localSessions.filter((s) => s.exitCode === undefined && !parseTaskOrigin(s)),
     [localSessions],
   );
 
   const endedSessions = useMemo(
-    () => localSessions.filter((s) => s.exitCode !== undefined),
+    () => localSessions.filter((s) => s.exitCode !== undefined && !parseTaskOrigin(s)),
     [localSessions],
   );
 
@@ -656,8 +691,10 @@ export default function ProjectSessions() {
                 </Box>
               )}
 
-              {/* Remote sessions grouped by person/machine */}
-              {Object.entries(remoteSessionsByPeer).map(([peerName, peerSessions]) => (
+              {/* Remote sessions (and local task sessions) grouped by person/machine */}
+              {Object.entries(remoteSessionsByPeer).map(([peerName, peerSessions]) => {
+                const remotePeerNode = peerSessions.find((s) => s.peer_node)?.peer_node;
+                return (
                 <Box key={`remote-${peerName}`} sx={{ mb: 3 }}>
                   <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
                     <ComputerIcon sx={{ fontSize: 16, color: "success.main" }} />
@@ -666,14 +703,14 @@ export default function ProjectSessions() {
                     </Typography>
                     <Chip label={`${peerSessions.length} session${peerSessions.length === 1 ? "" : "s"}`} size="small" variant="outlined" sx={{ height: 18, fontSize: 10, color: "text.disabled" }} />
                     <Box sx={{ flex: 1 }} />
+                    {remotePeerNode && (
                     <Tooltip title="Run a task on this machine">
                       <Button
                         size="small"
                         startIcon={<RocketLaunchIcon sx={{ fontSize: 14 }} />}
                         onClick={() => {
-                          const peerNode = peerSessions[0]?.peer_node;
-                          if (peerNode) {
-                            setTaskSelectedPeers(new Set([peerNode]));
+                          if (remotePeerNode) {
+                            setTaskSelectedPeers(new Set([remotePeerNode]));
                             setTaskInput("");
                             setTaskDialogOpen(true);
                           }
@@ -683,24 +720,35 @@ export default function ProjectSessions() {
                         Run task
                       </Button>
                     </Tooltip>
+                    )}
                   </Stack>
                   <CardGrid minWidth={300}>
-                    {peerSessions.map((s) => (
+                    {peerSessions.map((s) => {
+                      const isLocalTask = !s.peer_display_name;
+                      return (
                       <SessionCard
                         key={s.id}
                         s={s}
                         enrichment={enrichments[s.id]}
-                        onView={() => navigate(`/sessions/${s.id}?peer=${encodeURIComponent(s.peer_node || "")}`)}
-                        onResume={() => {}}
-                        onDelete={() => {}}
-                        onOpenDetail={() => navigate(`/sessions/${s.id}?peer=${encodeURIComponent(s.peer_node || "")}`)}
+                        onView={isLocalTask
+                          ? () => setViewing(s)
+                          : () => navigate(`/sessions/${s.id}?peer=${encodeURIComponent(s.peer_node || "")}`)
+                        }
+                        onResume={isLocalTask ? handleResume : () => {}}
+                        onDelete={isLocalTask ? handleDelete : () => {}}
+                        onOpenDetail={isLocalTask
+                          ? () => navigate(`/sessions/${s.id}`)
+                          : () => navigate(`/sessions/${s.id}?peer=${encodeURIComponent(s.peer_node || "")}`)
+                        }
                         showProject={showProject}
                         projectNameMap={projectNameMap}
                       />
-                    ))}
+                      );
+                    })}
                   </CardGrid>
                 </Box>
-              ))}
+                );
+              })}
 
               {grouped.map((group) => (
                 <Box key={group.label} sx={{ mb: 3 }}>
