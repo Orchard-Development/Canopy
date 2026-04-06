@@ -1,3 +1,5 @@
+import type { TimelineItem } from "../types/timeline";
+
 // When served through the CF Pages proxy (/connect/<machineId>/...) all API
 // calls must go through the proxy too, otherwise they hit the Site origin.
 const _proxyMatch = window.location.pathname.match(/^\/connect\/([^/]+)\//);
@@ -1048,6 +1050,12 @@ export const api = {
     get<Array<{ role: string; text: string; ts?: string }>>(`/api/mesh/collab/relay/${encodeURIComponent(peerNode)}/${sessionId}/messages`),
   getRemoteSessionLog: (peerNode: string, sessionId: string) =>
     get<{ entries: SessionLogEntry[] }>(`/api/mesh/collab/relay/${encodeURIComponent(peerNode)}/${sessionId}`),
+
+  getTimeline: (sessionId: string): Promise<{ items: TimelineItem[]; hasMore: boolean }> =>
+    get(`/api/session-logs/${sessionId}/timeline`),
+
+  getRemoteTimeline: (peerNode: string, sessionId: string): Promise<{ items: TimelineItem[]; hasMore: boolean }> =>
+    get(`/api/mesh/collab/relay/${encodeURIComponent(peerNode)}/${sessionId}/timeline`),
 
   searchSessionLogs: (q: string) =>
     get<{ matches: Array<{ id: string; snippet: string }> }>(`/api/session-logs/search?q=${encodeURIComponent(q)}`),
