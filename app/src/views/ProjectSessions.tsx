@@ -367,11 +367,18 @@ export default function ProjectSessions() {
 
   useEffect(() => { load(); }, [load, generation]);
 
-  // Auto-refresh to pick up external session changes
+  // Auto-refresh to pick up external session changes (only update if data changed)
   useEffect(() => {
     const interval = setInterval(() => {
       api.listSessionLogs().then((sessions) => {
-        setAll(sessions);
+        setAll((prev) => {
+          if (prev.length !== sessions.length) return sessions;
+          // Quick check: compare IDs and exit codes to detect real changes
+          const changed = sessions.some((s, i) =>
+            prev[i]?.id !== s.id || prev[i]?.exitCode !== s.exitCode
+          );
+          return changed ? sessions : prev;
+        });
       }).catch(() => {});
     }, 5_000);
     return () => clearInterval(interval);
@@ -385,14 +392,20 @@ export default function ProjectSessions() {
     }
     const fetchRemote = () => {
       api.collabSessions().then((res) => {
-        setRemoteSessions(res.sessions.map((s: SessionLogMeta) => ({
+        const mapped = res.sessions.map((s: SessionLogMeta) => ({
           ...s,
-          id: s.id || s.agentSessionId || `remote-${Math.random().toString(36).slice(2)}`,
-          // Coerce null exitCode to undefined so "running" detection works
+          id: s.id || s.agentSessionId || `remote-${s.peer_node}-${s.command}`,
           exitCode: s.exitCode === null ? undefined : s.exitCode,
           lineCount: s.lineCount || 0,
           sizeBytes: s.sizeBytes || 0,
-        })));
+        }));
+        setRemoteSessions((prev) => {
+          if (prev.length !== mapped.length) return mapped;
+          const changed = mapped.some((s, i) =>
+            prev[i]?.id !== s.id || prev[i]?.exitCode !== s.exitCode
+          );
+          return changed ? mapped : prev;
+        });
       }).catch(() => setRemoteSessions([]));
     };
     fetchRemote();
