@@ -1,14 +1,13 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Box, Stack, Typography, Chip, Divider,
+  Stack, Typography, Chip,
   CircularProgress, Button, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, Tabs, Tab,
 } from "@mui/material";
 import GrassIcon from "@mui/icons-material/Grass";
-import CloudIcon from "@mui/icons-material/Cloud";
 import StoreIcon from "@mui/icons-material/Store";
-import LockIcon from "@mui/icons-material/Lock";
+import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import AddIcon from "@mui/icons-material/Add";
 import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
 import GitHubIcon from "@mui/icons-material/GitHub";
@@ -24,9 +23,8 @@ interface SeedPack extends PackCardData {
   tags?: string[];
   requires?: string[];
   auto_apply?: boolean;
+  pack_type?: "orchard" | "community";
 }
-
-const CATEGORY_TABS = ["All", "Discipline", "Workflow", "Tools", "Scaffold", "Platform", "Agents"];
 
 export default function SeedPacks() {
   const navigate = useNavigate();
@@ -41,8 +39,7 @@ export default function SeedPacks() {
   const [genPrompt, setGenPrompt] = useState("");
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
-  const [mainTab, setMainTab] = useState<"my-packs" | "store">("my-packs");
-  const [categoryTab, setCategoryTab] = useState("All");
+  const [mainTab, setMainTab] = useState<"my-packs" | "orchard" | "store">("my-packs");
   const [search, setSearch] = useState("");
 
   function load() {
@@ -86,27 +83,19 @@ export default function SeedPacks() {
     } catch { /* ignore */ }
   }
 
-  const corePacks = useMemo(() => packs.filter((p) => p.source === "public" && p.auto_apply), [packs]);
-  const optionalPacks = useMemo(() => packs.filter((p) => p.source === "public" && !p.auto_apply), [packs]);
-  const publicPacks = useMemo(() => packs.filter((p) => p.source === "public"), [packs]);
+  const orchardPacks = useMemo(() => packs.filter((p) => p.source === "public" && p.pack_type === "orchard"), [packs]);
+  const storePacks = useMemo(() => packs.filter((p) => p.source === "public" && p.pack_type !== "orchard"), [packs]);
   const userPacks = useMemo(() => packs.filter((p) => p.source !== "public"), [packs]);
 
-  const filteredPublic = useMemo(() => {
-    let result = publicPacks;
-    if (categoryTab !== "All") {
-      const cat = categoryTab.toLowerCase();
-      result = result.filter((p) => (p.category || "").toLowerCase() === cat);
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter((p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.description.toLowerCase().includes(q) ||
-        (p.tags || []).some((t) => t.toLowerCase().includes(q))
-      );
-    }
-    return result;
-  }, [publicPacks, categoryTab, search]);
+  const filteredOrchard = useMemo(() => {
+    if (!search.trim()) return orchardPacks;
+    const q = search.toLowerCase();
+    return orchardPacks.filter((p) =>
+      p.name.toLowerCase().includes(q) ||
+      p.description.toLowerCase().includes(q) ||
+      (p.tags || []).some((t) => t.toLowerCase().includes(q))
+    );
+  }, [orchardPacks, search]);
 
   const filteredUser = useMemo(() => {
     if (!search.trim()) return userPacks;
@@ -143,6 +132,7 @@ export default function SeedPacks() {
         sx={{ mb: 3, borderBottom: 1, borderColor: "divider" }}
       >
         <Tab label="My Packs" value="my-packs" icon={<GrassIcon fontSize="small" />} iconPosition="start" />
+        <Tab label="Orchard" value="orchard" icon={<AccountTreeIcon fontSize="small" />} iconPosition="start" />
         <Tab label="Store" value="store" icon={<StoreIcon fontSize="small" />} iconPosition="start" />
       </Tabs>
 
@@ -150,117 +140,72 @@ export default function SeedPacks() {
 
       {mainTab === "my-packs" && (
         <>
-      <TextField
-        size="small"
-        placeholder="Search by name, description, or tags..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        fullWidth
-        sx={{ mb: 3 }}
-      />
+          <TextField
+            size="small"
+            placeholder="Search by name, description, or tags..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            fullWidth
+            sx={{ mb: 3 }}
+          />
 
-      {loading && <CircularProgress size={24} />}
+          {loading && <CircularProgress size={24} />}
 
-      {!loading && (
-        <Stack spacing={4}>
-          {/* Core packs (auto_apply) */}
-          <Box>
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
-              <LockIcon fontSize="small" color="success" />
-              <Typography variant="subtitle1" fontWeight={700}>Core Packs</Typography>
-              <Chip label={corePacks.length} size="small" color="success" variant="outlined" />
-            </Stack>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-              Always applied to new projects. These provide the foundational rules, skills, and workflows.
-            </Typography>
+          {!loading && (
+            <>
+              {filteredUser.length === 0 && (
+                <Typography variant="body2" color="text.secondary">
+                  {userPacks.length === 0
+                    ? "No custom packs yet. Use New Pack, Generate with AI, or harvest from a project."
+                    : "No packs match this search."}
+                </Typography>
+              )}
 
-            <Stack spacing={1}>
-              {corePacks.map((pack) => (
-                <PackCard
-                  key={pack.id}
-                  pack={pack}
-                  onClick={() => navigate(`/seed-packs/${pack.id}`)}
-                />
-              ))}
-            </Stack>
-          </Box>
-
-          <Divider />
-
-          {/* Optional public packs */}
-          <Box>
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
-              <CloudIcon fontSize="small" color="primary" />
-              <Typography variant="subtitle1" fontWeight={700}>Optional Packs</Typography>
-              <Chip label={optionalPacks.length} size="small" variant="outlined" />
-            </Stack>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-              Public packs you can install per-project. Not applied automatically.
-            </Typography>
-
-            <Tabs
-              value={categoryTab}
-              onChange={(_e, val) => setCategoryTab(val)}
-              variant="scrollable"
-              scrollButtons="auto"
-              sx={{ mb: 2, minHeight: 36, "& .MuiTab-root": { minHeight: 36 } }}
-            >
-              {CATEGORY_TABS.map((tab) => (
-                <Tab key={tab} label={tab} value={tab} sx={{ textTransform: "none", py: 0.5 }} />
-              ))}
-            </Tabs>
-
-            {filteredPublic.length === 0 && (
-              <Typography variant="body2" color="text.secondary">
-                {optionalPacks.length === 0 ? "No optional packs available." : "No packs match this filter."}
-              </Typography>
-            )}
-
-            <Stack spacing={1}>
-              {filteredPublic.filter((p) => !p.auto_apply).map((pack) => (
-                <PackCard
-                  key={pack.id}
-                  pack={pack}
-                  onClick={() => navigate(`/seed-packs/${pack.id}`)}
-                />
-              ))}
-            </Stack>
-          </Box>
-
-          <Divider />
-
-          {/* User packs */}
-          <Box>
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
-              <GrassIcon fontSize="small" color="action" />
-              <Typography variant="subtitle1" fontWeight={700}>Your Packs</Typography>
-              <Chip label={userPacks.length} size="small" variant="outlined" />
-            </Stack>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-              Harvested from your projects or created manually. Plant on any orchard.
-            </Typography>
-
-            {filteredUser.length === 0 && (
-              <Typography variant="body2" color="text.secondary">
-                {userPacks.length === 0
-                  ? "No custom packs yet. Use New Pack, Generate with AI, or harvest from a project."
-                  : "No packs match this search."}
-              </Typography>
-            )}
-
-            <Stack spacing={1}>
-              {filteredUser.map((pack) => (
-                <PackCard
-                  key={pack.id}
-                  pack={pack}
-                  onClick={() => navigate(`/seed-packs/${pack.id}`)}
-                  onDelete={handleDelete}
-                />
-              ))}
-            </Stack>
-          </Box>
-        </Stack>
+              <Stack spacing={1}>
+                {filteredUser.map((pack) => (
+                  <PackCard
+                    key={pack.id}
+                    pack={pack}
+                    onClick={() => navigate(`/seed-packs/${pack.id}`)}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </Stack>
+            </>
+          )}
+        </>
       )}
+
+      {mainTab === "orchard" && (
+        <>
+          <TextField
+            size="small"
+            placeholder="Search orchard packs..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            fullWidth
+            sx={{ mb: 2 }}
+          />
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Platform packs that provide Orchard's rules, skills, workflows, and agent coordination.
+          </Typography>
+
+          {loading && <CircularProgress size={24} />}
+
+          {!loading && (
+            <Stack spacing={1}>
+              {filteredOrchard.map((pack) => (
+                <PackCard
+                  key={pack.id}
+                  pack={pack}
+                  onClick={() => navigate(`/seed-packs/${pack.id}`)}
+                />
+              ))}
+              {filteredOrchard.length === 0 && (
+                <Typography variant="body2" color="text.secondary">No orchard packs match this search.</Typography>
+              )}
+            </Stack>
+          )}
         </>
       )}
 
