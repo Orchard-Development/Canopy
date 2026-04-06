@@ -27,7 +27,8 @@ export function PackStoreTab() {
   }, []);
 
   const filtered = useMemo(() => {
-    let result = packs;
+    // Hide orchard packs (they belong in the Orchard tab) and already-installed packs
+    let result = packs.filter((p) => p.pack_type !== "orchard" && !p.entitled);
     if (categoryTab !== "All") {
       const cat = categoryTab.toLowerCase();
       result = result.filter((p) => p.category?.toLowerCase() === cat);

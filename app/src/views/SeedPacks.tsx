@@ -11,11 +11,14 @@ import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import AddIcon from "@mui/icons-material/Add";
 import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
 import GitHubIcon from "@mui/icons-material/GitHub";
+import DownloadDoneIcon from "@mui/icons-material/DownloadDone";
 import { PageLayout } from "../components/PageLayout";
 import { api } from "../lib/api";
 import { GitHubHarvestDialog } from "../components/settings/GitHubHarvestDialog";
 import { PackCard, type PackCardData } from "../components/seedpacks/PackCard";
 import { PackStoreTab } from "../components/seedpacks/PackStoreTab";
+import { useEntitlements } from "../hooks/useEntitlements";
+import { StorePackCard } from "../components/seedpacks/StorePackCard";
 
 interface SeedPack extends PackCardData {
   created_at: string;
@@ -39,8 +42,10 @@ export default function SeedPacks() {
   const [genPrompt, setGenPrompt] = useState("");
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
-  const [mainTab, setMainTab] = useState<"my-packs" | "orchard" | "store">("my-packs");
+  const [mainTab, setMainTab] = useState<"my-packs" | "installed" | "orchard" | "store">("my-packs");
   const [search, setSearch] = useState("");
+  const { entitlements, remove: removeEntitlement, loading: entsLoading } = useEntitlements();
+  const [installedPacks, setInstalledPacks] = useState<import("../lib/api").DiscoverPack[]>([]);
 
   function load() {
     setLoading(true);
@@ -48,6 +53,14 @@ export default function SeedPacks() {
   }
 
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    if (mainTab === "installed") {
+      api.discoverPacks().then((all) => {
+        setInstalledPacks(all.filter((p) => p.entitled));
+      }).catch(() => {});
+    }
+  }, [mainTab, entitlements]);
 
   async function handleCreate() {
     setCreating(true);
@@ -84,7 +97,6 @@ export default function SeedPacks() {
   }
 
   const orchardPacks = useMemo(() => packs.filter((p) => p.source === "public" && p.pack_type === "orchard"), [packs]);
-  const storePacks = useMemo(() => packs.filter((p) => p.source === "public" && p.pack_type !== "orchard"), [packs]);
   const userPacks = useMemo(() => packs.filter((p) => p.source !== "public"), [packs]);
 
   const filteredOrchard = useMemo(() => {
@@ -132,6 +144,7 @@ export default function SeedPacks() {
         sx={{ mb: 3, borderBottom: 1, borderColor: "divider" }}
       >
         <Tab label="My Packs" value="my-packs" icon={<GrassIcon fontSize="small" />} iconPosition="start" />
+        <Tab label="Installed" value="installed" icon={<DownloadDoneIcon fontSize="small" />} iconPosition="start" />
         <Tab label="Orchard" value="orchard" icon={<AccountTreeIcon fontSize="small" />} iconPosition="start" />
         <Tab label="Store" value="store" icon={<StoreIcon fontSize="small" />} iconPosition="start" />
       </Tabs>
@@ -172,6 +185,40 @@ export default function SeedPacks() {
                 ))}
               </Stack>
             </>
+          )}
+        </>
+      )}
+
+      {mainTab === "installed" && (
+        <>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Packs you've installed from the store. These sync across all your machines.
+          </Typography>
+
+          {entsLoading && <CircularProgress size={24} />}
+
+          {!entsLoading && installedPacks.length === 0 && (
+            <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: "center" }}>
+              No installed packs yet. Browse the Store to find packs.
+            </Typography>
+          )}
+
+          {!entsLoading && (
+            <Stack spacing={1}>
+              {installedPacks.map((pack) => (
+                <StorePackCard
+                  key={pack.id}
+                  pack={pack}
+                  entitled={true}
+                  onInstall={() => {}}
+                  onRemove={async () => {
+                    await removeEntitlement(pack.id);
+                    setInstalledPacks((prev) => prev.filter((p) => p.id !== pack.id));
+                  }}
+                  onClick={() => navigate(`/seed-packs/${pack.id}`)}
+                />
+              ))}
+            </Stack>
           )}
         </>
       )}
