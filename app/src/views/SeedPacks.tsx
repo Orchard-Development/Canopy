@@ -121,34 +121,32 @@ export default function SeedPacks() {
   }, [userPacks, search]);
 
   return (
-    <PageLayout
-      title="Seed Packs"
-      icon={<GrassIcon color="primary" />}
-      badge={<Chip label={`${packs.length}`} size="small" variant="outlined" />}
-      actions={mainTab === "my-packs" ? (
-        <Stack direction="row" spacing={0.5}>
-          <Tooltip title="From GitHub">
-            <IconButton size="small" onClick={() => setGithubOpen(true)}><GitHubIcon fontSize="small" /></IconButton>
-          </Tooltip>
-          <Tooltip title="Generate with AI">
-            <IconButton size="small" color="secondary" onClick={() => setGenerateOpen(true)}><AutoFixHighIcon fontSize="small" /></IconButton>
-          </Tooltip>
-          <Tooltip title="New Pack">
-            <IconButton size="small" color="primary" onClick={() => setCreateOpen(true)}><AddIcon fontSize="small" /></IconButton>
-          </Tooltip>
-        </Stack>
-      ) : undefined}
-    >
-      <Tabs
-        value={mainTab}
-        onChange={(_, v) => setMainTab(v)}
-        sx={{ mb: 1.5, borderBottom: 1, borderColor: "divider" }}
-      >
-        <Tab label="My Packs" value="my-packs" icon={<GrassIcon fontSize="small" />} iconPosition="start" />
-        <Tab label="Installed" value="installed" icon={<DownloadDoneIcon fontSize="small" />} iconPosition="start" />
-        <Tab label="Orchard" value="orchard" icon={<AccountTreeIcon fontSize="small" />} iconPosition="start" />
-        <Tab label="Store" value="store" icon={<StoreIcon fontSize="small" />} iconPosition="start" />
-      </Tabs>
+    <PageLayout>
+      <Stack direction="row" alignItems="center" sx={{ borderBottom: 1, borderColor: "divider", mb: 1.5 }}>
+        <Tabs
+          value={mainTab}
+          onChange={(_, v) => setMainTab(v)}
+          sx={{ flex: 1 }}
+        >
+          <Tab label="My Packs" value="my-packs" icon={<GrassIcon fontSize="small" />} iconPosition="start" />
+          <Tab label="Installed" value="installed" icon={<DownloadDoneIcon fontSize="small" />} iconPosition="start" />
+          <Tab label="Orchard" value="orchard" icon={<AccountTreeIcon fontSize="small" />} iconPosition="start" />
+          <Tab label="Store" value="store" icon={<StoreIcon fontSize="small" />} iconPosition="start" />
+        </Tabs>
+        {mainTab === "my-packs" && (
+          <Stack direction="row" spacing={0.5}>
+            <Tooltip title="From GitHub">
+              <IconButton size="small" onClick={() => setGithubOpen(true)}><GitHubIcon fontSize="small" /></IconButton>
+            </Tooltip>
+            <Tooltip title="Generate with AI">
+              <IconButton size="small" color="secondary" onClick={() => setGenerateOpen(true)}><AutoFixHighIcon fontSize="small" /></IconButton>
+            </Tooltip>
+            <Tooltip title="New Pack">
+              <IconButton size="small" color="primary" onClick={() => setCreateOpen(true)}><AddIcon fontSize="small" /></IconButton>
+            </Tooltip>
+          </Stack>
+        )}
+      </Stack>
 
       {mainTab === "store" && <PackStoreTab />}
 
