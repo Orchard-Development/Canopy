@@ -12,6 +12,7 @@ export const supabase: SupabaseClient = supabaseConfigured
       auth: {
         flowType: "pkce",
         detectSessionInUrl: true,
+        autoRefreshToken: false,
       },
     })
   : (null as unknown as SupabaseClient);

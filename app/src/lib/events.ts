@@ -139,6 +139,7 @@ export const EVENTS = {
   },
   auth: {
     signout: "auth:signout",
+    tokenRefreshed: "auth:token_refreshed",
   },
   toast: {
     show: "toast:show",

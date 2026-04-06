@@ -9,6 +9,7 @@ import { DashboardChannelProvider } from "@/contexts/DashboardChannelContext";
 import { MonitorChannelProvider } from "@/contexts/MonitorChannelContext";
 import { useDashboardChannel } from "@/hooks/useDashboardChannel";
 import { EVENTS } from "./lib/events";
+import { supabase } from "./lib/supabase";
 import { ProjectProvider } from "./hooks/useProject";
 import { ActiveProjectProvider } from "./hooks/useActiveProject";
 import { AppHeader } from "./components/AppHeader";
@@ -512,6 +513,25 @@ function AuthSignoutBridge() {
   return null;
 }
 
+/** Receives refreshed tokens from Engine's TokenRefresher and updates the SDK session.
+ *  The SDK's autoRefreshToken is disabled to prevent racing with the Engine
+ *  (Supabase refresh tokens are single-use, so dual refreshers cause spurious sign-outs). */
+function AuthTokenBridge() {
+  const { channel } = useDashboardChannel();
+  const tokenEvent = useChannelEvent<{ access_token: string; refresh_token: string }>(
+    channel,
+    EVENTS.auth.tokenRefreshed,
+  );
+  useEffect(() => {
+    if (!tokenEvent?.access_token || !tokenEvent?.refresh_token) return;
+    supabase.auth.setSession({
+      access_token: tokenEvent.access_token,
+      refresh_token: tokenEvent.refresh_token,
+    });
+  }, [tokenEvent]);
+  return null;
+}
+
 function CloudSyncBridge() {
   const { user } = useAuth();
   const { pushToCloud, pullFromCloud } = useCloudSync();
@@ -645,6 +665,7 @@ export function App() {
             <AuthProvider>
             <CloudSyncBridge />
             <AuthSignoutBridge />
+            <AuthTokenBridge />
             <LoginGate>
             <ActiveProjectProvider>
               <ProjectThemeBridge />
