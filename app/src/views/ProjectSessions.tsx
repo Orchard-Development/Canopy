@@ -3,6 +3,7 @@ import {
   Box, Typography, Chip, Skeleton, IconButton, Tooltip,
   Stack, Button, CircularProgress, alpha, TextField, InputAdornment,
   Card, CardContent, CardActionArea, TablePagination, ToggleButtonGroup, ToggleButton,
+  Dialog, DialogTitle, DialogContent, DialogActions,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
@@ -347,6 +348,8 @@ export default function ProjectSessions() {
   const [remoteSessions, setRemoteSessions] = useState<SessionLogMeta[]>([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(50);
+  const [taskDialogPeer, setTaskDialogPeer] = useState<string | null>(null);
+  const [taskInput, setTaskInput] = useState("");
   const { generation } = useRefetchOnDashboardEvent(EVENTS.session.exited);
 
   const load = useCallback(() => {
@@ -655,13 +658,8 @@ export default function ProjectSessions() {
                         onClick={() => {
                           const peerNode = peerSessions[0]?.peer_node;
                           if (peerNode) {
-                            const task = prompt("What task should this machine run?");
-                            if (task) {
-                              api.collabSend(peerNode, "task.request", {
-                                command: "claude",
-                                args: ["--print", task],
-                              }).catch(console.error);
-                            }
+                            setTaskDialogPeer(peerNode);
+                            setTaskInput("");
                           }
                         }}
                         sx={{ fontSize: 11, textTransform: "none" }}
@@ -733,6 +731,45 @@ export default function ProjectSessions() {
         onResume={handleResume}
       />
     )}
+    <Dialog
+      open={!!taskDialogPeer}
+      onClose={() => setTaskDialogPeer(null)}
+      maxWidth="sm"
+      fullWidth
+    >
+      <DialogTitle>Run Task on Remote Machine</DialogTitle>
+      <DialogContent>
+        <TextField
+          autoFocus
+          fullWidth
+          multiline
+          minRows={2}
+          maxRows={6}
+          placeholder="What should this machine do? e.g. 'Pull latest and run the test suite, report any failures'"
+          value={taskInput}
+          onChange={(e) => setTaskInput(e.target.value)}
+          sx={{ mt: 1 }}
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setTaskDialogPeer(null)}>Cancel</Button>
+        <Button
+          variant="contained"
+          disabled={!taskInput.trim()}
+          onClick={() => {
+            if (taskDialogPeer && taskInput.trim()) {
+              api.collabSend(taskDialogPeer, "task.request", {
+                command: "claude",
+                args: ["-p", taskInput.trim()],
+              }).catch(console.error);
+              setTaskDialogPeer(null);
+            }
+          }}
+        >
+          Send Task
+        </Button>
+      </DialogActions>
+    </Dialog>
     </>
   );
 }
