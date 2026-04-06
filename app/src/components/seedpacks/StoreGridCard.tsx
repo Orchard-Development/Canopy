@@ -1,5 +1,6 @@
 import {
   Card, CardActionArea, Stack, Typography, Chip, Box, Button, Tooltip,
+  CircularProgress,
 } from "@mui/material";
 import DownloadIcon from "@mui/icons-material/Download";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
@@ -23,12 +24,13 @@ function getCategoryColor(category?: string): string {
 interface StoreGridCardProps {
   pack: DiscoverPack;
   entitled: boolean;
+  busy?: boolean;
   onInstall: () => void;
   onRemove: () => void;
   onClick: () => void;
 }
 
-export function StoreGridCard({ pack, entitled, onInstall, onRemove, onClick }: StoreGridCardProps) {
+export function StoreGridCard({ pack, entitled, busy, onInstall, onRemove, onClick }: StoreGridCardProps) {
   const isFree = !pack.price_cents || pack.price_cents === 0;
 
   return (
@@ -77,13 +79,13 @@ export function StoreGridCard({ pack, entitled, onInstall, onRemove, onClick }: 
             <Tooltip title="Installed">
               <CheckCircleOutlineIcon fontSize="small" color="success" />
             </Tooltip>
-            <Button size="small" color="error" variant="text" startIcon={<DeleteOutlineIcon />} onClick={onRemove}>
-              Remove
+            <Button size="small" color="error" variant="text" startIcon={busy ? <CircularProgress size={14} /> : <DeleteOutlineIcon />} onClick={onRemove} disabled={busy}>
+              {busy ? "Removing..." : "Remove"}
             </Button>
           </Stack>
         ) : (
-          <Button size="small" variant="contained" startIcon={<DownloadIcon />} onClick={onInstall}>
-            {isFree ? "Install" : `$${(pack.price_cents / 100).toFixed(2)}`}
+          <Button size="small" variant="contained" startIcon={busy ? <CircularProgress size={14} color="inherit" /> : <DownloadIcon />} onClick={onInstall} disabled={busy}>
+            {busy ? "Installing..." : isFree ? "Install" : `$${(pack.price_cents / 100).toFixed(2)}`}
           </Button>
         )}
       </Box>

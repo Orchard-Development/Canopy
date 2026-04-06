@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box, Stack, Typography, CircularProgress, Chip,
@@ -17,6 +17,7 @@ export function PackStoreTab() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
+  const [busyPacks, setBusyPacks] = useState<Set<string>>(new Set());
   const { install, remove } = useEntitlements();
 
   useEffect(() => {
@@ -27,7 +28,7 @@ export function PackStoreTab() {
   }, []);
 
   const filtered = useMemo(() => {
-    let result = packs.filter((p) => p.pack_type !== "orchard" && !p.entitled);
+    let result = packs.filter((p) => p.pack_type !== "orchard");
     if (category !== "All") {
       const cat = category.toLowerCase();
       result = result.filter((p) => p.category?.toLowerCase() === cat);
@@ -44,19 +45,29 @@ export function PackStoreTab() {
     return result;
   }, [packs, category, search]);
 
-  const handleInstall = async (packId: string) => {
-    await install(packId);
-    setPacks((prev) => prev.map((p) =>
-      p.id === packId ? { ...p, entitled: true, entitlement_source: "free" } : p,
-    ));
-  };
+  const handleInstall = useCallback(async (packId: string) => {
+    setBusyPacks((prev) => new Set(prev).add(packId));
+    try {
+      await install(packId);
+      setPacks((prev) => prev.map((p) =>
+        p.id === packId ? { ...p, entitled: true, entitlement_source: "store" } : p,
+      ));
+    } finally {
+      setBusyPacks((prev) => { const next = new Set(prev); next.delete(packId); return next; });
+    }
+  }, [install]);
 
-  const handleRemove = async (packId: string) => {
-    await remove(packId);
-    setPacks((prev) => prev.map((p) =>
-      p.id === packId ? { ...p, entitled: false, entitlement_source: null } : p,
-    ));
-  };
+  const handleRemove = useCallback(async (packId: string) => {
+    setBusyPacks((prev) => new Set(prev).add(packId));
+    try {
+      await remove(packId);
+      setPacks((prev) => prev.map((p) =>
+        p.id === packId ? { ...p, entitled: false, entitlement_source: null } : p,
+      ));
+    } finally {
+      setBusyPacks((prev) => { const next = new Set(prev); next.delete(packId); return next; });
+    }
+  }, [remove]);
 
   if (loading) {
     return (
@@ -107,6 +118,7 @@ export function PackStoreTab() {
               key={pack.id}
               pack={pack}
               entitled={pack.entitled}
+              busy={busyPacks.has(pack.id)}
               onInstall={() => handleInstall(pack.id)}
               onRemove={() => handleRemove(pack.id)}
               onClick={() => navigate(`/seed-packs/${pack.id}`)}

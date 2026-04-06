@@ -43,7 +43,7 @@ export default function SeedPacks() {
   const [genPrompt, setGenPrompt] = useState("");
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
-  const [mainTab, setMainTab] = useState<"my-packs" | "installed" | "orchard" | "store">("my-packs");
+  const [mainTab, setMainTab] = useState<"installed" | "orchard" | "store" | "custom">("installed");
   const [search, setSearch] = useState("");
   const { entitlements, remove: removeEntitlement, loading: entsLoading } = useEntitlements();
   const [installedPacks, setInstalledPacks] = useState<import("../lib/api").DiscoverPack[]>([]);
@@ -128,12 +128,12 @@ export default function SeedPacks() {
           onChange={(_, v) => setMainTab(v)}
           sx={{ flex: 1 }}
         >
-          <Tab label="My Packs" value="my-packs" icon={<GrassIcon fontSize="small" />} iconPosition="start" />
           <Tab label="Installed" value="installed" icon={<DownloadDoneIcon fontSize="small" />} iconPosition="start" />
           <Tab label="Orchard" value="orchard" icon={<AccountTreeIcon fontSize="small" />} iconPosition="start" />
           <Tab label="Store" value="store" icon={<StoreIcon fontSize="small" />} iconPosition="start" />
+          <Tab label="Custom Packs" value="custom" icon={<GrassIcon fontSize="small" />} iconPosition="start" />
         </Tabs>
-        {mainTab === "my-packs" && (
+        {mainTab === "custom" && (
           <Stack direction="row" spacing={0.5}>
             <Tooltip title="From GitHub">
               <IconButton size="small" onClick={() => setGithubOpen(true)}><GitHubIcon fontSize="small" /></IconButton>
@@ -150,7 +150,7 @@ export default function SeedPacks() {
 
       {mainTab === "store" && <PackStoreTab />}
 
-      {mainTab === "my-packs" && (
+      {mainTab === "custom" && (
         <>
           <TextField
             size="small"

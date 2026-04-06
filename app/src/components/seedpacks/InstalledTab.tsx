@@ -3,6 +3,7 @@ import {
   List, ListItemButton, ListItemText, Divider,
 } from "@mui/material";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import LockIcon from "@mui/icons-material/Lock";
 import type { DiscoverPack } from "../../lib/api";
 
 interface InstalledTabProps {
@@ -45,15 +46,21 @@ export function InstalledTab({ packs, loading, onRemove, onPackClick }: Installe
                 />
                 <Stack direction="row" spacing={0.5} alignItems="center" sx={{ ml: 1, flexShrink: 0 }}>
                   <Chip label={`v${pack.version}`} size="small" variant="outlined" />
-                  <Tooltip title="Remove">
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={(e) => { e.stopPropagation(); onRemove(pack.id); }}
-                    >
-                      <DeleteOutlineIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
+                  {pack.pack_type === "orchard" || pack.auto_apply ? (
+                    <Tooltip title="Required -- always applied to all projects">
+                      <Chip icon={<LockIcon />} label="Required" size="small" color="success" />
+                    </Tooltip>
+                  ) : (
+                    <Tooltip title="Remove">
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={(e) => { e.stopPropagation(); onRemove(pack.id); }}
+                      >
+                        <DeleteOutlineIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  )}
                 </Stack>
               </ListItemButton>
             </div>
