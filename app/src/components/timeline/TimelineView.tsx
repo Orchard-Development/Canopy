@@ -3,9 +3,9 @@ import { Box, CircularProgress, Typography, Paper, Stack } from "@mui/material";
 import SmartToyIcon from "@mui/icons-material/SmartToy";
 import PersonIcon from "@mui/icons-material/Person";
 import type { TimelineItem } from "../../types/timeline";
-import type { ChatMessage } from "../../types/chat";
 import { MarkdownContent } from "../MarkdownContent";
 import { ToolCallsSummary } from "../chat/ToolCallCard";
+import type { ToolCall } from "../../types/tools";
 import { InjectedMessageBubble } from "./items/InjectedMessageBubble";
 import { CollabEvent } from "./items/CollabEvent";
 import { RemoteTaskEvent } from "./items/RemoteTaskEvent";
@@ -48,7 +48,7 @@ function MessageBubble({ item }: { item: TimelineItem }) {
       </Box>
       {data.toolCalls && data.toolCalls.length > 0 && (
         <Box sx={{ mt: 1 }}>
-          <ToolCallsSummary calls={data.toolCalls as ChatMessage["toolCalls"]} />
+          <ToolCallsSummary calls={data.toolCalls as ToolCall[]} />
         </Box>
       )}
     </Paper>
