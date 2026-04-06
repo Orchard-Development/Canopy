@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Stack, Typography, Chip,
   CircularProgress, Button, Dialog, DialogTitle, DialogContent,
-  DialogActions, TextField, Tabs, Tab,
+  DialogActions, TextField, Tabs, Tab, Tooltip, IconButton,
 } from "@mui/material";
 import GrassIcon from "@mui/icons-material/Grass";
 import StoreIcon from "@mui/icons-material/Store";
@@ -17,8 +17,9 @@ import { api } from "../lib/api";
 import { GitHubHarvestDialog } from "../components/settings/GitHubHarvestDialog";
 import { PackCard, type PackCardData } from "../components/seedpacks/PackCard";
 import { PackStoreTab } from "../components/seedpacks/PackStoreTab";
+import { OrchardSettingsTab } from "../components/seedpacks/OrchardSettingsTab";
+import { InstalledTab } from "../components/seedpacks/InstalledTab";
 import { useEntitlements } from "../hooks/useEntitlements";
-import { StorePackCard } from "../components/seedpacks/StorePackCard";
 
 interface SeedPack extends PackCardData {
   created_at: string;
@@ -125,23 +126,23 @@ export default function SeedPacks() {
       icon={<GrassIcon color="primary" />}
       badge={<Chip label={`${packs.length}`} size="small" variant="outlined" />}
       actions={mainTab === "my-packs" ? (
-        <Stack direction="row" spacing={1}>
-          <Button size="small" variant="outlined" startIcon={<GitHubIcon />} onClick={() => setGithubOpen(true)}>
-            From GitHub
-          </Button>
-          <Button size="small" variant="contained" color="secondary" startIcon={<AutoFixHighIcon />} onClick={() => setGenerateOpen(true)}>
-            Generate with AI
-          </Button>
-          <Button size="small" variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)}>
-            New Pack
-          </Button>
+        <Stack direction="row" spacing={0.5}>
+          <Tooltip title="From GitHub">
+            <IconButton size="small" onClick={() => setGithubOpen(true)}><GitHubIcon fontSize="small" /></IconButton>
+          </Tooltip>
+          <Tooltip title="Generate with AI">
+            <IconButton size="small" color="secondary" onClick={() => setGenerateOpen(true)}><AutoFixHighIcon fontSize="small" /></IconButton>
+          </Tooltip>
+          <Tooltip title="New Pack">
+            <IconButton size="small" color="primary" onClick={() => setCreateOpen(true)}><AddIcon fontSize="small" /></IconButton>
+          </Tooltip>
         </Stack>
       ) : undefined}
     >
       <Tabs
         value={mainTab}
         onChange={(_, v) => setMainTab(v)}
-        sx={{ mb: 3, borderBottom: 1, borderColor: "divider" }}
+        sx={{ mb: 1.5, borderBottom: 1, borderColor: "divider" }}
       >
         <Tab label="My Packs" value="my-packs" icon={<GrassIcon fontSize="small" />} iconPosition="start" />
         <Tab label="Installed" value="installed" icon={<DownloadDoneIcon fontSize="small" />} iconPosition="start" />
@@ -159,26 +160,24 @@ export default function SeedPacks() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             fullWidth
-            sx={{ mb: 3 }}
+            sx={{ mb: 1.5 }}
           />
-
           {loading && <CircularProgress size={24} />}
-
           {!loading && (
             <>
               {filteredUser.length === 0 && (
                 <Typography variant="body2" color="text.secondary">
                   {userPacks.length === 0
-                    ? "No custom packs yet. Use New Pack, Generate with AI, or harvest from a project."
+                    ? "No custom packs yet."
                     : "No packs match this search."}
                 </Typography>
               )}
-
               <Stack spacing={1}>
                 {filteredUser.map((pack) => (
                   <PackCard
                     key={pack.id}
                     pack={pack}
+                    compact
                     onClick={() => navigate(`/seed-packs/${pack.id}`)}
                     onDelete={handleDelete}
                   />
@@ -190,70 +189,25 @@ export default function SeedPacks() {
       )}
 
       {mainTab === "installed" && (
-        <>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Packs you've installed from the store. These sync across all your machines.
-          </Typography>
-
-          {entsLoading && <CircularProgress size={24} />}
-
-          {!entsLoading && installedPacks.length === 0 && (
-            <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: "center" }}>
-              No installed packs yet. Browse the Store to find packs.
-            </Typography>
-          )}
-
-          {!entsLoading && (
-            <Stack spacing={1}>
-              {installedPacks.map((pack) => (
-                <StorePackCard
-                  key={pack.id}
-                  pack={pack}
-                  entitled={true}
-                  onInstall={() => {}}
-                  onRemove={async () => {
-                    await removeEntitlement(pack.id);
-                    setInstalledPacks((prev) => prev.filter((p) => p.id !== pack.id));
-                  }}
-                  onClick={() => navigate(`/seed-packs/${pack.id}`)}
-                />
-              ))}
-            </Stack>
-          )}
-        </>
+        <InstalledTab
+          packs={installedPacks}
+          loading={entsLoading}
+          onRemove={async (packId) => {
+            await removeEntitlement(packId);
+            setInstalledPacks((prev) => prev.filter((p) => p.id !== packId));
+          }}
+          onPackClick={(id) => navigate(`/seed-packs/${id}`)}
+        />
       )}
 
       {mainTab === "orchard" && (
-        <>
-          <TextField
-            size="small"
-            placeholder="Search orchard packs..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            fullWidth
-            sx={{ mb: 2 }}
-          />
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Platform packs that provide Orchard's rules, skills, workflows, and agent coordination.
-          </Typography>
-
-          {loading && <CircularProgress size={24} />}
-
-          {!loading && (
-            <Stack spacing={1}>
-              {filteredOrchard.map((pack) => (
-                <PackCard
-                  key={pack.id}
-                  pack={pack}
-                  onClick={() => navigate(`/seed-packs/${pack.id}`)}
-                />
-              ))}
-              {filteredOrchard.length === 0 && (
-                <Typography variant="body2" color="text.secondary">No orchard packs match this search.</Typography>
-              )}
-            </Stack>
-          )}
-        </>
+        <OrchardSettingsTab
+          packs={filteredOrchard}
+          search={search}
+          onSearchChange={setSearch}
+          loading={loading}
+          onPackClick={(id) => navigate(`/seed-packs/${id}`)}
+        />
       )}
 
       <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="xs" fullWidth>

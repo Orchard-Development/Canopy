@@ -34,6 +34,8 @@ export interface PackCardData {
   modelsStale?: boolean;
   /** True when this pack is automatically applied to all new projects. */
   auto_apply?: boolean;
+  /** Pack type: orchard platform pack or community store pack. */
+  pack_type?: "orchard" | "community";
 }
 
 interface Props {
@@ -87,11 +89,8 @@ export function PackCard({
           <Typography variant="body2" fontWeight={600}>{pack.name}</Typography>
           <Chip label={`v${pack.version}`} size="small" variant="outlined" />
           <Chip label={`${pack.fileCount} files`} size="small" variant="outlined" />
-          {isPublic && !pack.auto_apply && (
-            <Chip label="optional" size="small" color="primary" variant="outlined" />
-          )}
-          {pack.auto_apply && (
-            <Tooltip title="Always applied to new projects">
+          {pack.pack_type === "orchard" && (
+            <Tooltip title="Always applied to all projects">
               <Chip icon={<LockIcon sx={{ fontSize: 14 }} />} label="required" size="small" color="success" variant="outlined" />
             </Tooltip>
           )}

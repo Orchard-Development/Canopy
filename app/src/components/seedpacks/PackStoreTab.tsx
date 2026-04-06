@@ -1,22 +1,22 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Box, Stack, Typography, CircularProgress,
-  TextField, Tabs, Tab, InputAdornment,
+  Box, Stack, Typography, CircularProgress, Chip,
+  TextField, InputAdornment,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import { api, type DiscoverPack } from "../../lib/api";
 import { useEntitlements } from "../../hooks/useEntitlements";
-import { StorePackCard } from "./StorePackCard";
+import { StoreGridCard } from "./StoreGridCard";
 
-const CATEGORY_TABS = ["All", "Discipline", "Workflow", "Tools", "Platform", "Research", "Deploy"];
+const CATEGORIES = ["All", "Discipline", "Workflow", "Tools", "Platform", "Research", "Deploy"];
 
 export function PackStoreTab() {
   const navigate = useNavigate();
   const [packs, setPacks] = useState<DiscoverPack[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [categoryTab, setCategoryTab] = useState("All");
+  const [category, setCategory] = useState("All");
   const { install, remove } = useEntitlements();
 
   useEffect(() => {
@@ -27,10 +27,9 @@ export function PackStoreTab() {
   }, []);
 
   const filtered = useMemo(() => {
-    // Hide orchard packs (they belong in the Orchard tab) and already-installed packs
     let result = packs.filter((p) => p.pack_type !== "orchard" && !p.entitled);
-    if (categoryTab !== "All") {
-      const cat = categoryTab.toLowerCase();
+    if (category !== "All") {
+      const cat = category.toLowerCase();
       result = result.filter((p) => p.category?.toLowerCase() === cat);
     }
     if (search) {
@@ -43,7 +42,7 @@ export function PackStoreTab() {
       );
     }
     return result;
-  }, [packs, categoryTab, search]);
+  }, [packs, category, search]);
 
   const handleInstall = async (packId: string) => {
     await install(packId);
@@ -81,23 +80,30 @@ export function PackStoreTab() {
         }}
         sx={{ maxWidth: 360 }}
       />
-      <Tabs
-        value={categoryTab}
-        onChange={(_, v) => setCategoryTab(v)}
-        variant="scrollable"
-        scrollButtons="auto"
-        sx={{ minHeight: 32, "& .MuiTab-root": { minHeight: 32, py: 0.5 } }}
-      >
-        {CATEGORY_TABS.map((t) => <Tab key={t} label={t} value={t} />)}
-      </Tabs>
+      <Stack direction="row" spacing={1} sx={{ overflowX: "auto", pb: 0.5 }}>
+        {CATEGORIES.map((cat) => (
+          <Chip
+            key={cat}
+            label={cat}
+            variant={category === cat ? "filled" : "outlined"}
+            color={category === cat ? "primary" : "default"}
+            onClick={() => setCategory(cat)}
+            clickable
+          />
+        ))}
+      </Stack>
       {filtered.length === 0 ? (
         <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: "center" }}>
           No packs found.
         </Typography>
       ) : (
-        <Stack spacing={1}>
+        <Box sx={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+          gap: 2,
+        }}>
           {filtered.map((pack) => (
-            <StorePackCard
+            <StoreGridCard
               key={pack.id}
               pack={pack}
               entitled={pack.entitled}
@@ -106,7 +112,7 @@ export function PackStoreTab() {
               onClick={() => navigate(`/seed-packs/${pack.id}`)}
             />
           ))}
-        </Stack>
+        </Box>
       )}
     </Stack>
   );

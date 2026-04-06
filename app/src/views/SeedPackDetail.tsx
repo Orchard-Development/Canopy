@@ -14,6 +14,7 @@ import AddIcon from "@mui/icons-material/Add";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import { PageLayout } from "../components/PageLayout";
 import { FileEditDialog } from "../components/seedpacks/FileEditDialog";
 import { AddContentDialog } from "../components/seedpacks/AddContentDialog";
@@ -28,6 +29,8 @@ interface PackData {
   created_at: string; updated_at: string;
   category?: string; tags?: string[]; requires?: string[];
   techStack?: string[];
+  pack_type?: "orchard" | "community";
+  auto_apply?: boolean;
 }
 
 export default function SeedPackDetail() {
@@ -151,6 +154,9 @@ export default function SeedPackDetail() {
           <Chip label={`${pack.files.length} files`} size="small" variant="outlined" />
           {pack.category && (
             <Chip label={pack.category} size="small" color="primary" variant="outlined" />
+          )}
+          {pack.pack_type === "orchard" && (
+            <Chip icon={<AccountTreeIcon />} label="Orchard" size="small" color="secondary" variant="outlined" />
           )}
         </Stack>
       }
