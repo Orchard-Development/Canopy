@@ -32,6 +32,8 @@ import { formatTime, labelForCommand, statusColor } from "../lib/session-log-uti
 import { useSessionMessages } from "../hooks/useSessionMessages";
 import { ChatMessages } from "../components/chat/ChatMessages";
 import { sessionMessagesToChat } from "../lib/sessionConvert";
+import { useTimeline } from "../hooks/useTimeline";
+import { TimelineView } from "../components/timeline/TimelineView";
 
 interface RichAnalysis {
   status: string;
@@ -265,13 +267,22 @@ function DetailContent({
   const navigate = useNavigate();
   const [streaming, setStreaming] = useState(true);
   const [resuming, setResuming] = useState(false);
-  const [viewMode, setViewMode] = useState<"pretty" | "raw">("pretty");
+  const [viewMode, setViewMode] = useState<"pretty" | "raw" | "timeline">(
+    peerNode ? "timeline" : "pretty"
+  );
   const [messageText, setMessageText] = useState("");
   const [sending, setSending] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const { messages, loading: messagesLoading } = useSessionMessages(
     viewMode === "pretty" && session.hasMessages !== false ? session.id : null,
     0,
+    peerNode,
+  );
+
+  // Timeline for collaborative sessions
+  const hasCollabContext = !!peerNode;
+  const { items: timelineItems, loading: timelineLoading } = useTimeline(
+    hasCollabContext ? session.id : null,
     peerNode,
   );
 
@@ -383,13 +394,23 @@ function DetailContent({
       actions={
         <Stack direction="row" spacing={0.5} alignItems="center" sx={{ flexWrap: "wrap", rowGap: 0.5 }}>
           <ButtonGroup size="small" variant="outlined">
-            <Button
-              startIcon={<ChatIcon />}
-              variant={viewMode === "pretty" ? "contained" : "outlined"}
-              onClick={() => setViewMode("pretty")}
-            >
-              Pretty
-            </Button>
+            {peerNode ? (
+              <Button
+                startIcon={<ChatIcon />}
+                variant={viewMode === "timeline" ? "contained" : "outlined"}
+                onClick={() => setViewMode("timeline")}
+              >
+                Timeline
+              </Button>
+            ) : (
+              <Button
+                startIcon={<ChatIcon />}
+                variant={viewMode === "pretty" ? "contained" : "outlined"}
+                onClick={() => setViewMode("pretty")}
+              >
+                Pretty
+              </Button>
+            )}
             <Button
               startIcon={<TerminalIcon />}
               variant={viewMode === "raw" ? "contained" : "outlined"}
@@ -456,6 +477,10 @@ function DetailContent({
             }}
           />
         </>
+      ) : viewMode === "timeline" ? (
+        <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", border: 1, borderColor: "divider", borderRadius: 1 }}>
+          <TimelineView items={timelineItems} loading={timelineLoading} />
+        </Box>
       ) : (
         <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", border: 1, borderColor: "divider", borderRadius: 1 }}>
           {messagesLoading ? (
